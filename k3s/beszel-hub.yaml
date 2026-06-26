@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beszel-hub
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: beszel-hub
+  template:
+    metadata:
+      labels:
+        app: beszel-hub
+    spec:
+      containers:
+      - name: hub
+        image: henrygd/beszel:latest
+        ports:
+        - containerPort: 8090
+        env:
+        - name: BESZEL_PORT
+          value: "8090"
+        - name: MEM_CALC
+          value: "htop"
+        volumeMounts:
+        - name: data
+          mountPath: /beszel_data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: beszel-hub-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: beszel-hub-data
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: beszel-hub-nodeport
+  namespace: monitoring
+spec:
+  selector:
+    app: beszel-hub
+  ports:
+  - port: 8090
+    targetPort: 8090
+    nodePort: 30090
+  type: NodePort

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: beszel-agent-master
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: beszel-agent-master
+  template:
+    metadata:
+      labels:
+        app: beszel-agent-master
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      hostNetwork: true
+      containers:
+      - name: agent
+        image: henrygd/beszel-agent:latest
+        ports:
+        - containerPort: 45876
+          hostPort: 45876
+        env:
+        - name: PORT
+          value: "45876"
+        - name: KEY
+          value: "ssh-ed25519 AAAAC3..."  # From Beszel UI
+        - name: TOKEN
+          value: "your-master-token"       # From Beszel UI
+        - name: HUB_URL
+          value: "http://x.x.x.x:30090"
+        volumeMounts:
+        - name: docker-sock
+          mountPath: /var/run/docker.sock
+          readOnly: true
+      volumes:
+      - name: docker-sock
+        hostPath:
+          path: /var/run/docker.sock
