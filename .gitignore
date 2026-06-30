@@ -1,0 +1,12 @@
+# Never commit secrets
+*.env
+*.secret
+acme.json
+kubeconfig
+*.pem
+*.key
+*.crt
+
+# Local overrides
+*.local.yaml
+*.local.sh

@@ -1,0 +1,43 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    globalArguments:
+      - "--global.sendanonymoususage=false"
+
+    deployment:
+      kind: DaemonSet
+
+    additionalArguments:
+      - "--providers.kubernetescrd.allowCrossNamespaceResources=true"
+
+    env:
+      - name: CF_DNS_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: cloudflare-token
+            key: api-token
+
+    ports:
+      web:
+        port: 8000
+        hostPort: 80
+        redirectTo:
+          port: websecure
+          priority: 10
+      websecure:
+        port: 8443
+        hostPort: 443
+        tls:
+          enabled: true
+
+    ingressRoute:
+      dashboard:
+        enabled: false
+
+    service:
+      enabled: true
+      type: ClusterIP
