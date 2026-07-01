@@ -11,9 +11,6 @@ spec:
     deployment:
       kind: DaemonSet
 
-    additionalArguments:
-      - "--providers.kubernetescrd.allowCrossNamespaceResources=true"
-
     env:
       - name: CF_DNS_API_TOKEN
         valueFrom:
