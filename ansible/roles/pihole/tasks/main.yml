@@ -1,5 +1,10 @@
 ---
 # roles/pihole/tasks/main.yml — deploy Pi-hole into k3s. Runs on the master.
+#
+# TODO (later): this runs Pi-hole INSIDE k3s, which is fine for learning but couples
+# your DNS to the cluster's uptime. Once the cluster is stable, convert this role to
+# run Pi-hole as a standalone container on the WORKER node (outside k3s), so DNS
+# doesn't go down when the cluster does. Also set a secondary DNS in DHCP for failover.
 
 - name: Copy the Pi-hole manifest to the master
   ansible.builtin.copy:
