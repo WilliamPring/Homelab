@@ -21,28 +21,27 @@
     state: present
     update_cache: true
 
-- name: Check whether the tailscale binary is already installed
-  # `which` returns non-zero if not found. We capture the result instead of
-  # letting a failure stop the play.
-  ansible.builtin.command: which tailscale
-  register: tailscale_installed
-  changed_when: false          # a read-only check never "changes" anything
-  failed_when: false           # not-found is a valid answer, not an error
-
 - name: Install Tailscale via the official script
-  # Only runs when the check above found nothing. This is how we stay idempotent
-  # without a dedicated apt module: install once, skip forever after. The script
-  # adds Tailscale's Debian apt repo and installs the package + systemd service.
+  # We run this EVERY time rather than gating on "is the tailscale binary there?".
+  # Why: a stray/partial `tailscale` binary could exist without the `tailscaled`
+  # systemd service, and gating on the binary would then skip the install and the
+  # next task would fail with "service not found". The official installer is
+  # idempotent — on an already-installed host it just re-checks the apt repo and
+  # package and exits — so running it unconditionally is safe and guarantees the
+  # service exists.
   #
-  # `set -o pipefail` + bash: in a pipeline, the shell normally reports only the
-  # LAST command's exit code. So if `curl` failed, `sh` would still exit 0 and the
-  # task would look successful while installing nothing. pipefail makes the whole
-  # pipeline fail if ANY part fails — so a broken download surfaces here, not three
-  # tasks later as a confusing "service not found".
+  # `set -o pipefail` + bash: in a pipeline the shell normally reports only the
+  # LAST command's exit code, so a failed `curl` piped into `sh` would look
+  # "successful" while installing nothing. pipefail makes the whole pipeline fail
+  # if any part fails, surfacing a broken download here instead of downstream.
   ansible.builtin.shell:
     cmd: set -o pipefail && curl -fsSL https://tailscale.com/install.sh | sh
     executable: /bin/bash
-  when: tailscale_installed.rc != 0
+  register: tailscale_install
+  # This is an "ensure installed" convergence step we run every time, and the
+  # installer's output isn't reliable enough to detect a real change from — so we
+  # report it as ok rather than falsely claiming "changed" on every run.
+  changed_when: false
 
 - name: Ensure the tailscaled daemon is enabled and running
   # `systemd` module is declarative: it makes the service match this state and
@@ -70,7 +69,7 @@
       Do this ONCE on the node (SSH or console):
           sudo tailscale up {{ tailscale_up_args }}
       Open the printed URL in a browser and approve the machine, then re-run:
-          ansible-playbook site.yml
+          ansible-playbook site.yml -K
 
       (Tip: to make this fully unattended later, generate a reusable auth key in
        the Tailscale admin console and switch to `tailscale up --authkey=...`.)

@@ -1,0 +1,10 @@
+---
+# roles/pihole/tasks/main.yml — deploy Pi-hole into k3s. Runs on the master.
+
+- name: Copy the Pi-hole manifest to the master
+  ansible.builtin.copy:
+    src: pihole.yaml
+    dest: /etc/pihole.yaml
+
+- name: Apply the Pi-hole manifest
+  ansible.builtin.command: k3s kubectl apply -f /etc/pihole.yaml

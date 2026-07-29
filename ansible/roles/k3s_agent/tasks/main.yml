@@ -21,14 +21,19 @@
 - name: Install k3s agent and join the cluster
   # K3S_URL + K3S_TOKEN in the environment tell the installer to run as an agent
   # and which server to join. `sh -s - agent <args>` passes any extra flags.
+  # pipefail (via bash) surfaces a failed curl instead of silently installing
+  # nothing. no_log hides the join-token, which appears on the command line here.
   ansible.builtin.shell:
     cmd: >
+      set -o pipefail &&
       curl -sfL https://get.k3s.io |
       INSTALL_K3S_CHANNEL={{ k3s_channel }}
       K3S_URL={{ k3s_url }}
       K3S_TOKEN={{ k3s_token }}
       sh -s - agent {{ k3s_agent_args }}
+    executable: /bin/bash
   when: k3s_installed.rc != 0
+  no_log: true
 
 - name: Ensure the k3s-agent service is enabled and running
   ansible.builtin.systemd:

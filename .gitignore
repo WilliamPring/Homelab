@@ -10,3 +10,7 @@ kubeconfig
 # Local overrides
 *.local.yaml
 *.local.sh
+
+# Ansible
+ansible/ansible.log
+*.retry

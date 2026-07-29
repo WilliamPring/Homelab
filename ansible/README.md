@@ -15,6 +15,7 @@ Automates the boring part of the homelab: install **Tailscale** and stand up a
 | 1 | all nodes | Install Tailscale, start the daemon, verify login |
 | 2 | master | Install k3s control plane, capture the join-token |
 | 3 | workers | Install k3s agent, join the cluster |
+| 4 | master | Deploy Pi-hole into the cluster (`k3s kubectl apply`) |
 
 Currently **vanilla k3s over the LAN** — the simplest thing that works on a VM.
 The Tailscale-as-flannel networking from your real homelab is behind variables in
@@ -122,7 +123,8 @@ ansible/
 ├── roles/
 │   ├── tailscale/         # install + connect Tailscale
 │   ├── k3s_server/        # control plane + join-token
-│   └── k3s_agent/         # workers join the cluster
+│   ├── k3s_agent/         # workers join the cluster
+│   └── pihole/            # apply the Pi-hole manifest (roles/pihole/files/pihole.yaml)
 ├── README.md              # you are here
 └── LEARN.md               # the teaching guide
 ```

@@ -33,3 +33,11 @@
   become: true
   roles:
     - k3s_agent
+
+# ─── PLAY 4: Pi-hole ─────────────────────────────────────────────────────────
+# Runs on the master and applies the Pi-hole manifest with `k3s kubectl`.
+- name: Deploy Pi-hole into the cluster
+  hosts: master
+  become: true
+  roles:
+    - pihole
