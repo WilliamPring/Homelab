@@ -34,10 +34,13 @@
   roles:
     - k3s_agent
 
-# ─── PLAY 4: Pi-hole ─────────────────────────────────────────────────────────
-# Runs on the master and applies the Pi-hole manifest with `k3s kubectl`.
-- name: Deploy Pi-hole into the cluster
+# ─── PLAY 4: Cluster apps ────────────────────────────────────────────────────
+# Each runs on the master and applies a manifest with `k3s kubectl`. Apps are
+# grouped into function namespaces (pihole→network, vaultwarden→apps, jellyfin→media).
+- name: Deploy cluster apps
   hosts: master
   become: true
   roles:
-    - pihole
+    - pihole        # network namespace  — DNS ad-blocking
+    - vaultwarden   # apps namespace     — password manager (throwaway data for now)
+    - jellyfin      # media namespace    — media server (empty shell until the HP)

@@ -1,15 +1,23 @@
-# Pi-hole in k3s. Edit the password/timezone below if you like, then re-run.
+# Pi-hole in k3s, in the `network` function namespace (grouped-by-function convention).
+# Edit the password/timezone below if you like, then re-run.
+#
+# ⚠️  Moving namespaces: if Pi-hole was previously deployed in the old `pihole`
+# namespace, delete it FIRST so it releases hostPort 53:
+#     sudo k3s kubectl delete namespace pihole
+# (config lives on the node at /opt/pihole, so it survives the namespace change.)
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: pihole
+  name: network
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pihole
-  namespace: pihole
+  namespace: network
+  labels:
+    app: pihole
 spec:
   replicas: 1
   selector:
@@ -53,7 +61,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pihole-web
-  namespace: pihole
+  namespace: network
+  labels:
+    app: pihole
 spec:
   type: NodePort
   selector:

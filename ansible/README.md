@@ -124,7 +124,13 @@ ansible/
 │   ├── tailscale/         # install + connect Tailscale
 │   ├── k3s_server/        # control plane + join-token
 │   ├── k3s_agent/         # workers join the cluster
-│   └── pihole/            # apply the Pi-hole manifest (roles/pihole/files/pihole.yaml)
+│   ├── pihole/            # DNS ad-blocking      → network namespace
+│   ├── vaultwarden/       # password manager     → apps namespace
+│   └── jellyfin/          # media server         → media namespace
 ├── README.md              # you are here
 └── LEARN.md               # the teaching guide
 ```
+
+App manifests live in `roles/<app>/files/<app>.yaml` and are grouped into **function
+namespaces** (see `../docs/roadmap.md`). All are exposed via NodePort for now (Path A);
+TLS ingress comes later.

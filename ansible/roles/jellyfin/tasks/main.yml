@@ -1,0 +1,11 @@
+---
+# roles/jellyfin/tasks/main.yml — deploy Jellyfin into k3s (media namespace).
+# Runs on the master. Same copy-then-apply pattern as the pihole role.
+
+- name: Copy the Jellyfin manifest to the master
+  ansible.builtin.copy:
+    src: jellyfin.yaml
+    dest: /etc/jellyfin.yaml
+
+- name: Apply the Jellyfin manifest
+  ansible.builtin.command: k3s kubectl apply -f /etc/jellyfin.yaml

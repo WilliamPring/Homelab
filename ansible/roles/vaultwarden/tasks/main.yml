@@ -1,0 +1,11 @@
+---
+# roles/vaultwarden/tasks/main.yml — deploy Vaultwarden into k3s (apps namespace).
+# Runs on the master. Same copy-then-apply pattern as the pihole role.
+
+- name: Copy the Vaultwarden manifest to the master
+  ansible.builtin.copy:
+    src: vaultwarden.yaml
+    dest: /etc/vaultwarden.yaml
+
+- name: Apply the Vaultwarden manifest
+  ansible.builtin.command: k3s kubectl apply -f /etc/vaultwarden.yaml
