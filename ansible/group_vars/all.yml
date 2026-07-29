@@ -1,0 +1,28 @@
+---
+# group_vars/all.yml — variables applied to ALL hosts in the inventory.
+#
+# Ansible auto-loads files under group_vars/<groupname>.yml. The special group
+# "all" matches every host, so these are your global knobs. Change behaviour
+# here instead of editing the roles.
+
+# ─── k3s ───────────────────────────────────────────────────────────────────────
+# Which k3s release channel to install. "stable" is fine for a homelab.
+# To make rebuilds reproducible later, pin an exact version instead, e.g.:
+#   k3s_channel: "v1.30"
+k3s_channel: "stable"
+
+# Extra flags passed to the k3s SERVER install (control plane).
+# Empty string = vanilla k3s over the LAN. Simplest possible, great for a VM.
+#
+# When you move to real hardware and want your documented Tailscale setup,
+# flip this to something like (all one line):
+#   k3s_server_args: "--disable=traefik --flannel-iface=tailscale0 --node-ip={{ tailscale_ip }} --advertise-address={{ tailscale_ip }}"
+k3s_server_args: ""
+
+# Extra flags passed to the k3s AGENT install (workers). Same idea.
+k3s_agent_args: ""
+
+# ─── Tailscale ──────────────────────────────────────────────────────────────────
+# Flags for `tailscale up`. We disable Tailscale's DNS takeover so it doesn't
+# fight with your LAN/k3s DNS — matches your existing homelab scripts.
+tailscale_up_args: "--accept-dns=false"

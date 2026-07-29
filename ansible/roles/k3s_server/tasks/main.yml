@@ -1,0 +1,62 @@
+---
+# roles/k3s_server/tasks/main.yml
+#
+# Installs the k3s control plane on the master and captures the join-token so the
+# workers (Play 3) can join. Runs only on the [master] host.
+
+- name: Check whether k3s is already installed
+  ansible.builtin.command: which k3s
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install k3s server (control plane)
+  # The official installer is itself idempotent-ish, but we gate it on the check
+  # so we don't re-run the network install on every playbook run.
+  #
+  # INSTALL_K3S_CHANNEL picks the release channel. `sh -s - server <args>` passes
+  # our extra flags (empty by default = vanilla LAN k3s).
+  ansible.builtin.shell:
+    cmd: >
+      curl -sfL https://get.k3s.io |
+      INSTALL_K3S_CHANNEL={{ k3s_channel }}
+      sh -s - server {{ k3s_server_args }}
+  when: k3s_installed.rc != 0
+
+- name: Ensure the k3s service is enabled and running
+  ansible.builtin.systemd:
+    name: k3s
+    enabled: true
+    state: started
+
+- name: Wait for the cluster join-token to be generated
+  # k3s writes this file once the server is up. Workers authenticate with it.
+  ansible.builtin.wait_for:
+    path: /var/lib/rancher/k3s/server/node-token
+    timeout: 120
+
+- name: Read the join-token from disk
+  # `slurp` returns the file base64-encoded (safe for binary/secret content).
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_token_file
+
+- name: Publish the join-token as a fact for the workers to read
+  # `set_fact` here attaches k3s_node_token to THIS host (the master). In Play 3
+  # workers pull it via hostvars[<master>].k3s_node_token — that's how data
+  # crosses between plays/hosts.
+  ansible.builtin.set_fact:
+    k3s_node_token: "{{ k3s_token_file.content | b64decode | trim }}"
+
+- name: Wait until the control-plane node reports Ready
+  # Gives k3s time to finish bootstrapping before we call the cluster usable.
+  ansible.builtin.command: k3s kubectl get nodes
+  register: k3s_nodes
+  until: "' Ready' in k3s_nodes.stdout"
+  retries: 20
+  delay: 6
+  changed_when: false
+
+- name: Show cluster nodes
+  ansible.builtin.debug:
+    msg: "{{ k3s_nodes.stdout_lines }}"

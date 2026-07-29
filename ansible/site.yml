@@ -1,0 +1,35 @@
+---
+# site.yml — the top-level playbook. Run this and it does the whole cluster.
+#
+#   ansible-playbook site.yml
+#
+# A playbook is an ordered list of "plays". Each play targets a group of hosts
+# and applies a list of roles to them. Plays run top-to-bottom; within a play,
+# hosts are configured in parallel.
+
+# ─── PLAY 1: Tailscale on every node ─────────────────────────────────────────
+# Runs first so remote access exists before we touch k3s. `become: true` means
+# every task runs as root (via sudo) on the target.
+- name: Install and connect Tailscale on all nodes
+  hosts: k3s_cluster
+  become: true
+  roles:
+    - tailscale
+
+# ─── PLAY 2: k3s control plane ───────────────────────────────────────────────
+# Only the single host in the [master] group. This install also produces the
+# cluster join-token, which we stash for the workers to use in Play 3.
+- name: Install k3s control plane (server)
+  hosts: master
+  become: true
+  roles:
+    - k3s_server
+
+# ─── PLAY 3: k3s workers ─────────────────────────────────────────────────────
+# Runs on every host in [workers]. If that group is empty (single-node cluster),
+# this play simply matches no hosts and is skipped — no error.
+- name: Join k3s workers (agents) to the cluster
+  hosts: workers
+  become: true
+  roles:
+    - k3s_agent
