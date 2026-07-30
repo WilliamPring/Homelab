@@ -13,3 +13,19 @@
 
 - name: Apply the Pi-hole manifest
   ansible.builtin.command: k3s kubectl apply -f /etc/pihole.yaml
+  register: pihole_apply
+  changed_when: "'created' in pihole_apply.stdout or 'configured' in pihole_apply.stdout"
+
+- name: Pi-hole — what kubectl changed
+  ansible.builtin.debug:
+    msg: "{{ pihole_apply.stdout_lines }}"
+
+- name: Pi-hole — summary (how to use it / what to know)
+  ansible.builtin.debug:
+    msg:
+      - "✅ Pi-hole deployed → namespace 'network'"
+      - "🔗 Web UI:  http://{{ ansible_host }}:30081/admin   (password is set in the manifest env)"
+      - "📡 DNS:     point your router/clients at  {{ ansible_host }}  (port 53)"
+      - "⚠  If Pi-hole was in the OLD 'pihole' namespace, delete it to free port 53:"
+      - "     sudo k3s kubectl delete namespace pihole"
+      - "🔍 Verify:  sudo k3s kubectl get pods -n network -o wide"
