@@ -55,7 +55,7 @@
   vars_files:
     - vars/helm_releases.yml      # the app list lives in its own file, not group_vars
   tasks:
-    - name: "Deploy Helm release: {{ item.name }}"
+    - name: Deploy Helm release          # per-app name shown via loop_control.label below
       ansible.builtin.include_role:
         name: helm_release
       vars:
