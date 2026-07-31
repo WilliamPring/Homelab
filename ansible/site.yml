@@ -43,4 +43,40 @@
   roles:
     - pihole        # network namespace  — DNS ad-blocking
     - vaultwarden   # apps namespace     — password manager (throwaway data for now)
-    - jellyfin      # media namespace    — media server (empty shell until the HP)
+
+# ─── PLAY 5: Helm releases (data-driven) ─────────────────────────────────────
+# Deploys every enabled entry in the `helm_releases` list (group_vars/all.yml) via
+# the helm_release role (kubernetes.core.helm). Add an app = add a dict there + a
+# values file in helm-values/. This play never changes.
+- name: Deploy Helm releases
+  hosts: master
+  become: true
+  vars_files:
+    - vars/helm_releases.yml      # the app list lives in its own file, not group_vars
+  tasks:
+    - name: "Deploy Helm release: {{ item.name }}"
+      ansible.builtin.include_role:
+        name: helm_release
+      vars:
+        helm_name: "{{ item.name }}"
+        helm_repo_name: "{{ item.repo_name }}"
+        helm_repo: "{{ item.repo }}"
+        helm_chart: "{{ item.chart }}"
+        helm_namespace: "{{ item.namespace }}"
+        helm_values_file: "{{ item.values_file }}"
+        helm_chart_version: "{{ item.version | default(omit) }}"
+      loop: "{{ helm_releases | default([]) }}"
+      when: item.enabled | default(true)
+      loop_control:
+        label: "{{ item.name }}"
+
+# ─── PLAY 6: Host-level file sharing (Samba/SMB) ─────────────────────────────
+# NOT a k3s workload — Samba runs on the host (the master/HP) and shares the
+# storage folder over the network. Toggle with samba_enabled in group_vars.
+- name: Host file share (Samba/SMB)
+  hosts: master
+  become: true
+  roles:
+    - role: samba
+      when: samba_enabled | default(true)
+

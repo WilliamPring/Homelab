@@ -15,11 +15,17 @@ Automates the boring part of the homelab: install **Tailscale** and stand up a
 | 1 | all nodes | Install Tailscale, start the daemon, verify login |
 | 2 | master | Install k3s control plane, capture the join-token |
 | 3 | workers | Install k3s agent, join the cluster |
-| 4 | master | Deploy Pi-hole into the cluster (`k3s kubectl apply`) |
+| 4 | master | Deploy manifest apps — Pi-hole, Vaultwarden (`k3s kubectl apply`) |
+| 5 | master | Deploy Helm releases — Jellyfin (data-driven, `kubernetes.core.helm`) |
+| 6 | master | Samba file share (host-level, not k3s) |
 
 Currently **vanilla k3s over the LAN** — the simplest thing that works on a VM.
 The Tailscale-as-flannel networking from your real homelab is behind variables in
 `group_vars/all.yml` for when you move to real hardware (see LEARN.md → "Growing this").
+
+**Two ways apps are deployed:** small apps as hand-written manifests
+(`roles/<app>/files/*.yaml` → `kubectl apply`); heavier apps as Helm charts, defined
+as data in `vars/helm_releases.yml` with values in `helm-values/<app>.yaml`.
 
 ---
 
@@ -31,8 +37,9 @@ the nodes — nothing is installed on the targets ahead of time (it's *agentless
 **On your Arch control node:**
 
 ```bash
-# 1. Install Ansible
+# 1. Install Ansible + the collections this project uses
 sudo pacman -S ansible
+ansible-galaxy collection install -r requirements.yml   # kubernetes.core (for Helm)
 
 # 2. Make sure you can SSH into each node as a sudo-capable user, key-based:
 ssh <user>@<node-ip>      # should log in without a password prompt
@@ -117,16 +124,24 @@ ansible-playbook site.yml --tags ...   # (once you add tags) run a subset
 ansible/
 ├── ansible.cfg            # project config (inventory path, ssh behaviour)
 ├── inventory.ini          # THE file you edit: which machines, grouped by role
+├── requirements.yml       # Ansible collections (kubernetes.core) — install once
 ├── group_vars/
-│   └── all.yml            # global knobs (k3s channel, install flags)
-├── site.yml               # top-level playbook: 3 plays, run this
+│   └── all.yml            # global host knobs (k3s channel, tailscale, samba)
+├── vars/
+│   └── helm_releases.yml  # data: the list of Helm apps to deploy (loaded by Play 5)
+├── helm-values/          # Helm chart values as clean .yaml files (e.g. jellyfin.yaml)
+├── site.yml               # top-level playbook: 6 plays, run this
 ├── roles/
 │   ├── tailscale/         # install + connect Tailscale
 │   ├── k3s_server/        # control plane + join-token
 │   ├── k3s_agent/         # workers join the cluster
 │   ├── pihole/            # DNS ad-blocking      → network namespace
 │   ├── vaultwarden/       # password manager     → apps namespace
-│   └── jellyfin/          # media server         → media namespace
+│   ├── jellyfin/          # media server         → media namespace
+│   ├── samba/             # SMB file share       → host-level (not k3s)
+│   ├── helm_app/          # Helm via k3s HelmChart CRD (Approach A — zero deps; kept as backup)
+│   ├── helm_release/      # Helm via kubernetes.core.helm module (Approach B — idiomatic Ansible)
+│   └── certmanager_issuer/ # self-signed internal CA + issuers (no Cloudflare)
 ├── README.md              # you are here
 └── LEARN.md               # the teaching guide
 ```

@@ -26,3 +26,26 @@ k3s_agent_args: ""
 # Flags for `tailscale up`. We disable Tailscale's DNS takeover so it doesn't
 # fight with your LAN/k3s DNS — matches your existing homelab scripts.
 tailscale_up_args: "--accept-dns=false"
+
+# ─── Samba (SMB file share, runs on the host — Layer 1) ──────────────────────────
+# Shares a folder over the network so your Arch laptop / Mac / Windows / phones can
+# reach it. Runs on the node that has the storage (the master/HP).
+samba_enabled: true
+samba_share_name: "storage"
+samba_share_path: "/mnt/storage"           # the mergerfs pool (created empty if absent)
+samba_user: "{{ ansible_user }}"           # share user — must be a real system user
+# ⚠️  CHANGE THIS and move it to an ansible-vault file (a real password never in git).
+#     "changeme" is a placeholder, not a secret.
+samba_password: "changeme"
+# Who may connect — LAN + Tailscale only. NEVER expose SMB (445) to the internet.
+samba_allowed_subnets: "192.168.0.0/16 100.64.0.0/10"
+
+# ─── cert-manager (first Helm app — automated TLS certificates) ──────────────────
+# Deployed via the helm_app role (k3s HelmChart CRD). Off by default so it only
+# installs when you flip this to true. It's the foundation for real HTTPS ingress.
+certmanager_enabled: false
+certmanager_version: "v1.17.2"     # matches the version your existing README used
+
+# NOTE: the list of Helm apps to deploy lives in its own file — vars/helm_releases.yml
+# (loaded by the "Deploy Helm releases" play), not here, since it's deployment data
+# rather than a global host setting.

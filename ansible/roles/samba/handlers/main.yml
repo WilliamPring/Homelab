@@ -1,0 +1,8 @@
+---
+# roles/samba/handlers/main.yml
+# Restarts smbd only when the share config actually changed (notified above).
+
+- name: Restart smbd
+  ansible.builtin.systemd:
+    name: smbd
+    state: restarted

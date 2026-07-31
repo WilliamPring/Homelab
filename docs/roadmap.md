@@ -77,6 +77,37 @@ its apps — per-app namespaces would force replicating that cert everywhere.
 - **Pi-hole** currently sits in its own `pihole` namespace (inconsistent). It's migrating
   out of k3s to standalone-on-worker anyway, so we leave it until that migration.
 
+### Deployment method (decided + refined)
+- **Small apps** (Pi-hole, Vaultwarden) → hand-written manifests in
+  `roles/<app>/files/*.yaml`, applied with `kubectl apply`. Transparent, good for learning.
+- **Charted apps** (Jellyfin now; cert-manager, Immich, Prometheus/Grafana, Argo CD later)
+  → **Helm via the `kubernetes.core.helm` module** (Approach B, the `helm_release` role).
+  Needs the `kubernetes.core` collection + helm on the master.
+- **Data-driven:** the Helm app list lives in **`ansible/vars/helm_releases.yml`** (loaded
+  by the "Deploy Helm releases" play), with each chart's values in **`helm-values/<app>.yaml`**.
+  Adding an app = a dict + a values file; the playbook never changes.
+
+Adding a Helm app:
+```yaml
+# vars/helm_releases.yml — append an entry:
+  - name: immich
+    repo_name: immich
+    repo: https://immich-app.github.io/immich-charts
+    chart: immich
+    namespace: media
+    values_file: helm-values/immich.yaml
+    enabled: true
+# + create helm-values/immich.yaml
+```
+
+**Kept as backup (not deleted):** the hand-written Jellyfin manifest
+(`roles/jellyfin/files/`), and **`roles/helm_app`** — the alternative Approach A (Helm via
+k3s's HelmChart CRD, zero extra deps). Both approaches documented; we chose B for its
+idiomatic-Ansible ergonomics. **cert-manager** (`roles/helm_app` + `certmanager_issuer`,
+self-signed CA, no Cloudflare) is built but currently REMOVED from the playbook.
+Charts for later: `immich` (immich-app), `cert-manager` (jetstack), `kube-prometheus-stack`,
+`argo-cd` (argoproj).
+
 ---
 
 ## Service catalog (resource + difficulty + placement)

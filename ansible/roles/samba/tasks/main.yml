@@ -1,0 +1,71 @@
+---
+# roles/samba/tasks/main.yml — SMB (Samba) file share, on the HOST (Layer 1).
+#
+# This is NOT a k3s workload — Samba runs directly on the node that has the disks
+# (the master/HP) and shares {{ samba_share_path }} over the network. Managed by
+# Ansible like your other host-level services.
+
+- name: Install Samba
+  ansible.builtin.apt:
+    name: samba
+    state: present
+    update_cache: true
+
+- name: Ensure the share directory exists
+  # If /mnt/storage isn't mounted yet (no drives), this creates an empty folder so
+  # smbd still starts cleanly. Once the mergerfs pool is mounted here, it's shared.
+  ansible.builtin.file:
+    path: "{{ samba_share_path }}"
+    state: directory
+    owner: "{{ samba_user }}"
+    group: "{{ samba_user }}"
+    mode: "0775"
+
+- name: Configure the Samba share
+  # blockinfile inserts just our [share] block into smb.conf without clobbering the
+  # default [global] settings. The marker makes it idempotent + easy to update.
+  ansible.builtin.blockinfile:
+    path: /etc/samba/smb.conf
+    marker: "# {mark} ANSIBLE MANAGED SHARE: {{ samba_share_name }}"
+    block: |
+      [{{ samba_share_name }}]
+         path = {{ samba_share_path }}
+         browseable = yes
+         read only = no
+         valid users = {{ samba_user }}
+         create mask = 0664
+         directory mask = 0775
+         hosts allow = {{ samba_allowed_subnets }}
+         hosts deny = 0.0.0.0/0
+  notify: Restart smbd
+
+- name: Check whether the Samba user already exists
+  # Samba keeps its OWN password db (separate from Linux logins). We only set the
+  # password if the user isn't in it yet — keeps the run idempotent.
+  ansible.builtin.command: pdbedit -L -u {{ samba_user }}
+  register: samba_user_check
+  changed_when: false
+  failed_when: false
+
+- name: Set the Samba password for {{ samba_user }}
+  # smbpasswd -s reads the password twice from stdin. no_log keeps it out of logs.
+  ansible.builtin.shell: >
+    printf '%s\n%s\n' '{{ samba_password }}' '{{ samba_password }}' | smbpasswd -s -a {{ samba_user }}
+  when: samba_user_check.rc != 0
+  no_log: true
+
+- name: Ensure smbd is enabled and running
+  ansible.builtin.systemd:
+    name: smbd
+    enabled: true
+    state: started
+
+- name: Samba — summary (how to connect)
+  ansible.builtin.debug:
+    msg:
+      - "✅ Samba share '{{ samba_share_name }}' → {{ samba_share_path }}  (user: {{ samba_user }})"
+      - "🐧 Linux:   sudo mount -t cifs //{{ ansible_host }}/{{ samba_share_name }} /mnt/hp -o username={{ samba_user }},uid=$(id -u),gid=$(id -g)"
+      - "🍎 Mac:     Finder → ⌘K → smb://{{ ansible_host }}/{{ samba_share_name }}"
+      - "🪟 Windows: \\\\{{ ansible_host }}\\{{ samba_share_name }}"
+      - "🔒 Allowed from: {{ samba_allowed_subnets }}  — never expose SMB (445) to the internet."
+      - "⚡ For Linux clients, NFS is lighter/faster — use SMB for Mac/Windows/phones."

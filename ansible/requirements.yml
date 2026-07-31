@@ -1,0 +1,8 @@
+---
+# Ansible collections this project needs. Install once on the control node with:
+#   ansible-galaxy collection install -r requirements.yml
+#
+# kubernetes.core provides the `helm`, `helm_repository`, and `k8s` modules —
+# the idiomatic way to drive Helm/Kubernetes from Ansible.
+collections:
+  - name: kubernetes.core
