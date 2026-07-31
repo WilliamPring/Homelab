@@ -19,3 +19,11 @@ helm_releases:
     values_file: helm-values/jellyfin.yaml
     enabled: true
     # version: "2.x.x"   # optional: pin the chart version for reproducibility
+
+  - name: vaultwarden
+    repo_name: vaultwarden
+    repo: https://guerzon.github.io/vaultwarden
+    chart: vaultwarden
+    namespace: apps
+    values_file: helm-values/vaultwarden.yaml
+    enabled: true
