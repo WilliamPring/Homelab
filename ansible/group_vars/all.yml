@@ -46,6 +46,11 @@ samba_allowed_subnets: "192.168.0.0/16 100.64.0.0/10"
 certmanager_enabled: false
 certmanager_version: "v1.17.2"     # matches the version your existing README used
 
+# ─── Immich (photos) — HEAVY, staged for the HP ──────────────────────────────────
+# One toggle controls BOTH the prereqs (Postgres + PVCs, Play 4) and the Helm release
+# (Play 5). Leave false until the HP + DAS storage exist — it needs real RAM + disk.
+immich_enabled: false
+
 # NOTE: the list of Helm apps to deploy lives in its own file — vars/helm_releases.yml
 # (loaded by the "Deploy Helm releases" play), not here, since it's deployment data
 # rather than a global host setting.

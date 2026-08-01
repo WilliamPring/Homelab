@@ -1,0 +1,28 @@
+---
+# roles/immich/tasks/main.yml — Immich PREREQUISITES (Postgres + library PVC + secret).
+# Runs on the master, BEFORE the Immich Helm release (Play 5). Gated by immich_enabled.
+# The Helm chart itself is deployed via vars/helm_releases.yml (the data-driven loop).
+
+- name: Copy the Immich prerequisites manifest to the master
+  ansible.builtin.copy:
+    src: immich-prereqs.yaml
+    dest: /etc/immich-prereqs.yaml
+    mode: "0600"          # contains the DB password secret
+
+- name: Apply the Immich prerequisites (Postgres, library PVC, secret)
+  ansible.builtin.command: k3s kubectl apply -f /etc/immich-prereqs.yaml
+  register: immich_prereqs
+  changed_when: "'created' in immich_prereqs.stdout or 'configured' in immich_prereqs.stdout"
+
+- name: Wait for the Immich Postgres to be ready
+  ansible.builtin.command: >
+    k3s kubectl rollout status deploy/immich-postgres -n media --timeout=180s
+  changed_when: false
+
+- name: Immich prereqs — summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Immich prerequisites applied (Postgres w/ vector extension, library PVC, DB secret)."
+      - "   The Immich chart (vars/helm_releases.yml) connects to: immich-postgres:5432, PVC immich-library."
+      - "⚠️  DB password is 'changeme' in the secret — change + vault it before real use."
+      - "🔍 sudo k3s kubectl get pods,pvc -n media"
