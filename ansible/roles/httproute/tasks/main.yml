@@ -1,0 +1,18 @@
+---
+# roles/httproute/tasks/main.yml — deploy ONE HTTPRoute (called in a loop from the
+# "Routes" play, once per entry in vars/routes.yml). Runs on the master.
+# Expects vars: route_name, route_namespace, route_hostname, route_service, route_port.
+
+- name: "Render the HTTPRoute for {{ route_name }}"
+  ansible.builtin.template:
+    src: httproute.yaml.j2
+    dest: "/etc/httproute-{{ route_name }}.yaml"
+
+- name: "Apply the HTTPRoute for {{ route_name }}"
+  ansible.builtin.command: "k3s kubectl apply -f /etc/httproute-{{ route_name }}.yaml"
+  register: httproute_apply
+  changed_when: "'created' in httproute_apply.stdout or 'configured' in httproute_apply.stdout"
+
+- name: "HTTPRoute summary — {{ route_name }}"
+  ansible.builtin.debug:
+    msg: "✅ {{ route_hostname }} → {{ route_service }}:{{ route_port }} (ns {{ route_namespace }})"

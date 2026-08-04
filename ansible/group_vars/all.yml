@@ -46,6 +46,12 @@ samba_allowed_subnets: "192.168.0.0/16 100.64.0.0/10"
 certmanager_enabled: false
 certmanager_version: "v1.17.2"     # matches the version your existing README used
 
+# ─── Gateway API (TLS ingress — the modern Ingress replacement, on Traefik) ──────
+# Requires certmanager_enabled: true (for the wildcard TLS cert). Set BOTH true to
+# bring up HTTPS ingress. Routes live in vars/routes.yml. See docs/gateway-api-plan.md.
+gateway_api_enabled: false
+gateway_api_version: "v1.2.0"      # Gateway API CRD release (keep compatible w/ Traefik)
+
 # ─── Immich (photos) — HEAVY, staged for the HP ──────────────────────────────────
 # One toggle controls BOTH the prereqs (Postgres + PVCs, Play 4) and the Helm release
 # (Play 5). Leave false until the HP + DAS storage exist — it needs real RAM + disk.
