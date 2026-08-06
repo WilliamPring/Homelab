@@ -1,0 +1,30 @@
+# ── Sandbox /etc/hosts entries ───────────────────────────────────────────────
+#
+# WHAT: maps the sandbox *.home.arpa hostnames to the k3s ingress node so your
+#       Arch box (the only machine that can reach the libvirt-NAT VMs) resolves
+#       them. .home.arpa is reserved/internal — no public DNS will ever answer
+#       it, so YOU provide the answer here.
+#
+# WHY /etc/hosts (not Pi-hole yet): the VMs live on libvirt NAT (192.168.122.x),
+#       reachable only from this host. /etc/hosts is checked BEFORE any DNS
+#       server (nsswitch: files → dns), so it works regardless of resolver
+#       (systemd-resolved / NetworkManager). Graduate to Pi-hole local DNS once
+#       you're on the HP + real LAN and want phones/other devices to resolve too.
+#
+# IP:   192.168.122.166 = the MASTER VM (where Traefik/Gateway listens on :443).
+#       Verify with:  sudo k3s kubectl get svc -n kube-system traefik
+#       ...and change the IP below if yours differs.
+#
+# APPLY (on the Arch box):
+#   sudo sh -c 'cat >> /etc/hosts' < ansible/sandbox-hosts.txt
+#   # (or just paste the lines below into /etc/hosts by hand)
+#
+# REMOVE later: delete these lines from /etc/hosts.
+# ─────────────────────────────────────────────────────────────────────────────
+
+192.168.122.166   vault.home.arpa
+192.168.122.166   jellyfin.home.arpa
+
+# Add more as you route them (must match a hostname in ansible/vars/routes.yml):
+# 192.168.122.166   pihole.home.arpa
+# 192.168.122.166   immich.home.arpa
