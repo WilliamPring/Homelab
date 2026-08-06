@@ -11,7 +11,7 @@
 #       (systemd-resolved / NetworkManager). Graduate to Pi-hole local DNS once
 #       you're on the HP + real LAN and want phones/other devices to resolve too.
 #
-# IP:   192.168.122.166 = the MASTER VM (where Traefik/Gateway listens on :443).
+# IP:   192.168.122.165 = the MASTER VM (where Traefik/Gateway listens on :443).
 #       Verify with:  sudo k3s kubectl get svc -n kube-system traefik
 #       ...and change the IP below if yours differs.
 #
@@ -22,9 +22,26 @@
 # REMOVE later: delete these lines from /etc/hosts.
 # ─────────────────────────────────────────────────────────────────────────────
 
-192.168.122.166   vault.home.arpa
-192.168.122.166   jellyfin.home.arpa
+# ── via the MASTER node ──────────────────────────────────────────────────────
+192.168.122.165   vault.home.arpa
+192.168.122.165   jellyfin.home.arpa
+
+# ── via the RASPBERRY PI / Rock 4b+ worker ───────────────────────────────────
+# Every k3s node runs the ingress load balancer (svclb), so Traefik also answers
+# HTTPS on the Pi's IP — same cert, same routes, different entry node. Point a
+# hostname here to reach the cluster through the Pi.
+#
+# ⚠️ Set <RASPBERRY_PI_IP> to the Pi's real address. Find it with:
+#      sudo virsh net-dhcp-leases default        # (if it's a libvirt VM)
+#      ip -4 addr show                            # (on the Pi itself)
+#      sudo k3s kubectl get nodes -o wide         # INTERNAL-IP of the worker
+#
+# NOTE: listing the SAME hostname on two IPs = DNS round-robin (redundancy, not
+#       real load balancing). Fine for a sandbox. Or give the Pi its own name.
+# <RASPBERRY_PI_IP>   vault.home.arpa
+# <RASPBERRY_PI_IP>   jellyfin.home.arpa
+# <RASPBERRY_PI_IP>   pi.home.arpa
 
 # Add more as you route them (must match a hostname in ansible/vars/routes.yml):
-# 192.168.122.166   pihole.home.arpa
-# 192.168.122.166   immich.home.arpa
+# 192.168.122.165   pihole.home.arpa
+# 192.168.122.165   immich.home.arpa
