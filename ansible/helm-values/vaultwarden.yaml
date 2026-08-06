@@ -11,6 +11,10 @@ database:
 # Let you create your account on first use. Set false AFTER you've signed up.
 signupsAllowed: true
 
+# The external URL Vaultwarden is served at (behind the Gateway/HTTPS). Needed so links,
+# WebSocket, and WebAuthn work correctly through the reverse proxy.
+domain: "https://vault.apps.williampring.ca"
+
 # ClusterIP + port-forward: the Vaultwarden web vault needs a secure context (HTTPS
 # or localhost), so plain-http NodePort can't log in anyway. Reach it with:
 #   sudo k3s kubectl -n apps port-forward svc/vaultwarden 8080:80  → http://localhost:8080
