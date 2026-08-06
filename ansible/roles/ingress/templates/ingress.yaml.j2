@@ -1,0 +1,28 @@
+# Rendered by the ingress role — one standard Kubernetes Ingress per app
+# (data-driven from vars/routes.yml). k3s's bundled Traefik serves Ingress out of
+# the box — NO Gateway API, NO HelmChartConfig. cert-manager auto-issues the TLS
+# cert from the self-signed homelab CA (homelab-ca-issuer, a ClusterIssuer).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ route_name }}
+  namespace: {{ route_namespace }}
+  annotations:
+    cert-manager.io/cluster-issuer: homelab-ca-issuer   # ingress-shim auto-creates the cert
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - "{{ route_hostname }}"
+      secretName: {{ route_name }}-tls        # cert-manager fills this in
+  rules:
+    - host: "{{ route_hostname }}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ route_service }}
+                port:
+                  number: {{ route_port }}

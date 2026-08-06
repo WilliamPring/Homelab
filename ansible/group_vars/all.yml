@@ -41,14 +41,16 @@ samba_password: "changeme"
 samba_allowed_subnets: "192.168.0.0/16 100.64.0.0/10"
 
 # ─── cert-manager (first Helm app — automated TLS certificates) ──────────────────
-# Deployed via the helm_app role (k3s HelmChart CRD). Off by default so it only
-# installs when you flip this to true. It's the foundation for real HTTPS ingress.
-certmanager_enabled: false
+# ON by default now: cert-manager + Traefik Ingress is the HTTPS path (Play 7).
+# cert-manager issues a per-app TLS cert from the self-signed homelab CA; k3s's
+# bundled Traefik serves standard Ingress with no extra config. Routes: vars/routes.yml.
+certmanager_enabled: true
 certmanager_version: "v1.17.2"     # matches the version your existing README used
 
-# ─── Gateway API (TLS ingress — the modern Ingress replacement, on Traefik) ──────
-# Requires certmanager_enabled: true (for the wildcard TLS cert). Set BOTH true to
-# bring up HTTPS ingress. Routes live in vars/routes.yml. See docs/gateway-api-plan.md.
+# ─── Gateway API (OPTIONAL / BACKUP routing path) ────────────────────────────────
+# The default HTTPS path is plain Traefik Ingress (above) — simpler and works out of
+# the box. Leave this false. Only flip to true if you specifically want to experiment
+# with Gateway API instead (roles/gateway_api + httproute). See docs/gateway-api-plan.md.
 gateway_api_enabled: false
 gateway_api_version: "v1.2.0"      # Gateway API CRD release (keep compatible w/ Traefik)
 
