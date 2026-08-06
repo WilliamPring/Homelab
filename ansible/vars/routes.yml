@@ -8,19 +8,19 @@
 routes:
   - name: jellyfin
     namespace: media
-    hostname: jellyfin.media.williampring.ca
+    hostname: jellyfin.home.arpa
     service: jellyfin        # the Service name (chart creates 'jellyfin')
     port: 8096
 
   - name: vaultwarden
     namespace: apps
-    hostname: vault.apps.williampring.ca
+    hostname: vault.home.arpa
     service: vaultwarden       # verify: kubectl get svc -n apps (chart names it 'vaultwarden')
     port: 80
 
   # Add more later, e.g.:
   # - name: pihole
   #   namespace: network
-  #   hostname: pihole.net.williampring.ca
+  #   hostname: pihole.home.arpa
   #   service: pihole-web
   #   port: 80

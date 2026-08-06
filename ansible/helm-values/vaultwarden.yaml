@@ -13,7 +13,7 @@ signupsAllowed: true
 
 # The external URL Vaultwarden is served at (behind the Gateway/HTTPS). Needed so links,
 # WebSocket, and WebAuthn work correctly through the reverse proxy.
-domain: "https://vault.apps.williampring.ca"
+domain: "https://vault.home.arpa"
 
 # ClusterIP + port-forward: the Vaultwarden web vault needs a secure context (HTTPS
 # or localhost), so plain-http NodePort can't log in anyway. Reach it with:
