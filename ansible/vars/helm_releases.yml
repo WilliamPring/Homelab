@@ -1,25 +1,12 @@
 ---
-# vars/helm_releases.yml — the list of Helm apps to deploy.
+# vars/helm_releases.yml — the list of Helm apps to deploy (loaded by the Vaultwarden play).
 #
-# Loaded ONLY by the "Deploy Helm releases" play (via vars_files) — it's app-deployment
-# data, not a global host setting, so it lives here instead of group_vars/all.yml.
-#
-# To ADD an app:   add a dict below + create helm-values/<name>.yaml
-# To DISABLE one:  set enabled: false
-# The playbook (Play 5) never needs editing.
+# To ADD a Helm app:  add a dict below + create helm-values/<name>.yaml
+# To DISABLE one:     set enabled: false
 #
 # Fields: name (release), repo_name, repo (url), chart, namespace, values_file,
 #         [version] (optional chart pin), [enabled] (default true).
 helm_releases:
-  - name: jellyfin
-    repo_name: jellyfin
-    repo: https://jellyfin.github.io/jellyfin-helm
-    chart: jellyfin
-    namespace: media
-    values_file: helm-values/jellyfin.yaml
-    enabled: false     # HELD — needs /mnt/media storage (DAS not set up yet)
-    # version: "2.x.x"   # optional: pin the chart version for reproducibility
-
   - name: vaultwarden
     repo_name: vaultwarden
     repo: https://guerzon.github.io/vaultwarden
@@ -27,13 +14,3 @@ helm_releases:
     namespace: apps
     values_file: helm-values/vaultwarden.yaml
     enabled: true
-
-  # Immich (photos). HEAVY — needs the prereqs role (Postgres + PVCs) applied first,
-  # and the HP + DAS storage. Controlled by immich_enabled (group_vars), off by default.
-  - name: immich
-    repo_name: immich
-    repo: https://immich-app.github.io/immich-charts
-    chart: immich
-    namespace: media
-    values_file: helm-values/immich.yaml
-    enabled: "{{ immich_enabled | default(false) }}"

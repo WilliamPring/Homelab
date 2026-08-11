@@ -1,6 +1,0 @@
----
-# roles/helm_app/defaults/main.yml
-# Defaults for the generic Helm-chart deployer. Override per-app in the play.
-helm_app_namespace: "default"   # where the chart's resources get installed
-helm_app_version: ""            # "" = latest; pin a version for reproducibility
-helm_app_values: ""             # inline Helm values (YAML string); "" = chart defaults

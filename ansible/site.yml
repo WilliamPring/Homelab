@@ -1,74 +1,52 @@
 ---
-# site.yml — the top-level playbook. Run this and it does the whole cluster.
+# site.yml — the homelab playbook. Minimal + clean.
 #
-#   ansible-playbook site.yml
+#   ansible-playbook site.yml --ask-become-pass
 #
 # A playbook is an ordered list of "plays". Each play targets a group of hosts
-# and applies a list of roles to them. Plays run top-to-bottom; within a play,
-# hosts are configured in parallel.
+# and applies roles/tasks to them, top to bottom.
 
 # ─── PLAY 1: Tailscale on every node ─────────────────────────────────────────
-# Runs first so remote access exists before we touch k3s. `become: true` means
-# every task runs as root (via sudo) on the target.
+# Runs first so remote access exists before k3s. become: true = run as root.
 - name: Install and connect Tailscale on all nodes
   hosts: k3s_cluster
   become: true
   roles:
     - tailscale
 
-# ─── PLAY 2: k3s control plane ───────────────────────────────────────────────
-# Only the single host in the [master] group. This install also produces the
-# cluster join-token, which we stash for the workers to use in Play 3.
+# ─── PLAY 2: k3s control plane (master) ──────────────────────────────────────
 - name: Install k3s control plane (server)
   hosts: master
   become: true
   roles:
     - k3s_server
 
-# ─── PLAY 3: k3s workers ─────────────────────────────────────────────────────
-# Runs on every host in [workers]. If that group is empty (single-node cluster),
-# this play simply matches no hosts and is skipped — no error.
+# ─── PLAY 3: k3s workers (agents) ────────────────────────────────────────────
+# Skipped automatically when [workers] is empty (single-node cluster).
 - name: Join k3s workers (agents) to the cluster
   hosts: workers
   become: true
   roles:
     - k3s_agent
 
-# ─── PLAY 4: Cluster apps ────────────────────────────────────────────────────
-# Each runs on the master and applies a manifest with `k3s kubectl`. Apps are
-# grouped into function namespaces (vaultwarden→apps, jellyfin→media).
-- name: Deploy cluster apps
+# ─── PLAY 4: SearXNG (privacy metasearch) ────────────────────────────────────
+# Hand-written manifest app (Deployment + Service + ConfigMap) → apps namespace.
+- name: Deploy SearXNG
   hosts: master
   become: true
   roles:
-    # Pi-hole is NO LONGER deployed into k3s — it runs standalone outside the cluster
-    # (its own LXC/VM), so DNS doesn't depend on the cluster being up. This matches the
-    # long-planned "move Pi-hole out of k3s" decision. The roles/pihole/ files are KEPT
-    # AS BACKUP but no longer applied. To re-enable in-cluster Pi-hole, re-add: - pihole
-    # Vaultwarden is now a Helm release (see vars/helm_releases.yml). Its hand-written
-    # manifest in roles/vaultwarden/files/ is KEPT AS BACKUP but no longer applied.
-    # SearXNG — privacy metasearch (light manifest app → apps ns, NodePort 30880).
-    - role: searxng
-      when: searxng_enabled | default(true)
-    # Immich PREREQUISITES (Postgres + library PVC + secret) — must run BEFORE the Immich
-    # Helm release in Play 5. Gated by immich_enabled (off until the HP exists).
-    - role: immich
-      when: immich_enabled | default(false)
-    # qBittorrent + Gluetun VPN sidecar (vpn namespace). Gated — needs the Mullvad secret.
-    - role: qbittorrent
-      when: qbittorrent_enabled | default(false)
+    - searxng
 
-# ─── PLAY 5: Helm releases (data-driven) ─────────────────────────────────────
-# Deploys every enabled entry in the `helm_releases` list (group_vars/all.yml) via
-# the helm_release role (kubernetes.core.helm). Add an app = add a dict there + a
-# values file in helm-values/. This play never changes.
-- name: Deploy Helm releases
+# ─── PLAY 5: Vaultwarden (Helm) ──────────────────────────────────────────────
+# Data-driven Helm: the app list lives in vars/helm_releases.yml (just Vaultwarden).
+# Access while learning:  sudo k3s kubectl -n apps port-forward svc/vaultwarden 8080:80
+- name: Deploy Vaultwarden (Helm release)
   hosts: master
   become: true
   vars_files:
-    - vars/helm_releases.yml      # the app list lives in its own file, not group_vars
+    - vars/helm_releases.yml
   tasks:
-    - name: Deploy Helm release          # per-app name shown via loop_control.label below
+    - name: Deploy Helm release
       ansible.builtin.include_role:
         name: helm_release
       vars:
@@ -83,77 +61,3 @@
       when: item.enabled | default(true)
       loop_control:
         label: "{{ item.name }}"
-
-# ─── PLAY 6: Host-level file sharing (Samba/SMB) ─────────────────────────────
-# NOT a k3s workload — Samba runs on the host (the master/HP) and shares the
-# storage folder over the network. Toggle with samba_enabled in group_vars.
-- name: Host file share (Samba/SMB)
-  hosts: master
-  become: true
-  roles:
-    - role: samba
-      when: samba_enabled | default(true)
-
-# ─── PLAY 7: TLS ingress — cert-manager + Traefik Ingress ────────────────────
-# The simple, reliable path: cert-manager (self-signed CA) issues a per-app TLS
-# cert, and k3s's BUNDLED Traefik serves standard Kubernetes Ingress out of the
-# box — no Gateway API, no HelmChartConfig, nothing to enable on Traefik.
-# Gated by certmanager_enabled. Routes are data-driven from vars/routes.yml.
-#
-# The Gateway API path (roles/gateway_api + httproute) is KEPT AS BACKUP and only
-# runs if you flip gateway_api_enabled: true. See docs/gateway-api-plan.md.
-- name: TLS ingress (cert-manager + Traefik Ingress)
-  hosts: master
-  become: true
-  vars_files:
-    - vars/routes.yml            # the route list (data-driven; shared by both paths)
-  roles:
-    # cert-manager via Helm — issues the TLS certs from the self-signed CA.
-    - role: helm_app
-      when: certmanager_enabled | default(false)
-      vars:
-        helm_app_name: cert-manager
-        helm_app_chart: cert-manager
-        helm_app_repo: https://charts.jetstack.io
-        helm_app_version: "{{ certmanager_version }}"
-        helm_app_namespace: cert-manager
-        helm_app_values: |
-          crds:
-            enabled: true
-    # Self-signed CA + issuers (homelab-ca-issuer ClusterIssuer).
-    - role: certmanager_issuer
-      when: certmanager_enabled | default(false)
-    # BACKUP / OPTIONAL: Gateway API foundation. Off unless gateway_api_enabled: true.
-    - role: gateway_api
-      when: gateway_api_enabled | default(false)
-  tasks:
-    # DEFAULT PATH — one Traefik Ingress per entry in vars/routes.yml (data-driven).
-    - name: Deploy Ingress
-      ansible.builtin.include_role:
-        name: ingress
-      vars:
-        route_name: "{{ item.name }}"
-        route_namespace: "{{ item.namespace }}"
-        route_hostname: "{{ item.hostname }}"
-        route_service: "{{ item.service }}"
-        route_port: "{{ item.port }}"
-      loop: "{{ routes | default([]) }}"
-      when: certmanager_enabled | default(false)
-      loop_control:
-        label: "{{ item.name }}"
-
-    # BACKUP PATH — Gateway API HTTPRoutes. Only when gateway_api_enabled: true.
-    - name: Deploy HTTPRoute (Gateway API — optional)
-      ansible.builtin.include_role:
-        name: httproute
-      vars:
-        route_name: "{{ item.name }}"
-        route_namespace: "{{ item.namespace }}"
-        route_hostname: "{{ item.hostname }}"
-        route_service: "{{ item.service }}"
-        route_port: "{{ item.port }}"
-      loop: "{{ routes | default([]) }}"
-      when: gateway_api_enabled | default(false)
-      loop_control:
-        label: "{{ item.name }}"
-
