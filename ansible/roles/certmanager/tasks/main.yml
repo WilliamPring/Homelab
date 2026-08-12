@@ -1,0 +1,23 @@
+---
+# roles/certmanager/tasks/main.yml — install cert-manager (the TLS cert robot).
+# Installs CRDs + controller in one shot from the official release manifest.
+# Runs on the master.
+
+- name: Install cert-manager (CRDs + controller)
+  ansible.builtin.command: >
+    k3s kubectl apply -f
+    https://github.com/cert-manager/cert-manager/releases/download/{{ cert_manager_version }}/cert-manager.yaml
+  register: cm_apply
+  changed_when: "'created' in cm_apply.stdout or 'configured' in cm_apply.stdout"
+
+- name: Wait for cert-manager deployments to be ready
+  ansible.builtin.command: "k3s kubectl -n cert-manager rollout status deploy/{{ item }} --timeout=180s"
+  loop:
+    - cert-manager
+    - cert-manager-webhook
+    - cert-manager-cainjector
+  changed_when: false
+
+- name: cert-manager — summary
+  ansible.builtin.debug:
+    msg: "✅ cert-manager {{ cert_manager_version }} installed → namespace 'cert-manager'"

@@ -1,0 +1,109 @@
+# Let's Encrypt ClusterIssuer (Cloudflare DNS-01) + Vaultwarden Ingress.
+#
+# ⚠️ PREREQUISITE — create the Cloudflare token secret ONCE, by hand (keeps it out
+#    of git). Use your "Edit zone DNS" token:
+#      sudo k3s kubectl create secret generic cloudflare-api-token \
+#        -n cert-manager --from-literal=api-token=<YOUR_CF_TOKEN>
+#
+# DNS-01 validates via a Cloudflare TXT record — so the cert issues even though
+# Vaultwarden is only reachable over Tailscale (no public exposure needed).
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: william.pring@telus.com
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+---
+# Ingress for Vaultwarden. The cert-manager annotation makes ingress-shim
+# auto-create the cert (into vault-tls) from the ClusterIssuer above.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vaultwarden
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - vault.williampring.ca
+      secretName: vault-tls
+  rules:
+    - host: vault.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vaultwarden       # guerzon chart names the service 'vaultwarden'
+                port:
+                  number: 80
+---
+# Ingress for degoog (search aggregator). Reachable at https://search.williampring.ca
+# via Tailscale. NOTE: it's Tailscale-only (not public), so DEGOOG_SETTINGS_PASSWORDS
+# can stay unset for a SOLO tailnet — but set it if you share the tailnet, since the
+# extension system runs code.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: degoog
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - search.williampring.ca
+      secretName: degoog-tls
+  rules:
+    - host: search.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: degoog
+                port:
+                  number: 4444
+---
+# Ingress for SearXNG (privacy metasearch — the "hardened" one).
+# Reachable at https://private.williampring.ca via Tailscale.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: searxng
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - private.williampring.ca
+      secretName: searxng-tls
+  rules:
+    - host: private.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: searxng
+                port:
+                  number: 8080

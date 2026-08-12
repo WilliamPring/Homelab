@@ -1,0 +1,27 @@
+---
+# roles/tls_ingress/tasks/main.yml — Let's Encrypt ClusterIssuer + Vaultwarden Ingress.
+# Runs on the master.
+#
+# ⚠️ REQUIRES the cloudflare-api-token secret in the cert-manager namespace (once):
+#   sudo k3s kubectl create secret generic cloudflare-api-token \
+#     -n cert-manager --from-literal=api-token=<YOUR_CF_TOKEN>
+
+- name: Copy the TLS manifest (issuer + ingress) to the master
+  ansible.builtin.copy:
+    src: tls.yaml
+    dest: /etc/tls.yaml
+
+- name: Apply the ClusterIssuer + Vaultwarden Ingress
+  ansible.builtin.command: k3s kubectl apply -f /etc/tls.yaml
+  register: tls_apply
+  changed_when: "'created' in tls_apply.stdout or 'configured' in tls_apply.stdout"
+
+- name: TLS — summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Let's Encrypt ClusterIssuer + Ingresses (Vaultwarden, degoog, SearXNG) applied"
+      - "🔗 https://vault.williampring.ca (vaultwarden)"
+      - "🔗 https://search.williampring.ca (degoog)  ·  https://private.williampring.ca (searxng)"
+      - "⏳ watch the certs:  sudo k3s kubectl get certificate -n apps -w   (want READY=True)"
+      - "📡 Cloudflare DNS: add A records vault + search + private → the node's Tailscale IP (grey cloud)."
+      - "⚠️ Needs the cloudflare-api-token secret in the cert-manager namespace (see above)."
