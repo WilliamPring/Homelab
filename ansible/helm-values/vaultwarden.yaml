@@ -4,9 +4,20 @@
 image:
   repository: vaultwarden/server
 
-# Embedded SQLite — no external database server needed (that's what keeps it light).
+# External Postgres (LXC @ 192.168.68.7) — the DB (your passwords) lives OUTSIDE the
+# cluster, so it survives cluster rebuilds and gets backed up to Backblaze B2.
+# The DB password comes from a k8s Secret (create it BY HAND, kept out of git):
+#   sudo k3s kubectl create secret generic vaultwarden-db -n apps \
+#     --from-literal=db-password='<THE_POSTGRES_PASSWORD_FROM_THE_SCRIPT>'
+# ⚠️ VERIFY-ON-DEPLOY: confirm these key names against the guerzon chart's values.yaml.
 database:
-  type: default
+  type: postgresql
+  host: "192.168.68.7"
+  port: 5432
+  username: "vaultwarden"
+  dbName: "vaultwarden"
+  existingSecret: "vaultwarden-db"
+  existingSecretKey: "db-password"
 
 # Let you create your account on first use. Set false AFTER you've signed up.
 signupsAllowed: true
