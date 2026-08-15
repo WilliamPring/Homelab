@@ -1,0 +1,42 @@
+# Helm values for Immich (immich-app/immich-charts).
+#
+# ⚠️ VERIFY-ON-DEPLOY: Immich's chart is complex (bjw-s based). These wire it to the
+# external Postgres + library PVC from roles/immich/files/immich-prereqs.yaml. The
+# env/persistence/valkey keys are the most likely to need a small tuning pass on the
+# first real deploy — that's normal for Immich-on-k8s.
+
+# Pin ALL Immich pods to the labeled worker (heavy: ML + big storage). The playbook
+# labels the worker node 'immich-node=true'. (bjw-s chart convention — verify on deploy.)
+defaultPodOptions:
+  nodeSelector:
+    immich-node: "true"
+
+# Point Immich at the pre-created library PVC (the chart can't auto-create it).
+immich:
+  persistence:
+    library:
+      existingClaim: immich-library
+
+# Let the chart deploy its bundled Valkey (Redis) and wire it up automatically.
+valkey:
+  enabled: true
+
+# Connect to the external vector Postgres from immich-prereqs.yaml.
+env:
+  DB_HOSTNAME: immich-postgres
+  DB_USERNAME: immich
+  DB_DATABASE_NAME: immich
+  DB_PASSWORD:
+    valueFrom:
+      secretKeyRef:
+        name: immich-db
+        key: password
+
+# Expose the web/API on NodePort for now (TLS Ingress later, like the other apps).
+server:
+  service:
+    main:
+      type: NodePort
+      ports:
+        http:
+          nodePort: 30041

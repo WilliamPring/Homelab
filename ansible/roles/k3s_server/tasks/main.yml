@@ -4,6 +4,12 @@
 # Installs the k3s control plane on the master and captures the join-token so the
 # workers (Play 3) can join. Runs only on the [master] host.
 
+- name: Install nfs-common (NFS client — needed for NFS-backed PVs, e.g. Immich's library)
+  ansible.builtin.apt:
+    name: nfs-common
+    state: present
+    update_cache: true
+
 - name: Check whether k3s is already installed
   ansible.builtin.command: which k3s
   register: k3s_installed

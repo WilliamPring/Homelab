@@ -14,3 +14,13 @@ helm_releases:
     namespace: apps
     values_file: helm-values/vaultwarden.yaml
     enabled: true
+
+  # Immich (photos). HEAVY — needs the prereqs role (vector Postgres + library PVC)
+  # applied first (Play 5), the 32GB worker joined, and immich_db_password set.
+  - name: immich
+    repo_name: immich
+    repo: https://immich-app.github.io/immich-charts
+    chart: immich
+    namespace: media
+    values_file: helm-values/immich.yaml
+    enabled: "{{ immich_enabled | default(false) }}"

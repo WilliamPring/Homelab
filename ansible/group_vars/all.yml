@@ -13,6 +13,13 @@ k3s_agent_args: ""         # extra flags for the k3s AGENT install (workers)
 # your LAN/k3s DNS.
 tailscale_up_args: "--accept-dns=false"
 
+# ─── Immich (photos) — HEAVY, pinned to the 32GB worker ─────────────────────────
+# One toggle controls BOTH the prereqs (vector Postgres + library PVC, Play 5) AND
+# the Immich Helm release (Play 6). Requires: the 32GB worker joined, and
+# immich_db_password set in vars/secrets.local.yaml. Library is on local-path (node
+# disk) until the DAS exists.
+immich_enabled: true
+
 # ─── TLS (Let's Encrypt via Cloudflare DNS-01) ───────────────────────────────
 # Real HTTPS for apps (Vaultwarden → https://vault.williampring.ca), so the
 # Bitwarden mobile app can connect. Set true to enable Play 6.
