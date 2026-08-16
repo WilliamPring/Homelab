@@ -17,11 +17,13 @@ helm_releases:
 
   # Immich (photos). HEAVY — needs the prereqs role (vector Postgres + library PVC)
   # applied first (Play 5), the 32GB worker joined, and immich_db_password set.
+  # NOTE: OCI chart — the old HTTP repo (immich-app.github.io) is dead. 'repo' is the
+  # full oci:// chart URL; repo_name/chart are unused for OCI (helm_release handles it).
+  # No 'version' → uses the latest chart (default).
   - name: immich
     repo_name: immich
-    repo: https://immich-app.github.io/immich-charts
+    repo: oci://ghcr.io/immich-app/immich-charts/immich
     chart: immich
-    version: "0.13.1"          # chart targeting Immich v3.0.0 (pin for reproducibility)
     namespace: media
     values_file: helm-values/immich.yaml
     enabled: "{{ immich_enabled | default(false) }}"

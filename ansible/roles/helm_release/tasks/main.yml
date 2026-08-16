@@ -33,17 +33,21 @@
     executable: /bin/bash
   when: helm_check.rc != 0
 
+# HTTP repos need `helm repo add`; OCI charts (oci://…) do NOT — you reference the
+# full oci:// URL directly. So only add a repo for non-OCI entries.
 - name: "Add the Helm repo ({{ helm_repo_name }})"
   kubernetes.core.helm_repository:
     name: "{{ helm_repo_name }}"
     repo_url: "{{ helm_repo }}"
+  when: "'oci://' not in helm_repo"
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
 
 - name: "Install/upgrade the {{ helm_name }} release"
   kubernetes.core.helm:
     name: "{{ helm_name }}"
-    chart_ref: "{{ helm_repo_name }}/{{ helm_chart }}"
+    # OCI: chart_ref IS the full oci:// URL. HTTP: it's <repo_name>/<chart>.
+    chart_ref: "{{ helm_repo if 'oci://' in helm_repo else (helm_repo_name ~ '/' ~ helm_chart) }}"
     chart_version: "{{ helm_chart_version | default(omit) }}"
     release_namespace: "{{ helm_namespace }}"
     create_namespace: true
