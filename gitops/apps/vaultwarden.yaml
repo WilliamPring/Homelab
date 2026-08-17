@@ -1,0 +1,43 @@
+# Argo CD Application for Vaultwarden — your FIRST HELM app under GitOps.
+#
+# Unlike searxng/degoog (raw manifests via `path`), a Helm app pulls a CHART. We use the
+# MULTI-SOURCE pattern so the chart comes from the guerzon Helm repo while the VALUES live
+# in your git repo (gitops/vaultwarden/values.yaml) — clean + editable like everything else.
+#
+#   source 1  → the CHART (guerzon repo)   + valueFiles pointing at $values/...
+#   source 2  → YOUR repo, ref: values     (supplies the values file; applies nothing)
+#
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/vaultwarden.yaml
+# Manual sync — Argo shows OutOfSync and WAITS until you click Sync.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vaultwarden
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    # 1) The Helm chart from the guerzon HTTP repo.
+    - repoURL: https://guerzon.github.io/vaultwarden
+      chart: vaultwarden
+      # Always the LATEST chart version (user's choice — not pinned).
+      # ⚠️ SAFE ONLY because syncPolicy stays MANUAL below: Argo resolves "latest" but
+      #    won't apply it until YOU click Sync. Do NOT add an `automated:` block here, or
+      #    Vaultwarden would auto-upgrade unattended (risky — chart bumps can migrate the DB).
+      #    BACK UP the Postgres LXC before any Sync that pulls a newer version.
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          - $values/gitops/vaultwarden/values.yaml
+    # 2) Your repo — ONLY to provide the values file (ref, no path → applies nothing).
+    - repoURL: https://github.com/WilliamPring/Homelab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apps
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+  #
+  # When you TRUST it, add an 'automated' block alongside syncOptions (prune + selfHeal).
