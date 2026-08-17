@@ -1,0 +1,39 @@
+# Argo CD Application for SearXNG — your FIRST app under GitOps.
+#
+# You apply THIS file by hand, ONCE:
+#   sudo k3s kubectl apply -f gitops/apps/searxng.yaml
+#
+# It tells Argo: "watch gitops/searxng/ in my repo and represent it as an app called
+# searxng." It does NOT touch the cluster on its own — syncPolicy is MANUAL (empty),
+# so Argo only SHOWS in-sync / out-of-sync until YOU click Sync (UI) or run:
+#   argocd app sync searxng        (CLI, later)
+#
+# This file lives in gitops/apps/ — OUTSIDE gitops/searxng/ — on purpose, so Argo isn't
+# syncing its own Application manifest.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: searxng
+  namespace: argocd            # Argo Applications always live in the argocd namespace
+spec:
+  project: default
+  source:
+    # ⚠️ If your GitHub repo is PRIVATE, Argo needs credentials first (see README).
+    # For a public repo this HTTPS URL just works.
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/searxng       # the folder Argo applies (all yaml in it)
+  destination:
+    server: https://kubernetes.default.svc   # this same cluster
+    namespace: apps
+  # ── MANUAL sync. Argo does NOTHING automatically. ────────────────────────────────
+  syncPolicy: {}
+  #
+  # When you TRUST it and want hands-off, replace the line above with:
+  #   syncPolicy:
+  #     automated:
+  #       prune: true        # delete resources you remove from git
+  #       selfHeal: true     # revert manual/drifted changes back to git
+  #     syncOptions:
+  #       - CreateNamespace=true
+  # ─────────────────────────────────────────────────────────────────────────────────

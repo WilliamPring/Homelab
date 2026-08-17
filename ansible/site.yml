@@ -29,15 +29,18 @@
   roles:
     - k3s_agent
 
-# ─── PLAY 4: Search apps (SearXNG + degoog — comparing the two) ───────────────
+# ─── PLAY 4: Search apps (degoog) ─────────────────────────────────────────────
 # Hand-written manifest apps → apps namespace.
-#   SearXNG → 30880 (metasearch — aggregates many engines; stateless)
+#   SearXNG → 30880 (metasearch) — NOW MANAGED BY ARGO CD, not Ansible.
+#     See gitops/searxng/ + gitops/apps/searxng.yaml. The searxng role is disabled
+#     below (one-owner rule: don't let Ansible AND Argo fight over the same resources).
+#     To move it back to Ansible, re-add `- searxng` here and delete the Argo Application.
 #   degoog  → 30882 (search aggregator + plugin system; has a PVC + settings password)
 - name: Deploy search apps
   hosts: master
   become: true
   roles:
-    - searxng
+    # - searxng   # ← moved to GitOps (Argo CD). See gitops/README.md.
     - degoog
 
 # ─── PLAY 5: Immich prerequisites (vector Postgres + library PVC) ─────────────
