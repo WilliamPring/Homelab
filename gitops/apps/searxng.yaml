@@ -26,10 +26,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc   # this same cluster
     namespace: apps
-  # ── MANUAL sync. Argo does NOTHING automatically. ────────────────────────────────
-  syncPolicy: {}
+  # ── MANUAL sync. Argo does NOTHING automatically until YOU click Sync. ────────────
+  # CreateNamespace=true → Argo creates the 'apps' ns if missing, so we DON'T ship a
+  # Namespace resource in gitops/searxng/ (it's shared with degoog/vaultwarden — no
+  # single app should own it).
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
   #
-  # When you TRUST it and want hands-off, replace the line above with:
+  # When you TRUST it and want hands-off, ADD an 'automated' block alongside:
   #   syncPolicy:
   #     automated:
   #       prune: true        # delete resources you remove from git

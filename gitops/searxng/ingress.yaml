@@ -1,0 +1,29 @@
+# Ingress → https://private.williampring.ca. cert-manager auto-issues searxng-tls from
+# the 'letsencrypt' ClusterIssuer (Cloudflare DNS-01). That ClusterIssuer + the
+# cloudflare-api-token secret stay INFRA (Ansible tls_ingress role) — shared cluster-wide.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: searxng
+  namespace: apps
+  labels:
+    app: searxng
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - private.williampring.ca
+      secretName: searxng-tls
+  rules:
+    - host: private.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: searxng
+                port:
+                  number: 8080

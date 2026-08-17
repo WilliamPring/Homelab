@@ -12,12 +12,24 @@ gitops/   → apps Argo manages from git    (Argo syncs; starts MANUAL)
 ## Folder layout
 ```
 gitops/
-├── apps/            ← Argo "Application" files (you kubectl apply these by hand)
+├── apps/                 ← Argo "Application" files (you kubectl apply these by hand)
 │   └── searxng.yaml
-└── searxng/         ← the actual app manifests Argo watches
-    └── searxng.yaml
+└── searxng/              ← the app manifests Argo watches — SPLIT ONE FILE PER KIND
+    ├── configmap.yaml
+    ├── deployment.yaml
+    ├── service.yaml
+    └── ingress.yaml
 ```
-Add an app later = new `<app>/` folder + new `apps/<app>.yaml`. That's it.
+Add an app later = new `<app>/` folder (one file per resource) + new `apps/<app>.yaml`.
+
+**Conventions (keep every app consistent):**
+- **One file per resource, named by kind** (`deployment.yaml`, `service.yaml`, …). The
+  filename tells you what's inside; Argo applies every `.yaml` in the folder regardless.
+- **Group a tightly-bound sub-component** into one file (e.g. Valkey's Deployment+Service+PVC
+  → `valkey.yaml`).
+- **No `Namespace` resource in app folders** — shared namespaces (`apps`) aren't owned by
+  one app. The Application creates it via `syncOptions: [CreateNamespace=true]` instead.
+- **No numeric prefixes** (`01-…`) — Argo orders resources itself (sync waves).
 
 ---
 
