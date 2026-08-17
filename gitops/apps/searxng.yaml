@@ -28,8 +28,7 @@ spec:
     namespace: apps
   # ── MANUAL sync. Argo does NOTHING automatically until YOU click Sync. ────────────
   # CreateNamespace=true → Argo creates the 'apps' ns if missing, so we DON'T ship a
-  # Namespace resource in gitops/searxng/ (it's shared with degoog/vaultwarden — no
-  # single app should own it).
+  # Namespace resource in gitops/searxng/
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
