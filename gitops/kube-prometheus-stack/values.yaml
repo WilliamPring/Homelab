@@ -52,6 +52,18 @@ nodeExporter:
 kube-state-metrics:
   enabled: true
 
+# ── trim k3s noise: k3s bundles the control plane into one process and doesn't expose
+#    these separately, so scraping them just yields "down" targets. Disable them.
+#    (kubelet, coreDns, kube-apiserver DO work on k3s — left enabled by default.)
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
 # ── Prometheus itself — modest for a homelab ────────────────────────────────────────
 prometheus:
   prometheusSpec:
