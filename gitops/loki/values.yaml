@@ -7,7 +7,62 @@
 #   • chunksCache (memcached) defaults to ~9.6 GB RAM → DISABLED
 #   • the docs example bundles MinIO for object storage → we use filesystem instead (no MinIO)
 
-deploymentMode: Monolithic
+# deploymentMode: Monolithic
+
+# loki:
+#   auth_enabled: false
+#   commonConfig:
+#     replication_factor: 1
+#   schemaConfig:
+#     configs:
+#       - from: "2024-04-01"
+#         store: tsdb
+#         object_store: filesystem     # matches storage.type below (no MinIO/S3)
+#         schema: v13
+#         index:
+#           prefix: loki_index_
+#           period: 24h
+#   storage:
+#     type: filesystem
+#   limits_config:
+#     allow_structured_metadata: true  # required for Loki 3.x + schema v13
+#     volume_enabled: true
+#     # retention_period: 168h         # 7d — needs compactor.retention_enabled too; add later
+
+# singleBinary:
+#   replicas: 1
+#   persistence:
+#     enabled: true
+#     storageClass: local-path         # node disk; swap to B2 (object_store: s3) later
+#     size: 10Gi
+
+# # ── keep it lean: RAM caches + gateway/canary/test OFF ──────────────────────────────
+# chunksCache:
+#   enabled: false      # ⚠️ the ~9.6GB memcached — MUST stay off
+# resultsCache:
+#   enabled: false
+# lokiCanary:
+#   enabled: false
+# test:
+#   enabled: false
+# gateway:
+#   enabled: false      # Alloy + Grafana talk to the 'loki' service directly (:3100)
+
+# # ── zero out every non-monolithic component (mirrors Grafana's docs example) ─────────
+# backend:       { replicas: 0 }
+# read:          { replicas: 0 }
+# write:         { replicas: 0 }
+# ingester:      { replicas: 0 }
+# querier:       { replicas: 0 }
+# queryFrontend: { replicas: 0 }
+# queryScheduler:{ replicas: 0 }
+# distributor:   { replicas: 0 }
+# compactor:     { replicas: 0 }
+# indexGateway:  { replicas: 0 }
+# bloomPlanner:  { replicas: 0 }
+# bloomBuilder:  { replicas: 0 }
+# bloomGateway:  { replicas: 0 }
+deploymentMode: SingleBinary
 
 loki:
   auth_enabled: false
@@ -17,7 +72,7 @@ loki:
     configs:
       - from: "2024-04-01"
         store: tsdb
-        object_store: filesystem     # matches storage.type below (no MinIO/S3)
+        object_store: filesystem
         schema: v13
         index:
           prefix: loki_index_
@@ -25,40 +80,12 @@ loki:
   storage:
     type: filesystem
   limits_config:
-    allow_structured_metadata: true  # required for Loki 3.x + schema v13
+    allow_structured_metadata: true
     volume_enabled: true
-    # retention_period: 168h         # 7d — needs compactor.retention_enabled too; add later
 
 singleBinary:
   replicas: 1
   persistence:
     enabled: true
-    storageClass: local-path         # node disk; swap to B2 (object_store: s3) later
+    storageClass: local-path
     size: 10Gi
-
-# ── keep it lean: RAM caches + gateway/canary/test OFF ──────────────────────────────
-chunksCache:
-  enabled: false      # ⚠️ the ~9.6GB memcached — MUST stay off
-resultsCache:
-  enabled: false
-lokiCanary:
-  enabled: false
-test:
-  enabled: false
-gateway:
-  enabled: false      # Alloy + Grafana talk to the 'loki' service directly (:3100)
-
-# ── zero out every non-monolithic component (mirrors Grafana's docs example) ─────────
-backend:       { replicas: 0 }
-read:          { replicas: 0 }
-write:         { replicas: 0 }
-ingester:      { replicas: 0 }
-querier:       { replicas: 0 }
-queryFrontend: { replicas: 0 }
-queryScheduler:{ replicas: 0 }
-distributor:   { replicas: 0 }
-compactor:     { replicas: 0 }
-indexGateway:  { replicas: 0 }
-bloomPlanner:  { replicas: 0 }
-bloomBuilder:  { replicas: 0 }
-bloomGateway:  { replicas: 0 }
