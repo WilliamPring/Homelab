@@ -1,0 +1,43 @@
+# Argo CD Application for Immich — an OCI Helm chart + values from git (multi-source).
+#
+# ⚠️ SYNC 'immich-prereqs' FIRST (vector Postgres + library PVC must exist).
+#
+#   source 1  → the OCI Helm CHART (ghcr.io registry) + valueFiles pointing at $values/...
+#   source 2  → YOUR repo, ref: values  (supplies the values file; applies nothing)
+#
+# OCI NOTE: unlike an HTTP Helm repo, repoURL is the OCI registry path WITHOUT the oci://
+# scheme and WITHOUT the chart name; `chart` is the chart name. If Argo errors that OCI
+# isn't enabled, register the repo once (UI: Settings → Repositories → Connect repo, type
+# Helm, URL ghcr.io/immich-app/immich-charts, Enable OCI = true).
+#
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/immich.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: immich
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    # 1) The Immich chart from the OCI registry.
+    - repoURL: ghcr.io/immich-app/immich-charts
+      chart: immich
+      # ⚠️ PIN to the chart version you ALREADY have installed, so adoption doesn't trigger
+      #    a surprise chart change. Find it on the master:
+      #      sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm list -n media
+      #    CHART column shows e.g. "immich-0.9.3" → set targetRevision: "0.9.3".
+      #    (Immich is DB-migration-sensitive — pinning is safer than "*" here.)
+      targetRevision: "REPLACE-WITH-INSTALLED-CHART-VERSION"
+      helm:
+        valueFiles:
+          - $values/gitops/immich/values.yaml
+    # 2) Your repo — ONLY to provide the values file (ref, no path → applies nothing).
+    - repoURL: https://github.com/WilliamPring/Homelab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
