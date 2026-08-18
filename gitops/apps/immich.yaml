@@ -22,12 +22,13 @@ spec:
     # 1) The Immich chart from the OCI registry.
     - repoURL: ghcr.io/immich-app/immich-charts
       chart: immich
-      # ⚠️ PIN to the chart version you ALREADY have installed, so adoption doesn't trigger
-      #    a surprise chart change. Find it on the master:
-      #      sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm list -n media
-      #    CHART column shows e.g. "immich-0.9.3" → set targetRevision: "0.9.3".
-      #    (Immich is DB-migration-sensitive — pinning is safer than "*" here.)
-      targetRevision: "REPLACE-WITH-INSTALLED-CHART-VERSION"
+      # Always the LATEST chart (user's choice — not pinned), matching the old Ansible setup.
+      # ⚠️ SAFE ONLY because syncPolicy stays MANUAL below: Argo resolves "latest" but won't
+      #    apply it until YOU click Sync. Do NOT add an `automated:` block.
+      #    NOTE: values.yaml has NO image.tag → Immich runs the chart default appVersion
+      #    (v3.0.0). If the cluster is on 3.1, syncing this DOWNGRADES to 3.0.0 — see the
+      #    downgrade warning in values.yaml. SNAPSHOT the worker before any Sync.
+      targetRevision: "*"
       helm:
         valueFiles:
           - $values/gitops/immich/values.yaml
