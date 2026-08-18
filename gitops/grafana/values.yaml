@@ -1,0 +1,40 @@
+# Grafana (grafana/grafana chart) — the log/metrics UI. GitOps copy (fed via valueFiles).
+# Loki datasource is pre-wired, so logs are queryable the moment it starts.
+
+# Admin creds from a hand-made secret (out of git), like vaultwarden-admin. Create it first:
+#   sudo k3s kubectl create secret generic grafana-admin -n monitoring \
+#     --from-literal=admin-user=admin --from-literal=admin-password='YOURPASSWORD'
+admin:
+  existingSecret: grafana-admin
+  userKey: admin-user
+  passwordKey: admin-password
+
+# Keep dashboards/settings across pod restarts (small SQLite PVC).
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 2Gi
+
+# Pre-provision the Loki datasource → no manual "Add data source" clicking.
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki.monitoring.svc.cluster.local:3100
+        isDefault: true
+
+# Expose at https://grafana.williampring.ca (cert-manager issues grafana-tls).
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - grafana.williampring.ca
+  tls:
+    - hosts:
+        - grafana.williampring.ca
+      secretName: grafana-tls

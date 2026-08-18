@@ -82,7 +82,9 @@ See [`gitops/README.md`](gitops/README.md) for the full workflow.
 ## Docs
 
 - [`docs/proxmox-install.md`](docs/proxmox-install.md) — Proxmox VE install walkthrough
+- [`docs/argocd.md`](docs/argocd.md) — Argo CD / GitOps (install, expose, login)
 - [`docs/vaultwarden.md`](docs/vaultwarden.md) · [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) — per-app guides
+- [`docs/logging.md`](docs/logging.md) — Loki + Alloy + Grafana logging stack
 - [`docs/cheatsheet.md`](docs/cheatsheet.md) — everyday kubectl / Ansible commands
 - [`ansible/LEARN.md`](ansible/LEARN.md) — Ansible concepts, learning notes
 
