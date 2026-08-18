@@ -29,21 +29,22 @@
   roles:
     - k3s_agent
 
-# ─── PLAY 5: Immich prerequisites (vector Postgres + library PVC) ─────────────
-# Immich's Helm chart needs a special vector Postgres + a library PVC it can't create
-# itself. Runs BEFORE the Helm releases (Play 6). Gated by immich_enabled; also labels
-# the 32GB worker node so all Immich pods pin there.
-- name: Immich prerequisites
+# ─── PLAY 5: Immich INFRA (immich-db secret + worker node label) ─────────────
+# Immich's MANIFESTS + chart are now on GitOps (Argo CD). This play only ensures the
+# out-of-git bits the GitOps manifests reference: the immich-db Secret + the immich-node
+# label on the 32GB worker. Gated by immich_enabled. See gitops/apps/immich*.yaml.
+- name: Immich infra (secret + node label)
   hosts: master
   become: true
   roles:
     - role: immich
       when: immich_enabled | default(false)
 
-# ─── PLAY 6: Helm releases (Vaultwarden + Immich) ────────────────────────────
-# Data-driven Helm from vars/helm_releases.yml. Access Vaultwarden while learning:
-#   sudo k3s kubectl -n apps port-forward svc/vaultwarden 8080:80
-- name: Deploy Helm releases
+# ─── PLAY 6: App secrets (infra) ─────────────────────────────────────────────
+# All apps are on GitOps now, so vars/helm_releases.yml is EMPTY and the Helm loop below
+# is dormant (kept for any future infra Helm chart). What this play still does: create the
+# vaultwarden-db Secret (the out-of-git Postgres URI Vaultwarden's GitOps app references).
+- name: App secrets + (dormant) Helm releases
   hosts: master
   become: true
   vars_files:

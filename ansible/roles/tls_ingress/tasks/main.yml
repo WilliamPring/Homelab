@@ -19,9 +19,9 @@
 - name: TLS — summary
   ansible.builtin.debug:
     msg:
-      - "✅ Let's Encrypt ClusterIssuer + Ingresses (Vaultwarden, degoog, SearXNG) applied"
-      - "🔗 https://vault.williampring.ca (vaultwarden)"
-      - "🔗 https://search.williampring.ca (degoog)  ·  https://private.williampring.ca (searxng)"
-      - "⏳ watch the certs:  sudo k3s kubectl get certificate -n apps -w   (want READY=True)"
-      - "📡 Cloudflare DNS: add A records vault + search + private → the node's Tailscale IP (grey cloud)."
+      - "✅ Let's Encrypt ClusterIssuer + Ingresses (Vaultwarden, Immich) applied"
+      - "🔗 https://vault.williampring.ca (vaultwarden)  ·  https://immich.williampring.ca (immich)"
+      - "ℹ️  SearXNG + degoog Ingresses are on GitOps (Argo) now — not managed here."
+      - "⏳ watch the certs:  sudo k3s kubectl get certificate -A -w   (want READY=True)"
+      - "📡 Cloudflare DNS: add A records vault + immich → the node's Tailscale IP (grey cloud)."
       - "⚠️ Needs the cloudflare-api-token secret in the cert-manager namespace (see above)."

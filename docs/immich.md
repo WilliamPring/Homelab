@@ -27,17 +27,44 @@ iPhone / browser
 
 ---
 
-## Deployment (Ansible)
-| Piece | File |
-|-------|------|
-| Prereqs (vector Postgres + library NFS PV + DB secret + worker label) | `roles/immich/` |
-| Helm chart values (DB env, valkey, nodeSelector) | `helm-values/immich.yaml` |
-| Helm release (gated) | `vars/helm_releases.yml` |
-| Toggle | `group_vars/all.yml` → `immich_enabled: true` |
-| DB password (gitignored) | `vars/secrets.local.yaml` → `immich_db_password` |
-| Ingress (remote access) | `roles/tls_ingress/files/tls.yaml` |
+## Deployment (GitOps — Argo CD)
 
-Deploy: set `immich_db_password` in `vars/secrets.local.yaml`, then `ansible-playbook site.yml`.
+Immich is deployed by **Argo CD**, split into **two Applications** (mirrors the prereqs +
+chart split, and lets Postgres sync before Immich):
+
+| Argo Application | Source | What it deploys |
+|---|---|---|
+| `immich-prereqs` | `gitops/immich/prereqs/` (raw manifests) | vector Postgres (Deployment/PVC/Service) + NFS library PV/PVC |
+| `immich` | OCI chart `ghcr.io/immich-app/immich-charts` + `gitops/immich/values.yaml` | immich-server, machine-learning, valkey |
+
+**Chart/version:** `targetRevision: "*"` (latest chart). `values.yaml` has **no `image.tag`**
+→ runs the chart default appVersion **v3.0.0**. (The chart lags Immich releases: even the
+latest chart still advertises v3.0.0. To run a newer Immich, add `image.tag: vX.Y.Z`.)
+
+### What stays OUT of git (must already exist)
+| Item | How | Check |
+|---|---|---|
+| `immich-db` Secret (Postgres password) | hand/Ansible-managed | `kubectl get secret immich-db -n media` |
+| node label `immich-node=true` | `kubectl label node k3s-worker-01 immich-node=true` | `kubectl get node k3s-worker-01 --show-labels \| grep immich-node` |
+| Ingress `immich.williampring.ca` | still in Ansible `tls_ingress` (deferred) | `kubectl get ingress -n media` |
+
+### Deploy / sync (order matters — prereqs FIRST)
+```bash
+# after git push, and confirming the secret + node label exist:
+sudo k3s kubectl apply -f gitops/apps/immich-prereqs.yaml    # Argo UI → review diff → SYNC
+sudo k3s kubectl apply -f gitops/apps/immich.yaml            # Argo UI → review diff → SYNC
+```
+- Sync is **MANUAL** — Argo shows OutOfSync and waits for you to click Sync.
+- **OCI gotcha:** if the `immich` app errors that OCI isn't enabled, register it once —
+  UI → Settings → Repositories → Connect repo → type Helm, URL
+  `ghcr.io/immich-app/immich-charts`, **Enable OCI ✓**.
+- ⚠️ Keep sync manual (no `automated:` block) — a chart/version bump runs a **DB migration**;
+  snapshot the worker before any Sync that changes the version.
+
+### Upgrading Immich later
+Bump `image.tag` in `gitops/immich/values.yaml` (e.g. `v3.1.0`) → **snapshot the worker +
+`pg_dump`** → git push → review diff → Sync. The migration is one-way; the backup is your
+rollback. (Downgrades are NOT supported once a migration has run.)
 
 ---
 
