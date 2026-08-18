@@ -1,7 +1,7 @@
-Absolutely. Copy everything below into a file named:
-
-tailscale-mullvad-proxmox-exit-node.md
 # Tailscale → Mullvad Exit Node on Proxmox LXC
+
+> ⚠️ Reference/planning guide — NOT yet deployed. A path to route Tailscale traffic out
+> through a Mullvad exit node on a Proxmox LXC.
 
 
 ## Goal
