@@ -1,0 +1,39 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+  "timezone": "America/Vancouver",
+  "schedule": ["before 9am on monday"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 0,
+
+  "argocd": {
+    "managerFilePatterns": ["/gitops/apps/.+\\.ya?ml$/"]
+  },
+  "kubernetes": {
+    "managerFilePatterns": ["/gitops/.+\\.ya?ml$/"]
+  },
+
+  "packageRules": [
+    {
+      "description": "Group all Helm chart bumps from a single app into one PR",
+      "matchManagers": ["argocd", "helmv3"],
+      "groupName": "helm charts"
+    },
+    {
+      "description": "Label everything so PRs are easy to spot",
+      "matchManagers": ["argocd", "kubernetes", "helmv3", "helm-values"],
+      "addLabels": ["dependencies"]
+    },
+    {
+      "description": "Immich chart + image are DB-migration sensitive — never auto-merge, flag clearly",
+      "matchPackageNames": ["/immich/"],
+      "addLabels": ["⚠️ db-migration"],
+      "automerge": false
+    }
+  ],
+
+  "dependencyDashboardTitle": "🤖 Renovate Dependency Dashboard"
+}
