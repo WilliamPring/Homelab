@@ -73,6 +73,3 @@ data:
         - Proxmox:
             - abbr: PVE
               href: https://192.168.68.96:8006
-
-  docker.yaml: ""
-  kubernetes.yaml: ""
