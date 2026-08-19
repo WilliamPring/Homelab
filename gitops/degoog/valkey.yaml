@@ -22,7 +22,7 @@ spec:
       containers:
         - name: valkey
 
-          image: valkey/valkey:8-alpine
+          image: valkey/valkey:9-alpine
 
           command:
             - valkey-server
