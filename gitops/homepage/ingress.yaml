@@ -1,0 +1,30 @@
+# Ingress → https://home.williampring.ca. cert-manager issues homepage-tls from the
+# 'letsencrypt' ClusterIssuer (Cloudflare DNS-01). Add the DNS record:
+#   home → A → <master Tailscale 100.x IP>  (grey cloud)
+# ⚠️ The host here MUST match HOMEPAGE_ALLOWED_HOSTS in deployment.yaml.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: homepage
+  namespace: apps
+  labels:
+    app: homepage
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - home.williampring.ca
+      secretName: homepage-tls
+  rules:
+    - host: home.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: homepage
+                port:
+                  number: 3000
