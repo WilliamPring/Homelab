@@ -71,22 +71,6 @@
       when: vaultwarden_db_password is defined
       changed_when: false
 
-    - name: Deploy Helm release
-      ansible.builtin.include_role:
-        name: helm_release
-      vars:
-        helm_name: "{{ item.name }}"
-        helm_repo_name: "{{ item.repo_name }}"
-        helm_repo: "{{ item.repo }}"
-        helm_chart: "{{ item.chart }}"
-        helm_namespace: "{{ item.namespace }}"
-        helm_values_file: "{{ item.values_file }}"
-        helm_chart_version: "{{ item.version | default(omit) }}"
-      loop: "{{ helm_releases | default([]) }}"
-      when: item.enabled | default(true)
-      loop_control:
-        label: "{{ item.name }}"
-
 # ─── PLAY 7: TLS — real HTTPS via Let's Encrypt (Cloudflare DNS-01) ───────────
 # Installs cert-manager + a Let's Encrypt ClusterIssuer (Cloudflare DNS-01) + an
 # Ingress for Vaultwarden (vault.williampring.ca). Gated by tls_enabled.

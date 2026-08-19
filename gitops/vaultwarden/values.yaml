@@ -12,7 +12,7 @@ image:
 database:
   type: postgresql
   existingSecret: "vaultwarden-db"
-  existingSecretKey: "uri"        # this key holds the full postgresql:// connection URI
+  existingSecretKey: "uri"        # this key holds the full postgresql:// connection URI This is an external database 
 
 # Let you create your account on first use. Set false AFTER you've signed up.
 signupsAllowed: true
