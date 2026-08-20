@@ -23,17 +23,35 @@ NOT in cluster       →  Postgres itself (external LXC) + your vault DATA
 The Helm chart does **not** deploy a database — `database.type: postgresql` + `existingSecret`
 tells it to use the external LXC. Your passwords never enter the cluster.
 
-## The `vaultwarden-db` secret (required, out of git)
+## Passwords & secrets
+
+Vaultwarden has **two separate secrets** — don't confuse them:
+```
+1. The DATABASE secret (vaultwarden-db) → how the app connects to the external Postgres LXC
+2. The ADMIN TOKEN (vaultwarden-admin)  → the /admin panel — currently DISABLED (optional)
+```
+
+### 1. The `vaultwarden-db` secret (required, out of git)
 The chart references an existing secret holding the FULL connection URI. It must exist in
 the `apps` namespace BEFORE Argo syncs Vaultwarden (or the pod starts but can't connect).
 ```bash
 # check it exists:
 sudo k3s kubectl get secret vaultwarden-db -n apps
 
-# recreate it (e.g. after a cluster rebuild):
+# view the value (the full postgresql:// URI):
+sudo k3s kubectl get secret vaultwarden-db -n apps -o jsonpath='{.data.uri}' | base64 -d; echo
+
+# recreate it (e.g. after a cluster rebuild — it's NOT in git):
 sudo k3s kubectl create secret generic vaultwarden-db -n apps \
-  --from-literal=uri='postgresql://vaultwarden:<PASSWORD>@192.168.68.7:5432/vaultwarden'
+  --from-literal=uri='postgresql://vaultwarden:<PASSWORD>@192.168.68.7:5432/vaultwarden' \
+  --dry-run=client -o yaml | sudo k3s kubectl apply -f -
 ```
+> 🔑 Recurring gotcha: this secret is **not in git**. A rebuilt cluster comes up without it →
+> Vaultwarden's pod can't reach Postgres. Recreate it (above) before/after syncing.
+
+### 2. The admin token (`vaultwarden-admin`) — currently DISABLED
+The `/admin` panel is **off** (no `adminToken` in values, so no secret needed). Re-enabling it
+is optional — see "The admin panel" section below for the hashed-token setup.
 
 ---
 

@@ -22,10 +22,25 @@ signupsAllowed: true
 domain: "https://vault.williampring.ca"
 
 # ClusterIP — the web vault needs a secure context (HTTPS/localhost), reached via the
-# Ingress (vault.williampring.ca). For local debugging:
+# Ingress below. For local debugging:
 #   sudo k3s kubectl -n apps port-forward svc/vaultwarden 8080:80  → http://localhost:8080
 service:
   type: ClusterIP
+
+# Ingress → https://vault.williampring.ca. The CHART creates this now (moved out of the
+# Ansible tls_ingress role) so Argo owns the full app + domain — no playbook run needed.
+# cert-manager issues vault-tls from the 'letsencrypt' ClusterIssuer (Cloudflare DNS-01).
+ingress:
+  enabled: true
+  class: "traefik"
+  nginxIngressAnnotations: false     # ⚠️ off — those are nginx-only; we use Traefik
+  additionalAnnotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  tls: true
+  hostname: "vault.williampring.ca"
+  tlsSecret: "vault-tls"
+  path: "/"
+  pathType: "Prefix"
 
 storage:
   data:

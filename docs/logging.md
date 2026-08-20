@@ -55,6 +55,23 @@ sudo k3s kubectl create secret generic grafana-admin -n monitoring \
 # DNS: grafana → A → <master Tailscale 100.x IP>  (grey cloud)
 ```
 
+### Grafana passwords & secrets
+Grafana (bundled in kube-prometheus-stack) logs in with the **`grafana-admin`** secret — user
+`admin` + the password you set. It's **out of git**, so recreate it after a cluster rebuild.
+```bash
+# check it exists:
+sudo k3s kubectl get secret grafana-admin -n monitoring
+
+# view the admin password:
+sudo k3s kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d; echo
+
+# (re)create / change it (then restart Grafana to pick it up):
+sudo k3s kubectl create secret generic grafana-admin -n monitoring \
+  --from-literal=admin-user=admin --from-literal=admin-password='<NEW_PASSWORD>' \
+  --dry-run=client -o yaml | sudo k3s kubectl apply -f -
+sudo k3s kubectl rollout restart deploy/kube-prometheus-stack-grafana -n monitoring
+```
+
 ## Verify the pipeline
 ```bash
 # Loki alive:
