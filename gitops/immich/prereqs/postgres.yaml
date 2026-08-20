@@ -1,10 +1,4 @@
-# Immich's vector Postgres — the chart does NOT create this. Immich REQUIRES this exact
-# image (pgvecto.rs / VectorChord extension), not vanilla Postgres. Keep the tag in sync
-# with Immich's docker-compose (it changes across releases).
-#
-# The immich-db Secret (POSTGRES_PASSWORD) is NOT here — it's hand/Ansible-managed so the
-# password stays out of git. It must already exist in the 'media' namespace.
-# The 'immich-node: true' node label must also exist (set by hand / Ansible on the worker).
+# Existing Immich PostgreSQL — DO NOT CHANGE DURING MIGRATION
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,7 +20,7 @@ spec:
         app: immich-postgres
     spec:
       nodeSelector:
-        immich-node: "true"      # pin to the labeled 32GB worker (heavy app)
+        immich-node: "true"
       containers:
         - name: postgres
           image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
@@ -57,6 +51,7 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 256Mi
+
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -66,10 +61,12 @@ metadata:
   labels:
     app: immich-postgres
 spec:
-  accessModes: [ReadWriteOnce]
+  accessModes:
+    - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
+
 ---
 apiVersion: v1
 kind: Service
@@ -82,15 +79,75 @@ spec:
   ports:
     - port: 5432
       targetPort: 5432
+
+# NEW PG16 migration PVC
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: immich-postgres-data-v16
   namespace: media
+  labels:
+    app: immich-postgres
+    migration: postgres-v16
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
+
+# TEMPORARY PG16 migration database
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-postgres-v16-migration
+  namespace: media
+  labels:
+    app: immich-postgres-v16-migration
+    migration: postgres-v16
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: immich-postgres-v16-migration
+  template:
+    metadata:
+      labels:
+        app: immich-postgres-v16-migration
+    spec:
+      nodeSelector:
+        immich-node: "true"
+      containers:
+        - name: postgres
+          image: ghcr.io/immich-app/postgres:16-vectorchord0.4.3-pgvectors0.2.0
+          env:
+            - name: POSTGRES_USER
+              value: immich
+            - name: POSTGRES_DB
+              value: immich
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: immich-db
+                  key: password
+            - name: POSTGRES_INITDB_ARGS
+              value: "--data-checksums"
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: immich-postgres-data-v16
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
