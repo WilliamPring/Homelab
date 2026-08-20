@@ -35,6 +35,10 @@ storage:
     class: ""                     # "" = k3s default (local-path)
     accessMode: "ReadWriteOnce"   # local-path only supports RWO (NOT ReadWriteMany)
 
-adminToken:
-  existingSecret: "vaultwarden-admin"
-  existingSecretKey: "token"
+# Admin panel (/admin) DISABLED — no ADMIN_TOKEN set, so the pod needs no extra secret.
+# To enable it later: create a 'vaultwarden-admin' secret (key 'token', argon2 hash via
+#   kubectl run vw-hash --rm -it --image=vaultwarden/server --restart=Never --command -- /vaultwarden hash
+# ) FIRST, then re-add:
+#   adminToken:
+#     existingSecret: "vaultwarden-admin"
+#     existingSecretKey: "token"
