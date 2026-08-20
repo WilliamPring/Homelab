@@ -15,7 +15,7 @@ spec:
       chart: kube-prometheus-stack
       # PINNED (Argo can't resolve "*" for Helm charts). chart 88.4.0 = operator v0.93.1.
       # Verify/bump: helm show chart prometheus-community/kube-prometheus-stack | grep '^version'
-      targetRevision: "88.5.0"
+      targetRevision: "88.5.2"
       helm:
         valueFiles:
           - $values/gitops/kube-prometheus-stack/values.yaml
