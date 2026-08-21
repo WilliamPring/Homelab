@@ -49,7 +49,7 @@ data:
         - Argo CD:
             href: https://argocd.williampring.ca
             description: GitOps deployments
-            icon: argocd.png
+            icon: si-argo
 
   widgets.yaml: |
     - resources:
