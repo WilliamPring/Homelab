@@ -34,3 +34,7 @@ storage:
     size: "2Gi"
     class: ""                     # "" = k3s default (local-path)
     accessMode: "ReadWriteOnce"   # local-path only supports RWO (NOT ReadWriteMany)
+
+adminToken:
+  existingSecret: "vaultwarden-admin"
+  existingSecretKey: "token"
