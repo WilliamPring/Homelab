@@ -8,6 +8,10 @@ service:
   type: ClusterIP
   port: 80
 
+config:
+  base-url: "https://ntfy.williampring.ca"
+  upstream-base-url: "https://ntfy.sh"
+
 ingress:
   enabled: true
   className: traefik
