@@ -40,15 +40,3 @@ controllers:
             cpu: "6"
             memory: "8Gi"
 
-  # # Immich machine-learning service
-  # machine-learning:
-  #   containers:
-  #     main:
-  #       resources:
-  #         requests:
-  #           cpu: "500m"
-  #           memory: "1Gi"
-  #         limits:
-  #           cpu: "4"
-  #           memory: "4Gi"
-
