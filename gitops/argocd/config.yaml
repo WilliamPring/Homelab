@@ -1,8 +1,8 @@
 # Argo CD server config — makes 'insecure mode' declarative instead of a manual patch.
 # argocd-server serves plain HTTP so Traefik/Ingress can terminate TLS (no redirect loop).
 #
-# Apply:   sudo k3s kubectl apply -f gitops/argocd-config.yaml
-# Then:    sudo k3s kubectl rollout restart deploy/argocd-server -n argocd
+# Apply the whole folder at once:  sudo k3s kubectl apply -f gitops/argocd/
+# Then restart the server:          sudo k3s kubectl rollout restart deploy/argocd-server -n argocd
 #
 # NOTE: `kubectl apply` MERGES this key into the ConfigMap — it won't wipe other keys.
 apiVersion: v1
