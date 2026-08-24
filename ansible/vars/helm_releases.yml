@@ -21,6 +21,7 @@ helm_releases:
     repo_name: immich
     repo: https://immich-app.github.io/immich-charts
     chart: immich
+    version: "0.13.1"          # chart targeting Immich v3.0.0 (pin for reproducibility)
     namespace: media
     values_file: helm-values/immich.yaml
     enabled: "{{ immich_enabled | default(false) }}"
