@@ -1,19 +1,81 @@
-# degoog — self-hosted search aggregator with a plugin/extension system.
+# degoog + Valkey — k8s port of the official docker-compose reference.
 # https://github.com/degoog-org/degoog  ·  Namespace: apps.
 #
-# Heavier than SearXNG/Whoogle: it has STATE (SQLite + settings + extensions in
-# /app/data → needs a PVC) and runs as user 1000:1000 (securityContext).
+#   degoog   → search aggregator + plugins (stateful: SQLite/settings in /app/data)
+#   Valkey   → shared cache (service MUST be named 'degoog-valkey' so the URL resolves)
 #
-# ⚠️ SECURITY-CRITICAL: DEGOOG_SETTINGS_PASSWORDS must be set. The extension system
-#    RUNS CODE on the server, so an unlocked instance = anyone can install an
-#    extension = remote code execution. Placeholder below — change it, and move it
-#    to a k8s Secret before real use.
+# Runs as user 1000:1000. An initContainer chowns the PVC to 1000 (local-path mounts
+# it root-owned; this replaces the reference's `sudo chown -R 1000:1000 ./data`).
+#
+# DEGOOG_SETTINGS_PASSWORDS is UNSET here (trusted LAN use, per the reference).
+# SET it — ideally via a k8s Secret — before exposing degoog publicly: the extension
+# system RUNS CODE on the server, so an unlocked public instance = remote code exec.
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: apps
 ---
+# ── Valkey (shared cache) ────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: degoog-valkey
+  namespace: apps
+  labels:
+    app: degoog-valkey
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: degoog-valkey
+  template:
+    metadata:
+      labels:
+        app: degoog-valkey
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: valkey
+          image: valkey/valkey:8-alpine
+          args: ["valkey-server", "--save", "", "--appendonly", "no"]
+          ports:
+            - containerPort: 6379
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: valkey-tmp
+              mountPath: /data        # in-memory; keeps read-only rootfs happy
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "25m"
+            limits:
+              memory: "128Mi"
+      volumes:
+        - name: valkey-tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: degoog-valkey       # ← name matters: degoog connects to redis://degoog-valkey:6379
+  namespace: apps
+  labels:
+    app: degoog-valkey
+spec:
+  selector:
+    app: degoog-valkey
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+# ── degoog ───────────────────────────────────────────────────────────────────
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -23,7 +85,7 @@ metadata:
     app: degoog
 spec:
   accessModes:
-    - ReadWriteOnce          # local-path only does RWO (single node) — fine
+    - ReadWriteOnce
   resources:
     requests:
       storage: 2Gi
@@ -48,16 +110,31 @@ spec:
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
-        fsGroup: 1000          # k8s chowns the PVC to 1000:1000 (degoog requires this)
+        fsGroup: 1000
+      initContainers:
+        # local-path mounts the PVC ROOT-owned; degoog runs as 1000 and must write
+        # /app/data. chown it first — this is the crash fix (fsGroup alone isn't enough
+        # on local-path). Mirrors the reference's `sudo chown -R 1000:1000 ./data`.
+        - name: fix-perms
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 1000:1000 /app/data"]
+          securityContext:
+            runAsUser: 0        # root, only to chown
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
       containers:
         - name: degoog
-          image: ghcr.io/degoog-org/degoog:latest   # pin a tag later for reproducibility
+          image: ghcr.io/degoog-org/degoog:latest
           ports:
             - containerPort: 4444
           env:
-            # ⚠️ CHANGE THIS + move to a Secret. Locks settings/extension install.
-            - name: DEGOOG_SETTINGS_PASSWORDS
-              value: "REPLACE-WITH-A-REAL-PASSWORD"
+            - name: DEGOOG_PUBLIC_INSTANCE
+              value: "false"
+            - name: DEGOOG_VALKEY_URL
+              value: "redis://degoog-valkey:6379"
+            # DEGOOG_SETTINGS_PASSWORDS: unset for trusted LAN use (per the reference).
+            # To lock it (before exposing publicly), add it here — ideally from a Secret.
           volumeMounts:
             - name: data
               mountPath: /app/data

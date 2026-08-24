@@ -15,7 +15,7 @@
 - name: degoog — summary
   ansible.builtin.debug:
     msg:
-      - "✅ degoog deployed → namespace 'apps' (NodePort 30882)"
+      - "✅ degoog (+ Valkey) deployed → namespace 'apps' (NodePort 30882)"
       - "🔗 http://{{ ansible_host }}:30882"
-      - "⚠️ Set DEGOOG_SETTINGS_PASSWORDS (roles/degoog/files/degoog.yaml) — extensions run code!"
-      - "🔍 sudo k3s kubectl get pods -n apps -l app=degoog"
+      - "🔒 Password unset (trusted LAN). SET DEGOOG_SETTINGS_PASSWORDS before exposing publicly — extensions run code!"
+      - "🔍 sudo k3s kubectl get pods -n apps -l 'app in (degoog,degoog-valkey)'"
