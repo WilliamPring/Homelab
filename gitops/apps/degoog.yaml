@@ -1,0 +1,29 @@
+# Argo CD Application for Degoog — your FIRST app under GitOps.
+#
+# You apply THIS file by hand, ONCE:
+#   sudo k3s kubectl apply -f gitops/apps/degoog.yaml
+#
+# It tells Argo: "watch gitops/degoog/ in my repo and represent it as an app called
+# degoog." It does NOT touch the cluster on its own — syncPolicy is MANUAL (empty),
+# so Argo only SHOWS in-sync / out-of-sync until YOU click Sync (UI) or run:
+#   argocd app sync degoog        (CLI, later)
+#
+# This file lives in gitops/apps/ — OUTSIDE gitops/degoog/ — on purpose, so Argo isn't
+# syncing its own Application manifest.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: degoog
+  namespace: argocd            # Argo Applications always live in the argocd namespace
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/degoog
+  destination:
+    server: https://kubernetes.default.svc   # this same cluster
+    namespace: apps
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
