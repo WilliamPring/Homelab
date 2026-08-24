@@ -1,16 +1,29 @@
+# Ingress for the Argo CD UI → https://argocd.williampring.ca
+#
+# ⚠️ REQUIRES argocd-server in INSECURE mode (it serves plain HTTP so Traefik can terminate
+#    TLS at the edge — otherwise you get ERR_TOO_MANY_REDIRECTS). Set it once:
+#      kubectl patch configmap argocd-cmd-params-cm -n argocd \
+#        --type merge -p '{"data":{"server.insecure":"true"}}'
+#      kubectl rollout restart deploy/argocd-server -n argocd
+#
+# cert-manager auto-issues argocd-tls from the 'letsencrypt' ClusterIssuer (Cloudflare
+# DNS-01) — same as the app Ingresses.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: argocd
   namespace: argocd
   annotations:
-    traefik.ingress.kubernetes.io/service.serversscheme: https
-    traefik.ingress.kubernetes.io/router.entrypoints: web
+    cert-manager.io/cluster-issuer: letsencrypt
 spec:
   ingressClassName: traefik
-
+  tls:
+    - hosts:
+        - argocd.williampring.ca
+      secretName: argocd-tls
   rules:
-    - http:
+    - host: argocd.williampring.ca
+      http:
         paths:
           - path: /
             pathType: Prefix
@@ -18,4 +31,4 @@ spec:
               service:
                 name: argocd-server
                 port:
-                  number: 443
+                  number: 80          # http (insecure mode). NOT 443.
