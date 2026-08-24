@@ -89,3 +89,35 @@ spec:
     - port: 8080
       targetPort: 8080
       nodePort: 30880
+---
+# Ingress → https://private.williampring.ca (moved here from ansible tls.yaml so ARGO
+# owns the full app: workload + domain). cert-manager auto-issues searxng-tls from the
+# 'letsencrypt' ClusterIssuer (Cloudflare DNS-01). NOTE: that ClusterIssuer + the
+# cloudflare-api-token secret stay INFRA (Ansible tls_ingress role) — they're shared
+# cluster-wide, not per-app, so they're not moved here.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: searxng
+  namespace: apps
+  labels:
+    app: searxng
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - private.williampring.ca
+      secretName: searxng-tls
+  rules:
+    - host: private.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: searxng
+                port:
+                  number: 8080

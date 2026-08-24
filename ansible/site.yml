@@ -31,16 +31,14 @@
 
 # ─── PLAY 4: Search apps (degoog) ─────────────────────────────────────────────
 # Hand-written manifest apps → apps namespace.
-#   SearXNG → 30880 (metasearch) — NOW MANAGED BY ARGO CD, not Ansible.
-#     See gitops/searxng/ + gitops/apps/searxng.yaml. The searxng role is disabled
-#     below (one-owner rule: don't let Ansible AND Argo fight over the same resources).
-#     To move it back to Ansible, re-add `- searxng` here and delete the Argo Application.
 #   degoog  → 30882 (search aggregator + plugin system; has a PVC + settings password)
+#
+# SearXNG fully migrated to GitOps (Argo CD) — app + Ingress live in gitops/searxng/,
+# the role is deleted, and its Ingress was removed from tls_ingress. See gitops/README.md.
 - name: Deploy search apps
   hosts: master
   become: true
   roles:
-    # - searxng   # ← moved to GitOps (Argo CD). See gitops/README.md.
     - degoog
 
 # ─── PLAY 5: Immich prerequisites (vector Postgres + library PVC) ─────────────
