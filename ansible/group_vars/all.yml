@@ -13,4 +13,16 @@ k3s_agent_args: ""         # extra flags for the k3s AGENT install (workers)
 # your LAN/k3s DNS.
 tailscale_up_args: "--accept-dns=false"
 
+# ─── TLS (Let's Encrypt via Cloudflare DNS-01) ───────────────────────────────
+# Real HTTPS for apps (Vaultwarden → https://vault.williampring.ca), so the
+# Bitwarden mobile app can connect. Set true to enable Play 6.
+#
+# ⚠️ BEFORE the first run, create the Cloudflare token secret ONCE (by hand):
+#   sudo k3s kubectl create secret generic cloudflare-api-token \
+#     -n cert-manager --from-literal=api-token=<YOUR_CF_TOKEN>
+# (Requires the cert-manager namespace to exist — run once with tls_enabled to
+#  install cert-manager, create the secret, then it issues on the next run.)
+tls_enabled: true
+cert_manager_version: "v1.17.2"     # check github.com/cert-manager/cert-manager/releases for latest
+
 # NOTE: the Helm app list lives in vars/helm_releases.yml (loaded by the Vaultwarden play).
