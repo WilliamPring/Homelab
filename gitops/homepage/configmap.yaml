@@ -1,0 +1,78 @@
+# Homepage config (gethomepage.dev) — mounted at /app/config.
+# Edit these YAML docs to change what the dashboard shows. Split into the standard files
+# Homepage expects: settings / services / widgets / bookmarks.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  namespace: apps
+  labels:
+    app: homepage
+data:
+  settings.yaml: |
+    title: Homelab
+    theme: dark
+    color: slate
+    headerStyle: clean
+    layout:
+      Apps:
+        style: row
+        columns: 4
+      Monitoring:
+        style: row
+        columns: 3
+
+  services.yaml: |
+    - Apps:
+        - Vaultwarden:
+            href: https://vault.williampring.ca
+            description: Password manager
+            icon: vaultwarden.png
+        - Immich:
+            href: https://immich.williampring.ca
+            description: Photo backup
+            icon: immich.png
+        - SearXNG:
+            href: https://private.williampring.ca
+            description: Private metasearch
+            icon: searxng.png
+        - degoog:
+            href: https://search.williampring.ca
+            description: Search aggregator
+            icon: si-google
+
+    - Monitoring:
+        - Grafana:
+            href: https://grafana.williampring.ca
+            description: Logs & metrics
+            icon: grafana.png
+        - Argo CD:
+            href: https://argocd.williampring.ca
+            description: GitOps deployments
+            icon: argocd.png
+
+  widgets.yaml: |
+    - resources:
+        cpu: true
+        memory: true
+        disk: /
+    - search:
+        provider: duckduckgo
+        target: _blank
+    - datetime:
+        text_size: xl
+        format:
+          dateStyle: full
+          timeStyle: short
+
+  bookmarks.yaml: |
+    - Homelab:
+        - Repo:
+            - abbr: GH
+              href: https://github.com/WilliamPring/Homelab
+        - Proxmox:
+            - abbr: PVE
+              href: https://192.168.68.96:8006
+
+  docker.yaml: ""
+  kubernetes.yaml: ""

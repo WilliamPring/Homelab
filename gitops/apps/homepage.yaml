@@ -1,0 +1,21 @@
+# Argo CD Application — Homepage (dashboard/landing page). Raw manifests (directory app).
+# Links to all your services at https://home.williampring.ca.
+#
+# Apply:  sudo k3s kubectl apply -f gitops/apps/homepage.yaml   → then SYNC.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homepage
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/homepage
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apps
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

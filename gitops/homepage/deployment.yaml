@@ -1,0 +1,42 @@
+# Homepage — the dashboard/landing page. Single container, reads config from the ConfigMap.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homepage
+  namespace: apps
+  labels:
+    app: homepage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homepage
+  template:
+    metadata:
+      labels:
+        app: homepage
+    spec:
+      containers:
+        - name: homepage
+          image: ghcr.io/gethomepage/homepage:latest   # pin a tag later for reproducibility
+          ports:
+            - containerPort: 3000
+          env:
+            # ⚠️ REQUIRED since Homepage v1.0 — it rejects requests whose Host header isn't
+            #    in this list ("Host validation failed"). Comma-separated host[:port], no scheme.
+            #    Add the master IP:port here too if you access via port-forward/NodePort.
+            - name: HOMEPAGE_ALLOWED_HOSTS
+              value: "home.williampring.ca"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: config
+          configMap:
+            name: homepage-config
