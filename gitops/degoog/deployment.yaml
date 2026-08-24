@@ -77,9 +77,9 @@ spec:
             - name: DEGOOG_PUBLIC_INSTANCE
               value: "false"
 
-            # Connect to Valkey through the Kubernetes Service.
+            # Connect to external Valkey (Redis) instance at 192.168.68.103.
             - name: DEGOOG_VALKEY_URL
-              value: "redis://degoog-valkey:6379"
+              value: "redis://192.168.68.103:6379"
 
           resources:
             requests:
