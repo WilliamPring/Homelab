@@ -6,10 +6,11 @@
 #   lib  → immich.persistence.library
 # Redis auto-wires to <release>-valkey when valkey.enabled: true.
 
-# Immich version. The chart's default appVersion is v3.0.0, so we PIN the image tag to run
-# 3.1 (overrides the chart default). ⚠️ 3.0 → 3.1 triggers a DB migration — snapshot first.
-image:
-  tag: v3.1.0
+# Immich version = chart DEFAULT (appVersion v3.0.0) — no image.tag pin.
+# ⚠️ If the cluster is currently running 3.1, deploying this is a DOWNGRADE to 3.0.0.
+#    Immich does NOT support downgrades across a DB migration — 3.0.0 may refuse to start
+#    against a 3.1-migrated database. BACK UP Postgres + the library before syncing, and
+#    check the running version first (see docs/immich.md / the notes below).
 
 # Pin ALL Immich pods to the labeled 32GB worker (heavy: ML + storage).
 # ⚠️ The 'immich-node: true' label must exist on the worker (hand/Ansible — not a manifest).
