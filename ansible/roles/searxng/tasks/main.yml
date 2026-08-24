@@ -1,0 +1,21 @@
+---
+# roles/searxng/tasks/main.yml — deploy SearXNG (privacy metasearch) into k3s (apps ns).
+# Runs on the master. Same copy-then-apply pattern as the other manifest apps.
+
+- name: Copy the SearXNG manifest to the master
+  ansible.builtin.copy:
+    src: searxng.yaml
+    dest: /etc/searxng.yaml
+
+- name: Apply the SearXNG manifest
+  ansible.builtin.command: k3s kubectl apply -f /etc/searxng.yaml
+  register: searxng_apply
+  changed_when: "'created' in searxng_apply.stdout or 'configured' in searxng_apply.stdout"
+
+- name: SearXNG — summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ SearXNG deployed → namespace 'apps' (NodePort 30880)"
+      - "🔗 http://{{ ansible_host }}:30880"
+      - "⚠️ Set a real secret_key in roles/searxng/files/searxng.yaml (openssl rand -hex 32)."
+      - "🔍 sudo k3s kubectl get pods -n apps -l app=searxng"
