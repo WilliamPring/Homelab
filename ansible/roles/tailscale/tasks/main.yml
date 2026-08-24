@@ -13,6 +13,14 @@
 # changes the system when the system isn't already in the desired state. That's
 # why re-running the playbook after you log in manually "just works".
 
+- name: Ensure curl is installed (the Tailscale/k3s installers need it)
+  # A minimal Debian install may not ship curl. Without it, the `curl | sh` below
+  # would fail — but the pipe would hide that failure (see the pipefail note).
+  ansible.builtin.apt:
+    name: curl
+    state: present
+    update_cache: true
+
 - name: Check whether the tailscale binary is already installed
   # `which` returns non-zero if not found. We capture the result instead of
   # letting a failure stop the play.
@@ -25,8 +33,15 @@
   # Only runs when the check above found nothing. This is how we stay idempotent
   # without a dedicated apt module: install once, skip forever after. The script
   # adds Tailscale's Debian apt repo and installs the package + systemd service.
+  #
+  # `set -o pipefail` + bash: in a pipeline, the shell normally reports only the
+  # LAST command's exit code. So if `curl` failed, `sh` would still exit 0 and the
+  # task would look successful while installing nothing. pipefail makes the whole
+  # pipeline fail if ANY part fails — so a broken download surfaces here, not three
+  # tasks later as a confusing "service not found".
   ansible.builtin.shell:
-    cmd: curl -fsSL https://tailscale.com/install.sh | sh
+    cmd: set -o pipefail && curl -fsSL https://tailscale.com/install.sh | sh
+    executable: /bin/bash
   when: tailscale_installed.rc != 0
 
 - name: Ensure the tailscaled daemon is enabled and running
