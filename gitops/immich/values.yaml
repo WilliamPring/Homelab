@@ -52,11 +52,3 @@ controllers:
   #           cpu: "4"
   #           memory: "4Gi"
 
-  #           memory: "4Gi"
-
-# Add a NodePort service for local LAN access (bypasses Cloudflare)
-service:
-  main:
-    type: NodePort
-    nodePort: 30041
-
