@@ -1,7 +1,4 @@
-# values.yaml
-
 replicaCount: 1
-
 
 autoscaling:
   minReplicas: 1
@@ -14,13 +11,18 @@ service:
 ingress:
   enabled: true
   className: traefik
+
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+
   hosts:
     - host: ntfy.williampring.ca
       paths:
         - path: /
           pathType: Prefix
+
   tls:
-    - secretName: "vault-tls"
+    - secretName: ntfy-tls
       hosts:
         - ntfy.williampring.ca
 
@@ -29,7 +31,6 @@ persistence:
   size: 10Gi
   accessModes:
     - ReadWriteOnce
-
 
 resources:
   requests:

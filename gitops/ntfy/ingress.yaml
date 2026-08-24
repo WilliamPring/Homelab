@@ -5,7 +5,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: ntfy
-  namespace: media
+  namespace: notifications
   labels:
     app: ntfy
   annotations:
