@@ -1,0 +1,36 @@
+# Helm values for Vaultwarden (guerzon/vaultwarden chart) — GitOps copy.
+# Argo feeds this file to the chart via the Application's valueFiles ($values/...).
+# Same content as the old ansible/helm-values/vaultwarden.yaml.
+
+image:
+  repository: vaultwarden/server
+
+# External Postgres (LXC @ 192.168.68.7) — your passwords live OUTSIDE the cluster, so
+# they survive rebuilds + get backed up to B2. The chart's `existingSecretKey` holds the
+# FULL postgresql:// URI. The 'vaultwarden-db' Secret is created OUT OF BAND (by hand /
+# Ansible) so the password never lands in git — Argo just references it here.
+database:
+  type: postgresql
+  existingSecret: "vaultwarden-db"
+  existingSecretKey: "uri"        # this key holds the full postgresql:// connection URI
+
+# Let you create your account on first use. Set false AFTER you've signed up.
+signupsAllowed: true
+
+# The external URL Vaultwarden is served at (behind HTTPS). Needed so links, WebSocket,
+# and WebAuthn work correctly through the reverse proxy.
+domain: "https://vault.williampring.ca"
+
+# ClusterIP — the web vault needs a secure context (HTTPS/localhost), reached via the
+# Ingress (vault.williampring.ca). For local debugging:
+#   sudo k3s kubectl -n apps port-forward svc/vaultwarden 8080:80  → http://localhost:8080
+service:
+  type: ClusterIP
+
+storage:
+  data:
+    name: "vaultwarden-data"      # names the PVC + the volumeMount (must be set)
+    path: "/data"                 # mount path inside the container
+    size: "2Gi"
+    class: ""                     # "" = k3s default (local-path)
+    accessMode: "ReadWriteOnce"   # local-path only supports RWO (NOT ReadWriteMany)
