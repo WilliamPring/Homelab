@@ -48,6 +48,9 @@
     # Helm release in Play 5. Gated by immich_enabled (off until the HP exists).
     - role: immich
       when: immich_enabled | default(false)
+    # qBittorrent + Gluetun VPN sidecar (vpn namespace). Gated — needs the Mullvad secret.
+    - role: qbittorrent
+      when: qbittorrent_enabled | default(false)
 
 # ─── PLAY 5: Helm releases (data-driven) ─────────────────────────────────────
 # Deploys every enabled entry in the `helm_releases` list (group_vars/all.yml) via

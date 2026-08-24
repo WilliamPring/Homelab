@@ -1,0 +1,27 @@
+---
+# roles/qbittorrent/tasks/main.yml — qBittorrent + Gluetun VPN sidecar (vpn namespace).
+# Runs on the master. Gated by qbittorrent_enabled.
+# REQUIRES the mullvad-creds secret in the vpn namespace + /dev/net/tun on the node.
+
+- name: Copy the qBittorrent manifest to the master
+  ansible.builtin.copy:
+    src: qbittorrent.yaml
+    dest: /etc/qbittorrent.yaml
+
+- name: Apply the qBittorrent manifest
+  ansible.builtin.command: k3s kubectl apply -f /etc/qbittorrent.yaml
+  register: qb_apply
+  changed_when: "'created' in qb_apply.stdout or 'configured' in qb_apply.stdout"
+
+- name: qBittorrent — summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ qBittorrent + Gluetun (Mullvad) applied → namespace 'vpn', NodePort 30080."
+      - "🔒 ALL qBittorrent traffic exits via Mullvad WireGuard (the Gluetun sidecar)."
+      - "⚠️  REQUIRES the Mullvad secret — create it ONCE (real key, never commit it):"
+      - "     sudo k3s kubectl create secret generic mullvad-creds -n vpn \\"
+      - "       --from-literal=private-key='<mullvad-wireguard-private-key>' \\"
+      - "       --from-literal=address='<mullvad-address>/32'"
+      - "⚠️  Node needs /dev/net/tun and the downloads dir (/mnt/storage/downloads)."
+      - "🔍 Confirm the VPN is up:  sudo k3s kubectl logs -n vpn deploy/qbittorrent -c gluetun | tail"
+      - "🔍 Web UI: http://<node-ip>:30080  (qB 5.x may need HostHeaderValidation=false — see docs/debugging-runbook.md)"
