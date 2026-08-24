@@ -1,0 +1,31 @@
+# Ingress → https://ntfy.williampring.ca. cert-manager auto-issues ntfty-tls from
+# the 'letsencrypt' ClusterIssuer (Cloudflare DNS-01). That ClusterIssuer + the
+# cloudflare-api-token secret stay INFRA (Ansible tls_ingress role) — shared cluster-wide.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ntfy
+  namespace: media
+  labels:
+    app: ntfy
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+
+  tls:
+    - hosts:
+        - ntfy.williampring.ca
+      secretName: ntfy-tls
+
+  rules:
+    - host: ntfy.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ntfy
+                port:
+                  number: 80
