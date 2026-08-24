@@ -36,10 +36,7 @@ spec:
     - repoURL: https://github.com/WilliamPring/Homelab.git
       targetRevision: main
       ref: values
-    # 3) The Immich chart from the OCI registry.
-    - repoURL: ghcr.io/immich-app/immich-machine-learning
-      chart: immich
-      targetRevision: "*"   
+  
   destination:
     server: https://kubernetes.default.svc
     namespace: media
