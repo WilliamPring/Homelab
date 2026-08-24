@@ -1,29 +1,14 @@
 ---
-# vars/helm_releases.yml — the list of Helm apps to deploy (loaded by the Vaultwarden play).
+# vars/helm_releases.yml — the list of Helm apps Ansible deploys.
 #
-# To ADD a Helm app:  add a dict below + create helm-values/<name>.yaml
-# To DISABLE one:     set enabled: false
+# EMPTY — all apps have been migrated to GitOps (Argo CD). See gitops/.
+#   • Vaultwarden → gitops/apps/vaultwarden.yaml + gitops/vaultwarden/values.yaml
+#   • Immich      → gitops/apps/immich.yaml + gitops/immich/
 #
-# Fields: name (release), repo_name, repo (url), chart, namespace, values_file,
-#         [version] (optional chart pin), [enabled] (default true).
-helm_releases:
-  - name: vaultwarden
-    repo_name: vaultwarden
-    repo: https://guerzon.github.io/vaultwarden
-    chart: vaultwarden
-    namespace: apps
-    values_file: helm-values/vaultwarden.yaml
-    enabled: true
-
-  # Immich (photos). HEAVY — needs the prereqs role (vector Postgres + library PVC)
-  # applied first (Play 5), the 32GB worker joined, and immich_db_password set.
-  # NOTE: OCI chart — the old HTTP repo (immich-app.github.io) is dead. 'repo' is the
-  # full oci:// chart URL; repo_name/chart are unused for OCI (helm_release handles it).
-  # No 'version' → uses the latest chart (default).
-  - name: immich
-    repo_name: immich
-    repo: oci://ghcr.io/immich-app/immich-charts/immich
-    chart: immich
-    namespace: media
-    values_file: helm-values/immich.yaml
-    enabled: "{{ immich_enabled | default(false) }}"
+# Ansible now handles INFRA only (Tailscale, k3s, cert-manager/ClusterIssuer, the
+# out-of-git Secrets + node labels). App deployment lives in Argo.
+#
+# If you ever need Ansible to deploy a Helm chart again (e.g. an infra chart), add a dict
+# here — the loop in site.yml Play 6 + roles/helm_release still work. Fields:
+#   name, repo_name, repo, chart, namespace, values_file, [version], [enabled].
+helm_releases: []

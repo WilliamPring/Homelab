@@ -1,7 +1,13 @@
 ---
-# roles/immich/tasks/main.yml — Immich PREREQUISITES (vector Postgres + library PVC +
-# DB secret). Runs on the master BEFORE the Immich Helm release. Gated by immich_enabled.
-# The Immich chart itself is in vars/helm_releases.yml (the data-driven loop, Play 6).
+# roles/immich/tasks/main.yml — Immich INFRA ONLY (the bits GitOps deliberately keeps out
+# of git): the immich-db Secret (DB password) + the worker node label.
+#
+# The actual Immich manifests (vector Postgres, library PV/PVC) + the Helm chart now live
+# in GitOps / Argo CD:
+#   gitops/immich/prereqs/   (Postgres + NFS library)   → app: immich-prereqs
+#   gitops/immich/values.yaml + gitops/apps/immich.yaml (OCI Helm chart) → app: immich
+# So this role no longer applies any manifests — it only ensures the secret + label exist
+# (which the GitOps manifests reference but can't create themselves).
 
 - name: Load local secrets (vars/secrets.local.yaml — gitignored) if present
   ansible.builtin.include_vars: vars/secrets.local.yaml
@@ -26,24 +32,12 @@
   when: groups['workers'] | default([]) | length > 0
   changed_when: false
 
-- name: Copy the Immich prerequisites manifest to the master
-  ansible.builtin.copy:
-    src: immich-prereqs.yaml
-    dest: /etc/immich-prereqs.yaml
-
-- name: Apply the Immich prerequisites (Postgres, library PVC)
-  ansible.builtin.command: k3s kubectl apply -f /etc/immich-prereqs.yaml
-  register: immich_prereqs
-  changed_when: "'created' in immich_prereqs.stdout or 'configured' in immich_prereqs.stdout"
-
-- name: Wait for the Immich Postgres to be ready
-  ansible.builtin.command: k3s kubectl rollout status deploy/immich-postgres -n media --timeout=180s
-  changed_when: false
-
-- name: Immich prereqs — summary
+- name: Immich infra — summary
   ansible.builtin.debug:
     msg:
-      - "✅ Immich prerequisites applied (vector Postgres + library PVC + DB secret)."
-      - "   The Immich chart connects to immich-postgres:5432, PVC immich-library."
-      - "⚠️  Library is on local-path (node disk) until the DAS exists."
-      - "🔍 sudo k3s kubectl get pods,pvc -n media"
+      - "✅ Immich INFRA ready: immich-db Secret + worker node label (immich-node=true)."
+      - "   The Immich MANIFESTS + chart are deployed by Argo CD, not Ansible:"
+      - "     gitops/apps/immich-prereqs.yaml  → Postgres + NFS library (sync FIRST)"
+      - "     gitops/apps/immich.yaml          → the OCI Helm chart"
+      - "🔍 sudo k3s kubectl get secret immich-db -n media"
+      - "🔍 sudo k3s kubectl get node k3s-worker-01 --show-labels | grep immich-node"

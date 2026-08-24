@@ -1,4 +1,6 @@
-# Let's Encrypt ClusterIssuer (Cloudflare DNS-01) + Vaultwarden Ingress.
+# Let's Encrypt ClusterIssuer (Cloudflare DNS-01) — shared INFRA — plus the remaining
+# app Ingresses still managed by Ansible (Vaultwarden, Immich). SearXNG + degoog Ingresses
+# moved to GitOps; see the note further down.
 #
 # ⚠️ PREREQUISITE — create the Cloudflare token secret ONCE, by hand (keeps it out
 #    of git). Use your "Edit zone DNS" token:
@@ -52,38 +54,14 @@ spec:
                 port:
                   number: 80
 ---
-# Ingress for degoog (search aggregator). Reachable at https://search.williampring.ca
-# via Tailscale. NOTE: it's Tailscale-only (not public), so DEGOOG_SETTINGS_PASSWORDS
-# can stay unset for a SOLO tailnet — but set it if you share the tailnet, since the
-# extension system runs code.
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: degoog
-  namespace: apps
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
-spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - search.williampring.ca
-      secretName: degoog-tls
-  rules:
-    - host: search.williampring.ca
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: degoog
-                port:
-                  number: 4444
----
-# NOTE: SearXNG's Ingress moved to GitOps (gitops/searxng/searxng.yaml) — Argo owns the
-# full SearXNG app now (workload + domain). The 'letsencrypt' ClusterIssuer above stays
-# here (shared infra). See gitops/README.md.
+# NOTE: SearXNG + degoog Ingresses moved to GitOps (gitops/searxng/, gitops/degoog/) —
+# Argo owns those apps end-to-end (workload + domain). The 'letsencrypt' ClusterIssuer
+# above stays here (shared infra). See gitops/README.md.
+#
+# ⚠️ Vaultwarden + Immich Ingresses (below) still live HERE. Their APPS are on Argo, but
+# their domains are still Ansible-managed. This is SAFE (Argo doesn't define these
+# Ingresses, so there's no conflict) — but it's the last bit of app/infra split. To fully
+# fold them in later: move each Ingress into its GitOps app + delete it here.
 ---
 # Ingress for Immich (photos). https://immich.williampring.ca — note: media namespace.
 apiVersion: networking.k8s.io/v1
