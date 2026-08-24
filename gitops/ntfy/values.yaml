@@ -22,13 +22,14 @@ ingress:
   tls:
     - secretName: "vault-tls"
       hosts:
-        - ntfy.example.com
+        - ntfy.williampring.ca
 
 persistence:
   enabled: true
   size: 10Gi
   accessModes:
     - ReadWriteOnce
+
 
 resources:
   requests:
