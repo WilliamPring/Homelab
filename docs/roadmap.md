@@ -9,6 +9,23 @@ setup (`ansible/`) and the cluster docs (`docs/architecture.md`).
 
 ---
 
+## Files/Drive app — Seafile (planned, build ON the HP)
+Decided: **Immich (photos) + Seafile (files)**. Seafile chosen over Nextcloud for lighter
+runtime (Nextcloud only if calendar/contacts sync becomes wanted).
+
+**Deliberately NOT staged blind** — Seafile on k8s is another multi-component build and its
+charts are immature, so it'll be built *with* the HP present to test against:
+- Chart: official `haiwen.github.io/seafile-helm-chart/repo` (or datamate's, Beta).
+- **Prereqs to deploy ourselves (chart doesn't bring them):** MariaDB + Memcached
+  (+ optional Elasticsearch for full-text search, + optional Minio for object storage).
+- Same shape as Immich: an `immich`-style prereqs role (MariaDB + memcached + PVCs +
+  secret) → then the Seafile Helm release (data-driven entry + `helm-values/seafile.yaml`).
+- Access via port-forward/NodePort first, IngressRoute + TLS later.
+
+Build trigger: **when the HP + DAS are in the cluster** (do it with real hardware, not blind).
+
+---
+
 ## Hardware & topology
 
 | Node | Spec | Arch | Role |

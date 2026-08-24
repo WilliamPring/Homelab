@@ -44,6 +44,10 @@
     - pihole        # network namespace  — DNS ad-blocking
     # Vaultwarden is now a Helm release (see vars/helm_releases.yml). Its hand-written
     # manifest in roles/vaultwarden/files/ is KEPT AS BACKUP but no longer applied.
+    # Immich PREREQUISITES (Postgres + library PVC + secret) — must run BEFORE the Immich
+    # Helm release in Play 5. Gated by immich_enabled (off until the HP exists).
+    - role: immich
+      when: immich_enabled | default(false)
 
 # ─── PLAY 5: Helm releases (data-driven) ─────────────────────────────────────
 # Deploys every enabled entry in the `helm_releases` list (group_vars/all.yml) via

@@ -1,0 +1,39 @@
+# Helm values for Immich (immich-app/immich-charts).
+#
+# ⚠️ VERIFY-ON-DEPLOY: Immich's chart is complex (bjw-s based). These values wire it to
+# the external Postgres + library PVC from roles/immich/files/immich-prereqs.yaml. The
+# env/persistence/valkey keys are the most likely to need a small tuning pass when you
+# actually deploy on the HP — that's expected for Immich-on-k8s.
+
+# Point Immich at the pre-created library PVC (the chart can't auto-create it).
+immich:
+  persistence:
+    library:
+      existingClaim: immich-library
+
+# Let the chart deploy its bundled Valkey (Redis) and wire it up automatically.
+valkey:
+  enabled: true
+
+# Connect to the external Postgres we deployed in immich-prereqs.yaml.
+env:
+  DB_HOSTNAME: immich-postgres
+  DB_USERNAME: immich
+  DB_DATABASE_NAME: immich
+  DB_PASSWORD:
+    valueFrom:
+      secretKeyRef:
+        name: immich-db
+        key: password
+  # If the chart doesn't auto-wire Valkey, set REDIS_HOSTNAME to the valkey service
+  # name here (verify with: kubectl get svc -n media after install).
+
+# Expose the web/API. Start with NodePort (like the other apps); switch to an
+# IngressRoute + TLS later. Verify the exact service key against the chart if needed.
+server:
+  service:
+    main:
+      type: NodePort
+      ports:
+        http:
+          nodePort: 30041

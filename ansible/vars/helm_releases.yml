@@ -27,3 +27,13 @@ helm_releases:
     namespace: apps
     values_file: helm-values/vaultwarden.yaml
     enabled: true
+
+  # Immich (photos). HEAVY — needs the prereqs role (Postgres + PVCs) applied first,
+  # and the HP + DAS storage. Controlled by immich_enabled (group_vars), off by default.
+  - name: immich
+    repo_name: immich
+    repo: https://immich-app.github.io/immich-charts
+    chart: immich
+    namespace: media
+    values_file: helm-values/immich.yaml
+    enabled: "{{ immich_enabled | default(false) }}"
