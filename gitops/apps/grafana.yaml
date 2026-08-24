@@ -1,0 +1,31 @@
+# Argo CD Application — Grafana (the UI), step 3 of 3 for the logging stack.
+# Reads from Loki (datasource pre-wired in values) → search/view logs at
+# https://grafana.williampring.ca.
+#
+# ⚠️ BEFORE syncing: create the grafana-admin secret (see values.yaml) + add the DNS record.
+# Apply:  sudo k3s kubectl apply -f gitops/apps/grafana.yaml   → then SYNC.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: grafana
+      # PINNED (Argo can't resolve "*" for Helm charts). chart 10.5.15 = Grafana app 12.3.1.
+      # Verify/bump: helm show chart grafana/grafana | grep '^version'
+      targetRevision: "10.5.15"
+      helm:
+        valueFiles:
+          - $values/gitops/grafana/values.yaml
+    - repoURL: https://github.com/WilliamPring/Homelab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
