@@ -6,9 +6,12 @@
 #   lib  → immich.persistence.library
 # Redis auto-wires to <release>-valkey when valkey.enabled: true.
 
-# No image.tag → Immich uses the chart's default appVersion (fully default; tracks the
-# chart). ⚠️ Because nothing is pinned, a playbook run can auto-upgrade Immich AND
-# migrate the DB — SNAPSHOT the worker VM + back up before every run.
+# Immich version. The chart's default appVersion is v3.0.0, so to run 3.1 you PIN the
+# image tag here (this overrides the chart default). ⚠️ Verify the exact 3.1.x tag on
+# the Immich releases page and set it below. SNAPSHOT the worker + back up before running
+# — this triggers a 3.0 → 3.1 DB migration.
+image:
+  tag: v3.1.0        # ⚠️ set to the exact 3.1.x you want (check github.com/immich-app/immich/releases)
 
 # Pin ALL Immich pods to the labeled 32GB worker (heavy: ML + storage).
 defaultPodOptions:
