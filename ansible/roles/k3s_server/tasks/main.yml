@@ -68,3 +68,12 @@
 - name: Show cluster nodes
   ansible.builtin.debug:
     msg: "{{ k3s_nodes.stdout_lines }}"
+
+- name: Control plane — summary (how to use it / what to know)
+  ansible.builtin.debug:
+    msg:
+      - "✅ k3s control plane ready on {{ inventory_hostname }} ({{ ansible_host }})"
+      - "🔑 Join token captured for workers (Play 3 uses it automatically)."
+      - "📄 kubeconfig on this node:  /etc/rancher/k3s/k3s.yaml"
+      - "🔍 Use kubectl on the node:  sudo k3s kubectl get nodes -o wide"
+      - "💻 To use kubectl from your Arch laptop: copy that file and change 'server: 127.0.0.1' to {{ ansible_host }}"

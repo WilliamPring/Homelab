@@ -40,3 +40,31 @@
     name: k3s-agent
     enabled: true
     state: started
+
+# ─── Showcase the cluster after this worker joins ────────────────────────────
+# kubectl only works on the SERVER (it has the kubeconfig), so we `delegate_to`
+# the master to run these — but the output prints under THIS worker's play, so
+# you see the cluster grow as each worker joins. We match this node by its IP
+# (the INTERNAL-IP column) rather than hostname, since the k8s node name may not
+# equal the inventory name.
+- name: Wait for {{ inventory_hostname }} to register and report Ready
+  ansible.builtin.shell: >
+    k3s kubectl get nodes -o wide | grep "{{ ansible_host }}"
+  delegate_to: "{{ groups['master'][0] }}"
+  register: this_node_status
+  until: "' Ready' in this_node_status.stdout"
+  retries: 20
+  delay: 6
+  changed_when: false
+
+- name: Get cluster nodes (from the master)
+  ansible.builtin.command: k3s kubectl get nodes -o wide
+  delegate_to: "{{ groups['master'][0] }}"
+  register: cluster_nodes
+  changed_when: false
+
+- name: Get all pods (from the master)
+  ansible.builtin.command: k3s kubectl get pods -A -o wide
+  delegate_to: "{{ groups['master'][0] }}"
+  register: cluster_pods
+  changed_when: false
