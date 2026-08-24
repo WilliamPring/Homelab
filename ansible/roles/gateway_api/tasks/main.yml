@@ -52,8 +52,8 @@
   ansible.builtin.debug:
     msg:
       - "✅ Gateway API up: CRDs installed, Traefik Gateway provider enabled, Gateway 'main' created."
-      - "🔗 TLS: *.williampring.ca wildcard from the self-signed homelab CA (secret wildcard-tls)."
-      - "📡 DNS: point ONE wildcard record  *.williampring.ca → the HP's IP (single-node ingress)."
+      - "🔗 TLS: *.home.arpa wildcard from the self-signed homelab CA (secret wildcard-tls)."
+      - "📡 DNS: resolve *.home.arpa → the ingress node IP (Pi-hole record, or /etc/hosts on your box)."
       - "🔍 sudo k3s kubectl get gateway,gatewayclass -A"
       - "🔍 sudo k3s kubectl get httproute -A"
       - "⚠️ VERIFY-ON-DEPLOY: Traefik provider values keys are version-specific; cert-manager↔Gateway uses manual Certificate."
