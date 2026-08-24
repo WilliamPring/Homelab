@@ -1,0 +1,45 @@
+# Helm values for Immich (immich-app/immich-charts — bjw-s common-library based) — GitOps copy.
+# Argo feeds this to the chart via the Application's valueFiles ($values/gitops/immich/values.yaml).
+#
+# ⚠️ STRUCTURE MATTERS for this chart:
+#   env  → controllers.main.containers.main.env   (NOT a top-level env:)
+#   lib  → immich.persistence.library
+# Redis auto-wires to <release>-valkey when valkey.enabled: true.
+
+# Immich version. The chart's default appVersion is v3.0.0, so we PIN the image tag to run
+# 3.1 (overrides the chart default). ⚠️ 3.0 → 3.1 triggers a DB migration — snapshot first.
+image:
+  tag: v3.1.0
+
+# Pin ALL Immich pods to the labeled 32GB worker (heavy: ML + storage).
+# ⚠️ The 'immich-node: true' label must exist on the worker (hand/Ansible — not a manifest).
+defaultPodOptions:
+  nodeSelector:
+    immich-node: "true"
+
+# Photo library → the pre-created NFS-backed PVC (gitops/immich/prereqs/library.yaml).
+immich:
+  persistence:
+    library:
+      existingClaim: immich-library
+
+# Let the chart deploy + auto-wire Valkey (Redis). REDIS_HOSTNAME → immich-valkey.
+valkey:
+  enabled: true
+
+# Environment — connect to the EXTERNAL vector Postgres (gitops/immich/prereqs/postgres.yaml).
+# MUST live here (controllers.main.containers.main.env) for this chart to apply it.
+# DB_PASSWORD comes from the hand-managed immich-db Secret (out of git, must exist in media).
+controllers:
+  main:
+    containers:
+      main:
+        env:
+          DB_HOSTNAME: immich-postgres
+          DB_USERNAME: immich
+          DB_DATABASE_NAME: immich
+          DB_PASSWORD:
+            valueFrom:
+              secretKeyRef:
+                name: immich-db
+                key: password

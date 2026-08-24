@@ -1,0 +1,24 @@
+# Argo CD Application — Immich PREREQUISITES (raw manifests the Helm chart can't create):
+# the vector Postgres + the NFS library PV/PVC. A plain DIRECTORY app (path, not a chart).
+#
+# SYNC THIS FIRST, before the 'immich' Helm app — Immich needs Postgres + the library PVC
+# to exist before it starts.
+#
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/immich-prereqs.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: immich-prereqs
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/immich/prereqs
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

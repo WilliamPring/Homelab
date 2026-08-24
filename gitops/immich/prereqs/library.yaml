@@ -1,0 +1,38 @@
+# Photo LIBRARY on NFS — points at your file-server LXC (192.168.68.50:/data/images, 500GB).
+# The Immich chart mounts this via values (immich.persistence.library.existingClaim).
+# ⚠️ /data/images must be NFS-exported (rw) to the LAN, and nfs-common installed on the k3s
+# nodes. Later: repoint 'server'/'path' to the DAS at the same path → no other k8s change.
+#
+# NOTE: the PersistentVolume is CLUSTER-SCOPED (no namespace). Argo applies it fine, but
+# know it isn't "in" the media namespace like the PVC is.
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: immich-library-nfs
+  labels:
+    app: immich
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"        # the file-server LXC
+    path: /data/images
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-library
+  namespace: media
+  labels:
+    app: immich
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: immich-library-nfs   # binds to the static NFS PV above
+  resources:
+    requests:
+      storage: 500Gi
