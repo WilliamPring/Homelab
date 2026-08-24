@@ -30,7 +30,7 @@ tailscale_up_args: "--accept-dns=false"
 # ─── Samba (SMB file share, runs on the host — Layer 1) ──────────────────────────
 # Shares a folder over the network so your Arch laptop / Mac / Windows / phones can
 # reach it. Runs on the node that has the storage (the master/HP).
-samba_enabled: true
+samba_enabled: false      # OFF — no DAS/storage on the box yet; re-enable when it exists
 samba_share_name: "storage"
 samba_share_path: "/mnt/storage"           # the mergerfs pool (created empty if absent)
 samba_user: "{{ ansible_user }}"           # share user — must be a real system user
@@ -44,7 +44,8 @@ samba_allowed_subnets: "192.168.0.0/16 100.64.0.0/10"
 # ON by default now: cert-manager + Traefik Ingress is the HTTPS path (Play 7).
 # cert-manager issues a per-app TLS cert from the self-signed homelab CA; k3s's
 # bundled Traefik serves standard Ingress with no extra config. Routes: vars/routes.yml.
-certmanager_enabled: true
+certmanager_enabled: false    # OFF for now — TLS is being redone via Cloudflare + Let's Encrypt
+                              # (DNS-01) + Tailscale, NOT the old self-signed CA + home.arpa path
 certmanager_version: "v1.17.2"     # matches the version your existing README used
 
 # ─── Gateway API (OPTIONAL / BACKUP routing path) ────────────────────────────────

@@ -17,7 +17,7 @@ helm_releases:
     chart: jellyfin
     namespace: media
     values_file: helm-values/jellyfin.yaml
-    enabled: true
+    enabled: false     # HELD — needs /mnt/media storage (DAS not set up yet)
     # version: "2.x.x"   # optional: pin the chart version for reproducibility
 
   - name: vaultwarden
