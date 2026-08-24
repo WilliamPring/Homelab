@@ -111,18 +111,48 @@ iPhone app:      Server URL https://immich.williampring.ca
 
 ---
 
-## First run + accounts
-- **Create the admin account in the BROWSER** (web UI) — the setup screen only appears there.
-- The **mobile app is login-only** (no "create" button) — you log in with the web-created account.
+## Passwords & accounts
+
+Immich has **two separate passwords** — don't confuse them:
+```
+1. Your ADMIN LOGIN   → the account you sign into the app/web UI with
+2. The DATABASE password → how immich-server + immich-postgres talk to each other
+```
+
+### 1. Admin login (the app account)
+- **Create the admin account in the BROWSER** (web UI) — the first-run setup screen only appears there.
+- The **mobile app is login-only** (no "create" button) — log in with the web-created account.
 - Then in the app: **Settings → Backup → enable**.
 
-### Admin CLI (on the server)
+**Forgot it? Reset via the CLI (on the server):**
 ```bash
-# reset the admin password (prints a new one):
+# reset the admin password (prints a fresh temporary one):
 sudo k3s kubectl exec -n media deploy/immich-server -- immich-admin reset-admin-password
 # list users (find the admin email):
 sudo k3s kubectl exec -n media deploy/immich-server -- immich-admin list-users
 ```
+⚠️ The pod must be **Running** to exec in. If it's stuck (NFS mount / missing label), fix that
+first — see the Troubleshooting table.
+
+### 2. Database password (the `immich-db` secret)
+This is **out of git** (hand/Ansible-managed) — the vector Postgres and immich-server both read it.
+```bash
+# view the current DB password:
+sudo k3s kubectl get secret immich-db -n media -o jsonpath='{.data.password}' | base64 -d; echo
+
+# (re)create it — e.g. after a cluster rebuild where the secret was lost:
+sudo k3s kubectl create secret generic immich-db -n media \
+  --from-literal=password='<YOUR_DB_PASSWORD>' \
+  --dry-run=client -o yaml | sudo k3s kubectl apply -f -
+```
+⚠️ **Both `immich-server` and `immich-postgres` reference this secret** — if you *change* it,
+you must also reset it inside Postgres (`ALTER USER immich WITH PASSWORD ...`) or they'll
+mismatch and the server can't connect. On a fresh DB, just set both to the same value.
+
+> 🔑 Recurring gotcha: `immich-db` (this secret) + the `immich-node=true` node label are
+> **not in git**. A rebuilt/restored worker comes up without them → Postgres won't start or
+> pods stay `Pending`. Recreate the secret (above) + re-label the node:
+> `sudo k3s kubectl label node k3s-worker-01 immich-node=true --overwrite`
 
 ---
 

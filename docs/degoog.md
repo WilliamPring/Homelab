@@ -47,16 +47,32 @@ Key wiring:
 - The Deployment listens on **4444**; the Service maps `4444 → NodePort 30882`; the Ingress
   routes `search.williampring.ca → degoog:4444`.
 
-## ⚠️ The settings-password Secret
-`secrets.yaml` ships with `DEGOOG_SETTINGS_PASSWORDS: "YOUR-PASSWORD"` (a placeholder).
-Two things to decide:
-1. **Committing a Secret to git** is the GitOps anti-pattern. For a **solo tailnet** where
-   degoog isn't public, the settings password matters little — but it's still plaintext in
-   the repo. Options: put a real value in and accept it's in git, **or** delete `secrets.yaml`
-   and create the Secret by hand (`kubectl create secret generic degoog-secret ...`), **or**
-   use sealed-secrets later.
+## Passwords & secrets
+
+degoog has **one secret**: `degoog-secret` (key `DEGOOG_SETTINGS_PASSWORDS`) — the password
+that protects the settings/extensions UI. The Deployment reads it via `secretKeyRef`.
+
+```bash
+# check it exists:
+sudo k3s kubectl get secret degoog-secret -n apps
+
+# view the value:
+sudo k3s kubectl get secret degoog-secret -n apps -o jsonpath='{.data.DEGOOG_SETTINGS_PASSWORDS}' | base64 -d; echo
+
+# (re)create it by hand — the GitOps-safe way (out of git):
+sudo k3s kubectl create secret generic degoog-secret -n apps \
+  --from-literal=DEGOOG_SETTINGS_PASSWORDS='<YOUR_PASSWORD>' \
+  --dry-run=client -o yaml | sudo k3s kubectl apply -f -
+```
+
+### ⚠️ The git-vs-secret decision
+`secrets.yaml` currently ships with a placeholder `DEGOOG_SETTINGS_PASSWORDS: "YOUR-PASSWORD"`:
+1. **Committing a Secret to git is the anti-pattern.** For a **solo tailnet** (degoog isn't
+   public), the value matters little — but it's still plaintext in the repo. Options: put a
+   real value in and accept it's in git, **or** delete `secrets.yaml` and create `degoog-secret`
+   by hand (command above), **or** use sealed-secrets later.
 2. **On sync**, review the Secret's DIFF — if git's `YOUR-PASSWORD` would overwrite a real
-   live value, fix it first.
+   live value, fix it first (or the syncing placeholder wipes your real password).
 
 ## Deploy / sync (GitOps)
 ```bash
