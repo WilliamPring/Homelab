@@ -61,10 +61,10 @@
         k3s kubectl create namespace apps --dry-run=client -o yaml | k3s kubectl apply -f -
       changed_when: false
 
-    - name: Create the Vaultwarden DB password Secret (from vars/secrets.local.yaml)
+    - name: Create the Vaultwarden DB Secret (FULL connection URI, from vars/secrets.local.yaml)
       ansible.builtin.shell: >
         k3s kubectl create secret generic vaultwarden-db -n apps
-        --from-literal=db-password='{{ vaultwarden_db_password }}'
+        --from-literal=uri='postgresql://vaultwarden:{{ vaultwarden_db_password }}@192.168.68.7:5432/vaultwarden'
         --dry-run=client -o yaml | k3s kubectl apply -f -
       no_log: true
       when: vaultwarden_db_password is defined

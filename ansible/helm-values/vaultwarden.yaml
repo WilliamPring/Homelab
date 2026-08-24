@@ -6,18 +6,15 @@ image:
 
 # External Postgres (LXC @ 192.168.68.7) — the DB (your passwords) lives OUTSIDE the
 # cluster, so it survives cluster rebuilds and gets backed up to Backblaze B2.
-# The DB password comes from a k8s Secret (create it BY HAND, kept out of git):
-#   sudo k3s kubectl create secret generic vaultwarden-db -n apps \
-#     --from-literal=db-password='<THE_POSTGRES_PASSWORD_FROM_THE_SCRIPT>'
-# ⚠️ VERIFY-ON-DEPLOY: confirm these key names against the guerzon chart's values.yaml.
+#
+# The guerzon chart's `existingSecretKey` holds the FULL DATABASE URI (not just the
+# password). The playbook (Play 5) BUILDS that URI from vaultwarden_db_password
+# (vars/secrets.local.yaml) into the 'vaultwarden-db' Secret, key 'uri' — so the
+# password stays out of git.
 database:
   type: postgresql
-  host: "192.168.68.7"
-  port: 5432
-  username: "vaultwarden"
-  dbName: "vaultwarden"
   existingSecret: "vaultwarden-db"
-  existingSecretKey: "db-password"
+  existingSecretKey: "uri"        # this key holds the full postgresql:// connection URI
 
 # Let you create your account on first use. Set false AFTER you've signed up.
 signupsAllowed: true
