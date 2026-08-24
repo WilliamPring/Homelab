@@ -49,6 +49,27 @@
   vars_files:
     - vars/helm_releases.yml
   tasks:
+    # Create the vaultwarden-db k8s Secret from a GITIGNORED local file
+    # (vars/secrets.local.yaml) so the DB password stays out of git.
+    # First: cp vars/secrets.example.yaml vars/secrets.local.yaml  + fill in the password.
+    - name: Load local secrets (vars/secrets.local.yaml — gitignored) if present
+      ansible.builtin.include_vars: vars/secrets.local.yaml
+      failed_when: false
+
+    - name: Ensure the apps namespace exists
+      ansible.builtin.shell: >
+        k3s kubectl create namespace apps --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: false
+
+    - name: Create the Vaultwarden DB password Secret (from vars/secrets.local.yaml)
+      ansible.builtin.shell: >
+        k3s kubectl create secret generic vaultwarden-db -n apps
+        --from-literal=db-password='{{ vaultwarden_db_password }}'
+        --dry-run=client -o yaml | k3s kubectl apply -f -
+      no_log: true
+      when: vaultwarden_db_password is defined
+      changed_when: false
+
     - name: Deploy Helm release
       ansible.builtin.include_role:
         name: helm_release
