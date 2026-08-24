@@ -1,0 +1,21 @@
+---
+# vars/helm_releases.yml — the list of Helm apps to deploy.
+#
+# Loaded ONLY by the "Deploy Helm releases" play (via vars_files) — it's app-deployment
+# data, not a global host setting, so it lives here instead of group_vars/all.yml.
+#
+# To ADD an app:   add a dict below + create helm-values/<name>.yaml
+# To DISABLE one:  set enabled: false
+# The playbook (Play 5) never needs editing.
+#
+# Fields: name (release), repo_name, repo (url), chart, namespace, values_file,
+#         [version] (optional chart pin), [enabled] (default true).
+helm_releases:
+  - name: jellyfin
+    repo_name: jellyfin
+    repo: https://jellyfin.github.io/jellyfin-helm
+    chart: jellyfin
+    namespace: media
+    values_file: helm-values/jellyfin.yaml
+    enabled: true
+    # version: "2.x.x"   # optional: pin the chart version for reproducibility

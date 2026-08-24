@@ -1,0 +1,62 @@
+---
+# roles/helm_release/tasks/main.yml
+#
+# Deploy a Helm chart using the ANSIBLE-NATIVE `kubernetes.core.helm` module
+# (Approach B) — instead of templating a k3s HelmChart CRD (helm_app, Approach A).
+#
+# Runs on the master. Requirements:
+#   • control node: the `kubernetes.core` collection (see ../../requirements.yml)
+#   • master:       the `helm` binary + PyYAML (this role installs both)
+#   • KUBECONFIG:   the k3s server config at /etc/rancher/k3s/k3s.yaml (needs become)
+#
+# Per-app usage (vars in the play):
+#   helm_name, helm_repo_name, helm_repo, helm_chart, helm_namespace,
+#   helm_values_file, [helm_chart_version]
+
+- name: Ensure PyYAML is present (kubernetes.core needs it)
+  ansible.builtin.apt:
+    name: python3-yaml
+    state: present
+    update_cache: true
+
+- name: Check for the helm binary
+  ansible.builtin.command: which helm
+  register: helm_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Helm 3 (official script)
+  ansible.builtin.shell:
+    cmd: >
+      set -o pipefail &&
+      curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    executable: /bin/bash
+  when: helm_check.rc != 0
+
+- name: "Add the Helm repo ({{ helm_repo_name }})"
+  kubernetes.core.helm_repository:
+    name: "{{ helm_repo_name }}"
+    repo_url: "{{ helm_repo }}"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: "Install/upgrade the {{ helm_name }} release"
+  kubernetes.core.helm:
+    name: "{{ helm_name }}"
+    chart_ref: "{{ helm_repo_name }}/{{ helm_chart }}"
+    chart_version: "{{ helm_chart_version | default(omit) }}"
+    release_namespace: "{{ helm_namespace }}"
+    create_namespace: true
+    # values live in a clean YAML file; from_yaml turns them into a dict for the module
+    values: "{{ lookup('file', helm_values_file) | from_yaml }}"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: helm_result
+
+- name: "{{ helm_name }} — summary (Helm module deploy)"
+  ansible.builtin.debug:
+    msg:
+      - "✅ Helm release '{{ helm_name }}' → namespace '{{ helm_namespace }}'  (chart {{ helm_repo_name }}/{{ helm_chart }})"
+      - "   status: {{ helm_result.status.status | default('deployed') }}"
+      - "🔍 pods:     sudo k3s kubectl get pods -n {{ helm_namespace }} -o wide"
+      - "🔍 releases: sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml helm list -n {{ helm_namespace }}"

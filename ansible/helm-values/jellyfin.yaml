@@ -1,0 +1,21 @@
+# Helm values for the Jellyfin chart (https://jellyfin.github.io/jellyfin-helm).
+# Referenced from site.yml via lookup('file', ...). Edit Jellyfin's config HERE —
+# clean YAML with proper highlighting, not an inline string buried in the playbook.
+image:
+  repository: docker.io/jellyfin/jellyfin
+service:
+  type: NodePort
+  port: 8096
+  nodePort: 30096
+persistence:
+  config:
+    enabled: true
+    size: 10Gi
+  media:
+    enabled: true
+    type: hostPath
+    hostPath: /mnt/media
+jellyfin:
+  env:
+    - name: TZ
+      value: "America/Toronto"
