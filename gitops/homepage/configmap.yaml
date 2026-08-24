@@ -57,7 +57,8 @@ data:
         memory: true
         disk: /
     - search:
-        provider: duckduckgo
+        provider: custom
+        url: https://search.williampring.ca/search?q=
         target: _blank
     - datetime:
         text_size: xl
