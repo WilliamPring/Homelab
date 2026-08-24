@@ -88,3 +88,46 @@
     - role: samba
       when: samba_enabled | default(true)
 
+# ─── PLAY 7: TLS ingress foundation — cert-manager + Gateway API ──────────────
+# cert-manager (+ self-signed CA) provides the wildcard TLS cert; Gateway API
+# (on Traefik) does the routing. Both gated; set certmanager_enabled AND
+# gateway_api_enabled to true. See docs/gateway-api-plan.md.
+- name: TLS ingress (cert-manager + Gateway API)
+  hosts: master
+  become: true
+  vars_files:
+    - vars/routes.yml            # the HTTPRoute list (data-driven)
+  roles:
+    # cert-manager via Helm (needed for the wildcard cert)
+    - role: helm_app
+      when: certmanager_enabled | default(false)
+      vars:
+        helm_app_name: cert-manager
+        helm_app_chart: cert-manager
+        helm_app_repo: https://charts.jetstack.io
+        helm_app_version: "{{ certmanager_version }}"
+        helm_app_namespace: cert-manager
+        helm_app_values: |
+          crds:
+            enabled: true
+    - role: certmanager_issuer
+      when: certmanager_enabled | default(false)
+    # Gateway API foundation (CRDs + Traefik provider + GatewayClass + Gateway + cert)
+    - role: gateway_api
+      when: gateway_api_enabled | default(false)
+  tasks:
+    # HTTPRoutes — one per entry in vars/routes.yml (data-driven loop)
+    - name: Deploy HTTPRoute
+      ansible.builtin.include_role:
+        name: httproute
+      vars:
+        route_name: "{{ item.name }}"
+        route_namespace: "{{ item.namespace }}"
+        route_hostname: "{{ item.hostname }}"
+        route_service: "{{ item.service }}"
+        route_port: "{{ item.port }}"
+      loop: "{{ routes | default([]) }}"
+      when: gateway_api_enabled | default(false)
+      loop_control:
+        label: "{{ item.name }}"
+
