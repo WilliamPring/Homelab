@@ -29,13 +29,16 @@
   roles:
     - k3s_agent
 
-# ─── PLAY 4: SearXNG (privacy metasearch) ────────────────────────────────────
-# Hand-written manifest app (Deployment + Service + ConfigMap) → apps namespace.
-- name: Deploy SearXNG
+# ─── PLAY 4: Search apps (SearXNG + degoog — comparing the two) ───────────────
+# Hand-written manifest apps → apps namespace.
+#   SearXNG → 30880 (metasearch — aggregates many engines; stateless)
+#   degoog  → 30882 (search aggregator + plugin system; has a PVC + settings password)
+- name: Deploy search apps
   hosts: master
   become: true
   roles:
     - searxng
+    - degoog
 
 # ─── PLAY 5: Vaultwarden (Helm) ──────────────────────────────────────────────
 # Data-driven Helm: the app list lives in vars/helm_releases.yml (just Vaultwarden).

@@ -1,0 +1,21 @@
+---
+# roles/degoog/tasks/main.yml — deploy degoog (search aggregator + plugins) into
+# k3s (apps ns). Runs on the master. Same copy-then-apply pattern as SearXNG.
+
+- name: Copy the degoog manifest to the master
+  ansible.builtin.copy:
+    src: degoog.yaml
+    dest: /etc/degoog.yaml
+
+- name: Apply the degoog manifest
+  ansible.builtin.command: k3s kubectl apply -f /etc/degoog.yaml
+  register: degoog_apply
+  changed_when: "'created' in degoog_apply.stdout or 'configured' in degoog_apply.stdout"
+
+- name: degoog — summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ degoog deployed → namespace 'apps' (NodePort 30882)"
+      - "🔗 http://{{ ansible_host }}:30882"
+      - "⚠️ Set DEGOOG_SETTINGS_PASSWORDS (roles/degoog/files/degoog.yaml) — extensions run code!"
+      - "🔍 sudo k3s kubectl get pods -n apps -l app=degoog"
