@@ -70,6 +70,9 @@ data:
         - Repo:
             - abbr: GH
               href: https://github.com/WilliamPring/Homelab
-        - Proxmox:
+        - Sub Proxmox(masterk3s-worker):
+            - abbr: PVE
+              href: https://192.168.68.96:8006
+        - Main Proxmox(worker):
             - abbr: PVE
               href: https://192.168.68.96:8006
