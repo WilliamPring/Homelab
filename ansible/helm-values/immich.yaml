@@ -37,10 +37,7 @@ controllers:
                 name: immich-db
                 key: password
 
-# Expose the web/API on NodePort for now (TLS Ingress later).
-service:
-  main:
-    type: NodePort
-    ports:
-      http:
-        nodePort: 30041
+# Services stay ClusterIP (default) — a single NodePort leaks onto the machine-learning
+# service too and conflicts. Reach Immich via port-forward for now, or an Ingress:
+#   sudo k3s kubectl -n media port-forward svc/immich-server 2283:2283  → http://localhost:2283
+# (We'll add immich.williampring.ca to the TLS Ingress once it's running.)
