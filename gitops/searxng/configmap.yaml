@@ -1,0 +1,24 @@
+# SearXNG settings. Inherits SearXNG's defaults, overrides only what we need.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: searxng-settings
+  namespace: apps
+  labels:
+    app: searxng
+data:
+  settings.yml: |
+    use_default_settings: true
+    general:
+      instance_name: "Homelab Search"
+    server:
+      # ⚠️ CHANGE THIS to a random string:  openssl rand -hex 32
+      secret_key: "REPLACE-WITH-RANDOM-KEY-openssl-rand-hex-32"
+      limiter: false          # no Valkey → limiter off (fine for personal use)
+      image_proxy: true       # proxy image results for privacy
+      # base_url auto-detects from the request → works on NodePort AND via TLS
+    search:
+      autocomplete: "duckduckgo"
+      safe_search: 0
+    ui:
+      default_theme: simple

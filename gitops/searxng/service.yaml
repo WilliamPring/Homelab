@@ -1,0 +1,16 @@
+# SearXNG Service — NodePort 30880 (raw-IP access) + the target for the Ingress.
+apiVersion: v1
+kind: Service
+metadata:
+  name: searxng
+  namespace: apps
+  labels:
+    app: searxng
+spec:
+  type: NodePort
+  selector:
+    app: searxng
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30880
