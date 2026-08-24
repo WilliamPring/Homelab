@@ -79,7 +79,7 @@ spec:
 
             # Connect to external Valkey (Redis) instance at 192.168.68.103. Change thius later!!!!
             - name: DEGOOG_VALKEY_URL
-              value: "redis://redis:7jDtb86VyDd155XM7KHg4UNlahRVyl4s@127.0.0.1:6379"
+              value: "redis://redis:7jDtb86VyDd155XM7KHg4UNlahRVyl4s@192.168.68.103:6379"
 
           resources:
             requests:
