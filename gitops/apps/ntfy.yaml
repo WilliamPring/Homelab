@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ntfy
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: oci://codeberg.org/wrenix/helm-charts/ntfy
+      chart: ntfy
+      targetRevision: "*"
+      helm:
+        valueFiles:
+          - $values/gitops/ntfy/values.yaml
+
+    - repoURL: https://github.com/WilliamPring/Homelab.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
