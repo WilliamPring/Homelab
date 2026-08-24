@@ -16,11 +16,15 @@
   #
   # INSTALL_K3S_CHANNEL picks the release channel. `sh -s - server <args>` passes
   # our extra flags (empty by default = vanilla LAN k3s).
+  # `set -o pipefail` (needs bash) makes the pipeline fail if `curl` fails, instead
+  # of `sh` swallowing the error and "succeeding" with nothing installed.
   ansible.builtin.shell:
     cmd: >
+      set -o pipefail &&
       curl -sfL https://get.k3s.io |
       INSTALL_K3S_CHANNEL={{ k3s_channel }}
       sh -s - server {{ k3s_server_args }}
+    executable: /bin/bash
   when: k3s_installed.rc != 0
 
 - name: Ensure the k3s service is enabled and running
@@ -37,9 +41,12 @@
 
 - name: Read the join-token from disk
   # `slurp` returns the file base64-encoded (safe for binary/secret content).
+  # no_log: the token is a cluster credential — keep it out of the log/terminal
+  # even when running with -v.
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
   register: k3s_token_file
+  no_log: true
 
 - name: Publish the join-token as a fact for the workers to read
   # `set_fact` here attaches k3s_node_token to THIS host (the master). In Play 3
@@ -47,6 +54,7 @@
   # crosses between plays/hosts.
   ansible.builtin.set_fact:
     k3s_node_token: "{{ k3s_token_file.content | b64decode | trim }}"
+  no_log: true
 
 - name: Wait until the control-plane node reports Ready
   # Gives k3s time to finish bootstrapping before we call the cluster usable.
