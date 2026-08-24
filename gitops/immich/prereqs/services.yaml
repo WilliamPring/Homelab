@@ -1,0 +1,18 @@
+# Local NodePort service for Immich LAN access (bypasses Cloudflare)
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-server-local
+  namespace: media
+  labels:
+    app.kubernetes.io/name: server
+    app.kubernetes.io/instance: immich
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: server
+    app.kubernetes.io/instance: immich
+  ports:
+    - port: 80
+      targetPort: http
+      nodePort: 30041
