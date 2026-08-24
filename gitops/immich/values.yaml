@@ -44,28 +44,3 @@ controllers:
               secretKeyRef:
                 name: immich-db
                 key: password
-  # -------------------------------------------------------------------
-  # Machine Learning service
-  # -------------------------------------------------------------------
-  machine-learning:
-    enabled: true
-    controllers:
-      main:
-        containers:
-          main:
-            image:
-              repository: ghcr.io/immich-app/immich-machine-learning
-              tag: v2.3.1
-              pullPolicy: IfNotPresent
-            env:
-              TRANSFORMERS_CACHE: /cache
-              HF_XET_CACHE: /cache/huggingface-xet
-              MPLCONFIGDIR: /cache/matplotlib-config
-    persistence:
-      cache:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: immich-mlcache-pvc
-        accessMode: ReadWriteOnce
-
-  # -------------------------------------------------------------------
