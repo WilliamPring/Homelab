@@ -36,12 +36,15 @@
 
 # ─── PLAY 4: Cluster apps ────────────────────────────────────────────────────
 # Each runs on the master and applies a manifest with `k3s kubectl`. Apps are
-# grouped into function namespaces (pihole→network, vaultwarden→apps, jellyfin→media).
+# grouped into function namespaces (vaultwarden→apps, jellyfin→media).
 - name: Deploy cluster apps
   hosts: master
   become: true
   roles:
-    - pihole        # network namespace  — DNS ad-blocking
+    # Pi-hole is NO LONGER deployed into k3s — it runs standalone outside the cluster
+    # (its own LXC/VM), so DNS doesn't depend on the cluster being up. This matches the
+    # long-planned "move Pi-hole out of k3s" decision. The roles/pihole/ files are KEPT
+    # AS BACKUP but no longer applied. To re-enable in-cluster Pi-hole, re-add: - pihole
     # Vaultwarden is now a Helm release (see vars/helm_releases.yml). Its hand-written
     # manifest in roles/vaultwarden/files/ is KEPT AS BACKUP but no longer applied.
     # Immich PREREQUISITES (Postgres + library PVC + secret) — must run BEFORE the Immich
