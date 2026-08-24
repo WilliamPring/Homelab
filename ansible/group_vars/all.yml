@@ -1,75 +1,16 @@
 ---
 # group_vars/all.yml — variables applied to ALL hosts in the inventory.
-#
-# Ansible auto-loads files under group_vars/<groupname>.yml. The special group
-# "all" matches every host, so these are your global knobs. Change behaviour
-# here instead of editing the roles.
+# Ansible auto-loads group_vars/<groupname>.yml; the special group "all" matches
+# every host. Change behaviour here instead of editing the roles.
 
 # ─── k3s ───────────────────────────────────────────────────────────────────────
-# Which k3s release channel to install. "stable" is fine for a homelab.
-# To make rebuilds reproducible later, pin an exact version instead, e.g.:
-#   k3s_channel: "v1.30"
-k3s_channel: "stable"
-
-# Extra flags passed to the k3s SERVER install (control plane).
-# Empty string = vanilla k3s over the LAN. Simplest possible, great for a VM.
-#
-# When you move to real hardware and want your documented Tailscale setup,
-# flip this to something like (all one line):
-#   k3s_server_args: "--disable=traefik --flannel-iface=tailscale0 --node-ip={{ tailscale_ip }} --advertise-address={{ tailscale_ip }}"
-k3s_server_args: ""
-
-# Extra flags passed to the k3s AGENT install (workers). Same idea.
-k3s_agent_args: ""
+k3s_channel: "stable"      # k3s release channel; pin an exact version for reproducibility
+k3s_server_args: ""        # extra flags for the k3s SERVER install (control plane)
+k3s_agent_args: ""         # extra flags for the k3s AGENT install (workers)
 
 # ─── Tailscale ──────────────────────────────────────────────────────────────────
-# Flags for `tailscale up`. We disable Tailscale's DNS takeover so it doesn't
-# fight with your LAN/k3s DNS — matches your existing homelab scripts.
+# Flags for `tailscale up`. Disable Tailscale's DNS takeover so it doesn't fight
+# your LAN/k3s DNS.
 tailscale_up_args: "--accept-dns=false"
 
-# ─── Samba (SMB file share, runs on the host — Layer 1) ──────────────────────────
-# Shares a folder over the network so your Arch laptop / Mac / Windows / phones can
-# reach it. Runs on the node that has the storage (the master/HP).
-samba_enabled: false      # OFF — no DAS/storage on the box yet; re-enable when it exists
-samba_share_name: "storage"
-samba_share_path: "/mnt/storage"           # the mergerfs pool (created empty if absent)
-samba_user: "{{ ansible_user }}"           # share user — must be a real system user
-# ⚠️  CHANGE THIS and move it to an ansible-vault file (a real password never in git).
-#     "changeme" is a placeholder, not a secret.
-samba_password: "changeme"
-# Who may connect — LAN + Tailscale only. NEVER expose SMB (445) to the internet.
-samba_allowed_subnets: "192.168.0.0/16 100.64.0.0/10"
-
-# ─── cert-manager (first Helm app — automated TLS certificates) ──────────────────
-# ON by default now: cert-manager + Traefik Ingress is the HTTPS path (Play 7).
-# cert-manager issues a per-app TLS cert from the self-signed homelab CA; k3s's
-# bundled Traefik serves standard Ingress with no extra config. Routes: vars/routes.yml.
-certmanager_enabled: false    # OFF for now — TLS is being redone via Cloudflare + Let's Encrypt
-                              # (DNS-01) + Tailscale, NOT the old self-signed CA + home.arpa path
-certmanager_version: "v1.17.2"     # matches the version your existing README used
-
-# ─── Gateway API (OPTIONAL / BACKUP routing path) ────────────────────────────────
-# The default HTTPS path is plain Traefik Ingress (above) — simpler and works out of
-# the box. Leave this false. Only flip to true if you specifically want to experiment
-# with Gateway API instead (roles/gateway_api + httproute). See docs/gateway-api-plan.md.
-gateway_api_enabled: false
-gateway_api_version: "v1.2.0"      # Gateway API CRD release (keep compatible w/ Traefik)
-
-# ─── Immich (photos) — HEAVY, staged for the HP ──────────────────────────────────
-# One toggle controls BOTH the prereqs (Postgres + PVCs, Play 4) and the Helm release
-# (Play 5). Leave false until the HP + DAS storage exist — it needs real RAM + disk.
-immich_enabled: false
-
-# ─── qBittorrent + Gluetun (Mullvad VPN) ─────────────────────────────────────────
-# Off by default: needs the 'mullvad-creds' secret in the vpn namespace + /dev/net/tun
-# on the node + a downloads path. Enable once those exist (see the qbittorrent role).
-qbittorrent_enabled: false
-
-# ─── SearXNG (privacy metasearch) ────────────────────────────────────────────
-# Light app — manifest role, apps namespace, NodePort 30880. On by default.
-# ⚠️ Set a real secret_key in roles/searxng/files/searxng.yaml before real use.
-searxng_enabled: true
-
-# NOTE: the list of Helm apps to deploy lives in its own file — vars/helm_releases.yml
-# (loaded by the "Deploy Helm releases" play), not here, since it's deployment data
-# rather than a global host setting.
+# NOTE: the Helm app list lives in vars/helm_releases.yml (loaded by the Vaultwarden play).

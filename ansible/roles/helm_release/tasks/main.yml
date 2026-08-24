@@ -1,8 +1,8 @@
 ---
 # roles/helm_release/tasks/main.yml
 #
-# Deploy a Helm chart using the ANSIBLE-NATIVE `kubernetes.core.helm` module
-# (Approach B) — instead of templating a k3s HelmChart CRD (helm_app, Approach A).
+# Deploy a Helm chart using the ANSIBLE-NATIVE `kubernetes.core.helm` module.
+# Driven by the list in vars/helm_releases.yml (currently just Vaultwarden).
 #
 # Runs on the master. Requirements:
 #   • control node: the `kubernetes.core` collection (see ../../requirements.yml)
