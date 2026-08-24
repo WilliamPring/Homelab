@@ -1,0 +1,74 @@
+---
+# roles/tailscale/tasks/main.yml
+#
+# A "role" is a reusable bundle of tasks. Ansible auto-runs roles/<name>/tasks/main.yml.
+# This role: (1) installs Tailscale, (2) makes sure the daemon runs, (3) checks
+# whether the node is logged in — and if not, stops with clear instructions.
+#
+# TARGETS ARE DEBIAN. Tailscale isn't in Debian's default apt repos, so we use
+# the official install script, which adds Tailscale's apt repo and installs the
+# package. (That's why we don't use the generic `package` module here.)
+#
+# KEY IDEA — idempotency: every task below is safe to run over and over. It only
+# changes the system when the system isn't already in the desired state. That's
+# why re-running the playbook after you log in manually "just works".
+
+- name: Check whether the tailscale binary is already installed
+  # `which` returns non-zero if not found. We capture the result instead of
+  # letting a failure stop the play.
+  ansible.builtin.command: which tailscale
+  register: tailscale_installed
+  changed_when: false          # a read-only check never "changes" anything
+  failed_when: false           # not-found is a valid answer, not an error
+
+- name: Install Tailscale via the official script
+  # Only runs when the check above found nothing. This is how we stay idempotent
+  # without a dedicated apt module: install once, skip forever after. The script
+  # adds Tailscale's Debian apt repo and installs the package + systemd service.
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://tailscale.com/install.sh | sh
+  when: tailscale_installed.rc != 0
+
+- name: Ensure the tailscaled daemon is enabled and running
+  # `systemd` module is declarative: it makes the service match this state and
+  # reports "changed" only if it had to do something.
+  ansible.builtin.systemd:
+    name: tailscaled
+    enabled: true              # start on boot
+    state: started             # start now if not running
+
+- name: Read current Tailscale connection state
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+- name: Stop and ask for a one-time manual login if not connected
+  # You chose manual browser login. `tailscale up` would block waiting for you to
+  # click a URL, so instead we detect the "not logged in" state and stop cleanly
+  # with instructions. Log in once, then re-run the playbook — idempotency means
+  # the earlier tasks skip and we sail past this one.
+  ansible.builtin.fail:
+    msg: |
+      Tailscale is installed on {{ inventory_hostname }} but not logged in yet.
+
+      Do this ONCE on the node (SSH or console):
+          sudo tailscale up {{ tailscale_up_args }}
+      Open the printed URL in a browser and approve the machine, then re-run:
+          ansible-playbook site.yml
+
+      (Tip: to make this fully unattended later, generate a reusable auth key in
+       the Tailscale admin console and switch to `tailscale up --authkey=...`.)
+  when: >
+    tailscale_status.rc != 0
+    or (tailscale_status.stdout | from_json).BackendState != 'Running'
+
+- name: Report the node's Tailscale IP
+  # Purely informational — nice confirmation at the end of the role.
+  ansible.builtin.command: tailscale ip -4
+  register: tailscale_ip_out
+  changed_when: false
+
+- name: Show Tailscale IP
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} Tailscale IP: {{ tailscale_ip_out.stdout }}"

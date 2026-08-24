@@ -1,0 +1,37 @@
+---
+# roles/k3s_agent/tasks/main.yml
+#
+# Installs k3s in "agent" mode on each worker and joins it to the master.
+# Runs only on the [workers] group — skipped entirely if that group is empty.
+
+- name: Check whether k3s is already installed
+  ansible.builtin.command: which k3s
+  register: k3s_installed
+  changed_when: false
+  failed_when: false
+
+- name: Work out how to reach the master
+  # groups['master'] is the list of hosts in the [master] group; [0] is the one.
+  # hostvars[...] lets us read another host's variables — here the join-token
+  # that the k3s_server role published, plus the master's SSH address.
+  ansible.builtin.set_fact:
+    k3s_url: "https://{{ hostvars[groups['master'][0]].ansible_host }}:6443"
+    k3s_token: "{{ hostvars[groups['master'][0]].k3s_node_token }}"
+
+- name: Install k3s agent and join the cluster
+  # K3S_URL + K3S_TOKEN in the environment tell the installer to run as an agent
+  # and which server to join. `sh -s - agent <args>` passes any extra flags.
+  ansible.builtin.shell:
+    cmd: >
+      curl -sfL https://get.k3s.io |
+      INSTALL_K3S_CHANNEL={{ k3s_channel }}
+      K3S_URL={{ k3s_url }}
+      K3S_TOKEN={{ k3s_token }}
+      sh -s - agent {{ k3s_agent_args }}
+  when: k3s_installed.rc != 0
+
+- name: Ensure the k3s-agent service is enabled and running
+  ansible.builtin.systemd:
+    name: k3s-agent
+    enabled: true
+    state: started
