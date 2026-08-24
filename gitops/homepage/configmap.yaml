@@ -75,4 +75,4 @@ data:
               href: https://192.168.68.96:8006
         - Main Proxmox(worker):
             - abbr: PVE
-              href: https://192.168.68.96:8006
+              href: https://192.168.68.89:8006
