@@ -1,0 +1,123 @@
+# Immich PREREQUISITES — what the Immich Helm chart needs but does NOT create:
+#   1. Postgres with Immich's REQUIRED vector extension (NOT vanilla Postgres)
+#   2. the photo LIBRARY PVC (the chart can't auto-create it)
+# The immich-db Secret is created by the play (from immich_db_password), NOT here,
+# so the password stays out of git. Applied BEFORE the Immich Helm release.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: media
+---
+# Postgres with the pgvecto.rs / VectorChord extension — Immich REQUIRES this exact
+# image. Keep the tag in sync with Immich's docker-compose (it changes across releases).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-postgres
+  namespace: media
+  labels:
+    app: immich-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: immich-postgres
+  template:
+    metadata:
+      labels:
+        app: immich-postgres
+    spec:
+      nodeSelector:
+        immich-node: "true"      # pin to the labeled 32GB worker (heavy app)
+      containers:
+        - name: postgres
+          image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+          env:
+            - name: POSTGRES_USER
+              value: immich
+            - name: POSTGRES_DB
+              value: immich
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: immich-db
+                  key: password
+            - name: POSTGRES_INITDB_ARGS
+              value: "--data-checksums"
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: immich-postgres-data
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-postgres-data
+  namespace: media
+  labels:
+    app: immich-postgres
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-postgres
+  namespace: media
+spec:
+  selector:
+    app: immich-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+# Photo LIBRARY on NFS — points at your file-server LXC (192.168.68.50:/data/images, 500GB).
+# ⚠️ /data/images must be NFS-exported (rw) to the LAN, and nfs-common installed on the
+# k3s nodes. Later: repoint to the DAS at the same path → no k8s change.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: immich-library-nfs
+  labels:
+    app: immich
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"        # the file-server LXC
+    path: /data/images
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-library
+  namespace: media
+  labels:
+    app: immich
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: immich-library-nfs   # binds to the static NFS PV above
+  resources:
+    requests:
+      storage: 500Gi

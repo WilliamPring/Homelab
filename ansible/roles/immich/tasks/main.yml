@@ -1,0 +1,49 @@
+---
+# roles/immich/tasks/main.yml — Immich PREREQUISITES (vector Postgres + library PVC +
+# DB secret). Runs on the master BEFORE the Immich Helm release. Gated by immich_enabled.
+# The Immich chart itself is in vars/helm_releases.yml (the data-driven loop, Play 6).
+
+- name: Load local secrets (vars/secrets.local.yaml — gitignored) if present
+  ansible.builtin.include_vars: vars/secrets.local.yaml
+  failed_when: false
+
+- name: Ensure the media namespace exists
+  ansible.builtin.shell: >
+    k3s kubectl create namespace media --dry-run=client -o yaml | k3s kubectl apply -f -
+  changed_when: false
+
+- name: Create the immich-db Secret (from vars/secrets.local.yaml)
+  ansible.builtin.shell: >
+    k3s kubectl create secret generic immich-db -n media
+    --from-literal=password='{{ immich_db_password }}'
+    --dry-run=client -o yaml | k3s kubectl apply -f -
+  no_log: true
+  when: immich_db_password is defined
+  changed_when: false
+
+- name: Label the worker node so Immich pins to it (heavy — ML + storage)
+  ansible.builtin.command: "k3s kubectl label node {{ groups['workers'][0] }} immich-node=true --overwrite"
+  when: groups['workers'] | default([]) | length > 0
+  changed_when: false
+
+- name: Copy the Immich prerequisites manifest to the master
+  ansible.builtin.copy:
+    src: immich-prereqs.yaml
+    dest: /etc/immich-prereqs.yaml
+
+- name: Apply the Immich prerequisites (Postgres, library PVC)
+  ansible.builtin.command: k3s kubectl apply -f /etc/immich-prereqs.yaml
+  register: immich_prereqs
+  changed_when: "'created' in immich_prereqs.stdout or 'configured' in immich_prereqs.stdout"
+
+- name: Wait for the Immich Postgres to be ready
+  ansible.builtin.command: k3s kubectl rollout status deploy/immich-postgres -n media --timeout=180s
+  changed_when: false
+
+- name: Immich prereqs — summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Immich prerequisites applied (vector Postgres + library PVC + DB secret)."
+      - "   The Immich chart connects to immich-postgres:5432, PVC immich-library."
+      - "⚠️  Library is on local-path (node disk) until the DAS exists."
+      - "🔍 sudo k3s kubectl get pods,pvc -n media"
