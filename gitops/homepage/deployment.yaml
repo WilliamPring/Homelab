@@ -27,7 +27,7 @@ spec:
             #    Includes localhost + the master IP for local (no-DNS) access via port-forward.
             #    ⚠️ Replace 192.168.68.10 with YOUR master node's LAN IP (kubectl get nodes -o wide).
             - name: HOMEPAGE_ALLOWED_HOSTS
-              value: "home.williampring.ca
+              value: "home.williampring.ca"
           # ⚠️ subPath mounts each file INDIVIDUALLY so /app/config stays writable — Homepage
           #    must create /app/config/logs at startup, which fails if the whole dir is a
           #    read-only ConfigMap mount ("no such file or directory: /app/config/logs").
