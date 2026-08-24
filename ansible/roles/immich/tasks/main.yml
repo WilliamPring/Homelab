@@ -22,7 +22,7 @@
   changed_when: false
 
 - name: Label the worker node so Immich pins to it (heavy — ML + storage)
-  ansible.builtin.command: "k3s kubectl label node {{ groups['workers'][0] }} immich-node=true --overwrite"
+  ansible.builtin.command: "k3s kubectl label node k3s-worker-01 immich-node=true --overwrite"
   when: groups['workers'] | default([]) | length > 0
   changed_when: false
 
