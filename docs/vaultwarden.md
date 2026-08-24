@@ -87,11 +87,16 @@ adminToken:
 
 ## Common operations
 
-**Access the app:** https://vault.williampring.ca (Tailscale + DNS pointing there).
-Local debug without the Ingress:
-```bash
-sudo k3s kubectl -n apps port-forward svc/vaultwarden 8080:80   # → http://localhost:8080
-```
+**Access the app:**
+- **With DNS:** https://vault.williampring.ca (Tailscale + DNS pointing there).
+- **Without DNS (port-forward):**
+  ```bash
+  sudo k3s kubectl -n apps port-forward --address 0.0.0.0 svc/vaultwarden 8080:80
+  # → http://<master-ip>:8080   (--address 0.0.0.0 = reachable from your Mac while SSH'd in)
+  ```
+  > ⚠️ Vaultwarden's web vault needs a **secure context** (HTTPS or localhost). Over plain
+  > `http://<master-ip>:8080` the browser may block login — use `http://localhost:8080` via a
+  > local port-forward, or the HTTPS domain, to actually sign in.
 
 **Check pod / logs:**
 ```bash

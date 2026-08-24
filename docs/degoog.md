@@ -73,7 +73,15 @@ you click Sync.
 sudo k3s kubectl get pods,svc,ingress,pvc -n apps -l app=degoog
 sudo k3s kubectl get pods -n apps -l app=degoog-valkey
 ```
-Reach it at `http://<node-ip>:30882` (raw) or `https://search.williampring.ca` (domain).
+
+## Access
+**With DNS:** `https://search.williampring.ca`
+**Raw NodePort:** `http://<node-ip>:30882`
+**Without DNS (port-forward):**
+```bash
+sudo k3s kubectl -n apps port-forward --address 0.0.0.0 svc/degoog 4444:4444
+# → http://<master-ip>:4444
+```
 
 ## Troubleshooting
 | Symptom | Cause / fix |

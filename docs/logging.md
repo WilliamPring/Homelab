@@ -65,10 +65,20 @@ curl -s http://localhost:3100/ready ; echo                       # → "ready"
 curl -s "http://localhost:3100/loki/api/v1/labels" ; echo        # → namespace, pod, ...
 ```
 
-## Using it
+## Access
+
+**With DNS (permanent):**
 ```
 https://grafana.williampring.ca → log in → Explore → datasource "Loki"
 ```
+
+**Without DNS (port-forward — no Cloudflare record or cert needed):**
+```bash
+sudo k3s kubectl -n monitoring port-forward --address 0.0.0.0 svc/grafana 3000:80
+# → http://<master-ip>:3000   (--address 0.0.0.0 = reachable from your Mac while SSH'd in)
+```
+Login: `admin` + the password from the `grafana-admin` secret. Then **Explore → Loki**.
+
 LogQL queries to try:
 ```logql
 {namespace="media"}                     # all Immich logs
