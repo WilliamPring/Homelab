@@ -1,0 +1,24 @@
+# Helm values for Vaultwarden (guerzon/vaultwarden chart).
+# Edit Vaultwarden's config HERE — clean YAML, referenced from vars/helm_releases.yml.
+
+image:
+  repository: vaultwarden/server
+
+# Embedded SQLite — no external database server needed (that's what keeps it light).
+database:
+  type: default
+
+# Let you create your account on first use. Set false AFTER you've signed up.
+signupsAllowed: true
+
+# ClusterIP + port-forward: the Vaultwarden web vault needs a secure context (HTTPS
+# or localhost), so plain-http NodePort can't log in anyway. Reach it with:
+#   sudo k3s kubectl -n apps port-forward svc/vaultwarden 8080:80  → http://localhost:8080
+# (Switch to an IngressRoute + TLS later for real hostname access.)
+service:
+  type: ClusterIP
+
+storage:
+  data:
+    size: "2Gi"
+    class: ""          # "" = k3s default (local-path)

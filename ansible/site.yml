@@ -42,7 +42,8 @@
   become: true
   roles:
     - pihole        # network namespace  — DNS ad-blocking
-    - vaultwarden   # apps namespace     — password manager (throwaway data for now)
+    # Vaultwarden is now a Helm release (see vars/helm_releases.yml). Its hand-written
+    # manifest in roles/vaultwarden/files/ is KEPT AS BACKUP but no longer applied.
 
 # ─── PLAY 5: Helm releases (data-driven) ─────────────────────────────────────
 # Deploys every enabled entry in the `helm_releases` list (group_vars/all.yml) via
