@@ -21,4 +21,5 @@ service:
 storage:
   data:
     size: "2Gi"
-    class: ""          # "" = k3s default (local-path)
+    class: ""                     # "" = k3s default (local-path)
+    accessMode: "ReadWriteOnce"   # local-path only supports RWO (NOT ReadWriteMany)
