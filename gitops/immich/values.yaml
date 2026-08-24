@@ -1,22 +1,8 @@
-# Helm values for Immich (immich-app/immich-charts — bjw-s common-library based) — GitOps copy.
-# Argo feeds this to the chart via the Application's valueFiles ($values/gitops/immich/values.yaml).
-#
-# ⚠️ STRUCTURE MATTERS for this chart:
-#   env  → controllers.main.containers.main.env   (NOT a top-level env:)
-#   lib  → immich.persistence.library
-# Redis auto-wires to <release>-valkey when valkey.enabled: true.
-
-# Immich version = chart DEFAULT (appVersion v3.0.0) — no image.tag pin.
-# ⚠️ If the cluster is currently running 3.1, deploying this is a DOWNGRADE to 3.0.0.
-#    Immich does NOT support downgrades across a DB migration — 3.0.0 may refuse to start
-#    against a 3.1-migrated database. BACK UP Postgres + the library before syncing, and
-#    check the running version first (see docs/immich.md / the notes below).
-
-# Pin ALL Immich pods to the labeled 32GB worker (heavy: ML + storage).
-# ⚠️ The 'immich-node: true' label must exist on the worker (hand/Ansible — not a manifest).
+# Pin all Immich pods to the labeled 32GB worker.
 defaultPodOptions:
   nodeSelector:
     immich-node: "true"
+
 
 # Photo library → the pre-created NFS-backed PVC (gitops/immich/prereqs/library.yaml).
 immich:
@@ -28,26 +14,12 @@ immich:
 valkey:
   enabled: true
 
-# Enable machine learning pod (CLIP for image recognition, face detection)
-controllers:
-  ml:
-    enabled: true
-
-# ML Service resources — control CPU/memory for ML workloads
-mlService:
-  main:
-    resources:
-      requests:
-        cpu: "500m"
-        memory: "1Gi"
-      limits:
-        cpu: "2000m"
-        memory: "4Gi"
 
 # Environment — connect to the EXTERNAL vector Postgres (gitops/immich/prereqs/postgres.yaml).
 # MUST live here (controllers.main.containers.main.env) for this chart to apply it.
 # DB_PASSWORD comes from the hand-managed immich-db Secret (out of git, must exist in media).
 controllers:
+  # Immich server
   main:
     containers:
       main:
@@ -60,4 +32,23 @@ controllers:
               secretKeyRef:
                 name: immich-db
                 key: password
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "2Gi"
+          limits:
+            cpu: "6"
+            memory: "8Gi"
+
+  # Immich machine-learning service
+  machine-learning:
+    containers:
+      main:
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "4"
+            memory: "4Gi"
 
