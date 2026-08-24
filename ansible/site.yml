@@ -88,17 +88,21 @@
     - role: samba
       when: samba_enabled | default(true)
 
-# ─── PLAY 7: TLS ingress foundation — cert-manager + Gateway API ──────────────
-# cert-manager (+ self-signed CA) provides the wildcard TLS cert; Gateway API
-# (on Traefik) does the routing. Both gated; set certmanager_enabled AND
-# gateway_api_enabled to true. See docs/gateway-api-plan.md.
-- name: TLS ingress (cert-manager + Gateway API)
+# ─── PLAY 7: TLS ingress — cert-manager + Traefik Ingress ────────────────────
+# The simple, reliable path: cert-manager (self-signed CA) issues a per-app TLS
+# cert, and k3s's BUNDLED Traefik serves standard Kubernetes Ingress out of the
+# box — no Gateway API, no HelmChartConfig, nothing to enable on Traefik.
+# Gated by certmanager_enabled. Routes are data-driven from vars/routes.yml.
+#
+# The Gateway API path (roles/gateway_api + httproute) is KEPT AS BACKUP and only
+# runs if you flip gateway_api_enabled: true. See docs/gateway-api-plan.md.
+- name: TLS ingress (cert-manager + Traefik Ingress)
   hosts: master
   become: true
   vars_files:
-    - vars/routes.yml            # the HTTPRoute list (data-driven)
+    - vars/routes.yml            # the route list (data-driven; shared by both paths)
   roles:
-    # cert-manager via Helm (needed for the wildcard cert)
+    # cert-manager via Helm — issues the TLS certs from the self-signed CA.
     - role: helm_app
       when: certmanager_enabled | default(false)
       vars:
@@ -110,14 +114,30 @@
         helm_app_values: |
           crds:
             enabled: true
+    # Self-signed CA + issuers (homelab-ca-issuer ClusterIssuer).
     - role: certmanager_issuer
       when: certmanager_enabled | default(false)
-    # Gateway API foundation (CRDs + Traefik provider + GatewayClass + Gateway + cert)
+    # BACKUP / OPTIONAL: Gateway API foundation. Off unless gateway_api_enabled: true.
     - role: gateway_api
       when: gateway_api_enabled | default(false)
   tasks:
-    # HTTPRoutes — one per entry in vars/routes.yml (data-driven loop)
-    - name: Deploy HTTPRoute
+    # DEFAULT PATH — one Traefik Ingress per entry in vars/routes.yml (data-driven).
+    - name: Deploy Ingress
+      ansible.builtin.include_role:
+        name: ingress
+      vars:
+        route_name: "{{ item.name }}"
+        route_namespace: "{{ item.namespace }}"
+        route_hostname: "{{ item.hostname }}"
+        route_service: "{{ item.service }}"
+        route_port: "{{ item.port }}"
+      loop: "{{ routes | default([]) }}"
+      when: certmanager_enabled | default(false)
+      loop_control:
+        label: "{{ item.name }}"
+
+    # BACKUP PATH — Gateway API HTTPRoutes. Only when gateway_api_enabled: true.
+    - name: Deploy HTTPRoute (Gateway API — optional)
       ansible.builtin.include_role:
         name: httproute
       vars:
