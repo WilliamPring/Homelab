@@ -107,3 +107,29 @@ spec:
                 name: searxng
                 port:
                   number: 8080
+---
+# Ingress for Immich (photos). https://immich.williampring.ca — note: media namespace.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: immich
+  namespace: media
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - immich.williampring.ca
+      secretName: immich-tls
+  rules:
+    - host: immich.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: immich-server
+                port:
+                  number: 2283
