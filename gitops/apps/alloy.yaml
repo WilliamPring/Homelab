@@ -1,0 +1,30 @@
+# Argo CD Application — Alloy (log shipper), step 2 of 3 for the logging stack.
+# DaemonSet that tails all pod logs and pushes them to Loki (loki.monitoring:3100).
+#
+# ⚠️ Sync AFTER loki (it pushes to the 'loki' service, which must exist).
+# Apply:  sudo k3s kubectl apply -f gitops/apps/alloy.yaml   → then SYNC in the UI.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      # PINNED (Argo can't resolve "*" for Helm charts). Verify/bump:
+      #   helm show chart grafana/alloy | grep version
+      targetRevision: "1.11.1"
+      helm:
+        valueFiles:
+          - $values/gitops/alloy/values.yaml
+    - repoURL: https://github.com/WilliamPring/Homelab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
