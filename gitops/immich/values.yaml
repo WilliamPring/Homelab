@@ -28,6 +28,22 @@ immich:
 valkey:
   enabled: true
 
+# Enable machine learning pod (CLIP for image recognition, face detection)
+controllers:
+  ml:
+    enabled: true
+
+# ML Service resources — control CPU/memory for ML workloads
+mlService:
+  main:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "4Gi"
+
 # Environment — connect to the EXTERNAL vector Postgres (gitops/immich/prereqs/postgres.yaml).
 # MUST live here (controllers.main.containers.main.env) for this chart to apply it.
 # DB_PASSWORD comes from the hand-managed immich-db Secret (out of git, must exist in media).
@@ -44,3 +60,4 @@ controllers:
               secretKeyRef:
                 name: immich-db
                 key: password
+
