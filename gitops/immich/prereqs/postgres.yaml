@@ -72,20 +72,20 @@ spec:
 
 # OLD PG14 PVC — KEEP THIS FOR ROLLBACK.
 # DO NOT DELETE YET.
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: immich-postgres-data
-  namespace: media
-  labels:
-    app: immich-postgres
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: immich-postgres-data
+#   namespace: media
+#   labels:
+#     app: immich-postgres
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 10Gi
 
 # NEW PG16 PVC — contains the restored database.
 ---
