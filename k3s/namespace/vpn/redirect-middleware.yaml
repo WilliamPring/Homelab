@@ -1,0 +1,26 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: vpn
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: qbittorrent-http
+  namespace: vpn
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`qbittorrent.media.williampring.ca`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+      services:
+        - name: qbittorrent
+          port: 8080
