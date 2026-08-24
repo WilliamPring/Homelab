@@ -1,5 +1,6 @@
 # Gateway API entry point for the homelab.
-# Single *.williampring.ca wildcard, TLS from the self-signed homelab CA (cert-manager).
+# Single *.home.arpa wildcard (sandbox, internal-only — never touches the real domain),
+# TLS from the self-signed homelab CA (cert-manager).
 # Requires: Gateway API CRDs installed + cert-manager + homelab-ca-issuer (certmanager role).
 ---
 apiVersion: v1
@@ -39,8 +40,8 @@ metadata:
 spec:
   secretName: wildcard-tls
   dnsNames:
-    - "*.williampring.ca"
-    - "williampring.ca"
+    - "*.home.arpa"
+    - "home.arpa"
   issuerRef:
     name: homelab-ca-issuer
     kind: ClusterIssuer
@@ -56,7 +57,7 @@ spec:
     - name: https
       protocol: HTTPS
       port: 443
-      hostname: "*.williampring.ca"
+      hostname: "*.home.arpa"
       tls:
         mode: Terminate
         certificateRefs:
