@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+
+spec:
+  template:
+    spec:
+      volumes:
+        - name: custom-tools
+          emptyDir: {}
+
+        - name: sops-age
+          secret:
+            secretName: sops-age
+
+      initContainers:
+        - name: install-ksops
+          image: viaductoss/ksops:v4.5.1
+          command:
+            - /usr/local/bin/ksops
+            - install
+            - /custom-tools
+          volumeMounts:
+            - name: custom-tools
+              mountPath: /custom-tools
+
+      containers:
+        - name: argocd-repo-server
+          env:
+            - name: SOPS_AGE_KEY_FILE
+              value: /etc/sops-age/keys.txt
+
+          volumeMounts:
+            - name: custom-tools
+              mountPath: /usr/local/bin/ksops
+              subPath: ksops
+
+            - name: sops-age
+              mountPath: /etc/sops-age/keys.txt
+              subPath: keys.txt
+              readOnly: true
