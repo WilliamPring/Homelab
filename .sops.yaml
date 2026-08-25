@@ -1,6 +1,8 @@
-# .sops.yaml  (repo root)
 creation_rules:
-  # any file ending in .sops.yaml → encrypt only the data/stringData fields, with your age key
+  - path_regex: .*degoog-secret\.enc\.yaml$
+    encrypted_regex: "^(data|stringData)$"
+    age: "age1rvqfv9w738ucl3w8fctvp30p738s72t682dg5vwws5laxm3ek94qlczs34"
+
   - path_regex: .*\.sops\.yaml$
     encrypted_regex: "^(data|stringData)$"
     age: "age1rvqfv9w738ucl3w8fctvp30p738s72t682dg5vwws5laxm3ek94qlczs34"
