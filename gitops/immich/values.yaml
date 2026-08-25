@@ -12,7 +12,7 @@ immich:
 
 # Let the chart deploy + auto-wire Valkey (Redis). REDIS_HOSTNAME → immich-valkey.
 valkey:
-  enabled: true
+  enabled: false
 
 
 # Environment — connect to the EXTERNAL vector Postgres (gitops/immich/prereqs/postgres.yaml).
@@ -32,6 +32,8 @@ controllers:
               secretKeyRef:
                 name: immich-db
                 key: password
+          REDIS_HOSTNAME: 192.168.68.103
+          REDIS_PORT: "6379"
         resources:
           requests:
             cpu: "500m"
@@ -39,4 +41,5 @@ controllers:
           limits:
             cpu: "6"
             memory: "8Gi"
+
 
