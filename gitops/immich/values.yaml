@@ -32,8 +32,10 @@ controllers:
               secretKeyRef:
                 name: immich-db
                 key: password
-          REDIS_HOSTNAME: 192.168.68.103
+          REDIS_HOSTNAME: "192.168.68.103"
           REDIS_PORT: "6379"
+          REDIS_USERNAME: "redis"
+          REDIS_PASSWORD: "7jDtb86VyDd155XM7KHg4UNlahRVyl4s"
         resources:
           requests:
             cpu: "500m"
