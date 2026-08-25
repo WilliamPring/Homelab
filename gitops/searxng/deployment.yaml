@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: searxng
-          image: searxng/searxng:latest   # pin a tag later for reproducibility
+          image: searxng/searxng:latest 
           ports:
             - containerPort: 8080
           volumeMounts:
