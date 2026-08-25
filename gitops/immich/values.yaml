@@ -35,7 +35,11 @@ controllers:
           REDIS_HOSTNAME: "192.168.68.103" 
           REDIS_PORT: "6379" 
           REDIS_USERNAME: "redis" 
-          REDIS_PASSWORD: "7jDtb86VyDd155XM7KHg4UNlahRVyl4s"
+          REDIS_PASSWORD:
+            valueFrom:
+              secretKeyRef:
+                name: immich-secret
+                key: REDIS_PASSWORD
         resources:
           requests:
             cpu: "500m"
@@ -43,16 +47,3 @@ controllers:
           limits:
             cpu: "6"
             memory: "8Gi"
-
-  # # Immich machine-learning service
-  # machine-learning:
-  #   containers:
-  #     main:
-  #       resources:
-  #         requests:
-  #           cpu: "500m"
-  #           memory: "1Gi"
-  #         limits:
-  #           cpu: "4"
-  #           memory: "4Gi"
-
