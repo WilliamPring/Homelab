@@ -10,9 +10,6 @@ spec:
         - name: custom-tools
           emptyDir: {}
 
-        - name: kustomize-plugins
-          emptyDir: {}
-
         - name: sops-age
           secret:
             secretName: sops-age
@@ -29,17 +26,11 @@ spec:
             - name: custom-tools
               mountPath: /custom-tools
 
-            - name: kustomize-plugins
-              mountPath: /home/argocd/.config/kustomize/plugin
-
       containers:
         - name: argocd-repo-server
           env:
             - name: SOPS_AGE_KEY_FILE
               value: /etc/sops-age/keys.txt
-
-            - name: KUSTOMIZE_PLUGIN_HOME
-              value: /home/argocd/.config/kustomize/plugin
 
           volumeMounts:
             - name: custom-tools
@@ -49,9 +40,6 @@ spec:
             - name: custom-tools
               mountPath: /usr/local/bin/kustomize
               subPath: kustomize
-
-            - name: kustomize-plugins
-              mountPath: /home/argocd/.config/kustomize/plugin
 
             - name: sops-age
               mountPath: /etc/sops-age/keys.txt
