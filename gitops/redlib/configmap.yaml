@@ -1,23 +1,13 @@
-# Redlib Configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: redlib-config
   namespace: apps
-
 data:
-  # ------------------------------------------------------------
-  # Instance settings
-  # ------------------------------------------------------------
-
   REDLIB_PORT: "8080"
   REDLIB_SFW_ONLY: "off"
   REDLIB_ROBOTS_DISABLE_INDEXING: "off"
   REDLIB_PUSHPSHIFT_FRONTEND: "undelete.pullpush.io"
-
-  # ------------------------------------------------------------
-  # Default user settings
-  # ------------------------------------------------------------
 
   REDLIB_DEFAULT_THEME: "system"
   REDLIB_DEFAULT_FRONT_PAGE: "default"
@@ -31,9 +21,3 @@ data:
   REDLIB_DEFAULT_USE_HLS: "on"
   REDLIB_DEFAULT_HIDE_AWARDS: "off"
   REDLIB_DEFAULT_FIXED_NAVBAR: "on"
-
-  # ------------------------------------------------------------
-  # RSS
-  # ------------------------------------------------------------
-
-  REDLIB_ENABLE_RSS: "on"
