@@ -53,7 +53,7 @@ data:
         - Pulse:
             href: http://pulse.williampring.ca
             description: Platform that manages all your Proxmox servers 
-            icon: mdi-pulse   
+            icon: mdi-pulse
 
   widgets.yaml: |
     - resources:
