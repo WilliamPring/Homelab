@@ -1,0 +1,88 @@
+# Calibre storage — mirrors Immich's NFS pattern (file-server LXC 192.168.68.50).
+#   library → /data/books        (the Calibre library: books + metadata.db)   — NFS
+#   ingest  → /data/books-ingest (drop ebooks here → auto-imported by CWA)     — NFS
+#   config  → local-path PVC     (app.db/settings — SQLite, kept OFF NFS to avoid locking)
+#
+# ⚠️ PREREQ on the file server (Alpine LXC) — these dirs live under the existing /data export:
+#     mkdir -p /data/books /data/books-ingest
+#     chown -R 1000:1000 /data/books /data/books-ingest    (PUID/PGID 1000 below)
+# ⚠️ Whatever node Calibre lands on needs nfs-common (like the Immich worker).
+---
+# ── Books library (NFS) ─────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: calibre-books-nfs
+  labels:
+    app: calibre
+spec:
+  capacity:
+    storage: 200Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"        # the file-server LXC (same as Immich)
+    path: /data/books
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: calibre-books
+  namespace: media
+  labels:
+    app: calibre
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: calibre-books-nfs
+  resources:
+    requests:
+      storage: 200Gi
+---
+# ── Ingest drop-folder (NFS) — drop an ebook here → CWA auto-adds + converts it ───────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: calibre-ingest-nfs
+  labels:
+    app: calibre
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"
+    path: /data/books-ingest
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: calibre-ingest
+  namespace: media
+  labels:
+    app: calibre
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: calibre-ingest-nfs
+  resources:
+    requests:
+      storage: 20Gi
+---
+# ── App config (local-path) — SQLite app.db lives here, NOT on NFS (locking) ──────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: calibre-config
+  namespace: media
+  labels:
+    app: calibre
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

@@ -1,0 +1,57 @@
+# Calibre-Web-Automated — reads ebooks (phone/laptop browser + OPDS), sends to Kindle,
+# and auto-imports books dropped into the ingest folder.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calibre
+  namespace: media
+  labels:
+    app: calibre
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO config volume + single instance
+  selector:
+    matchLabels:
+      app: calibre
+  template:
+    metadata:
+      labels:
+        app: calibre
+    spec:
+      containers:
+        - name: calibre-web-automated
+          image: crocodilestick/calibre-web-automated:latest
+          imagePullPolicy: Always   # with :latest, pull the newest image on each pod (re)start
+          env:
+            - name: PUID
+              value: "1000"          # must match the file-server ownership of /data/books
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "America/Vancouver"
+          ports:
+            - containerPort: 8083    # Calibre-Web's web UI / OPDS port
+          volumeMounts:
+            - name: config
+              mountPath: /config           # app.db + settings (local-path)
+            - name: library
+              mountPath: /calibre-library  # the Calibre library (NFS)
+            - name: ingest
+              mountPath: /cwa-book-ingest  # drop books here → auto-added (NFS)
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: calibre-config
+        - name: library
+          persistentVolumeClaim:
+            claimName: calibre-books
+        - name: ingest
+          persistentVolumeClaim:
+            claimName: calibre-ingest
