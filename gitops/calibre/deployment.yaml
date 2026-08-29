@@ -41,10 +41,11 @@ spec:
               mountPath: /cwa-book-ingest  # drop books here → auto-added (NFS)
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 250m
+              memory: 512Mi
             limits:
-              memory: 1Gi
+              cpu: "2"
+              memory: 2Gi
       volumes:
         - name: config
           persistentVolumeClaim:
