@@ -6,9 +6,11 @@ metadata:
   labels:
     app: calibre
 spec:
-  type: ClusterIP
+  # type: ClusterIP
+  type: NodePort
   selector:
     app: calibre
   ports:
     - port: 8083
       targetPort: 8083
+      nodePort: 30083
