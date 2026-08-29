@@ -63,7 +63,6 @@ data:
         cpu: true
         memory: true
         disk: /
-        uptime: true
     - search:
         provider: custom
         url: https://search.williampring.ca/search?q=
