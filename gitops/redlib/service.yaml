@@ -3,14 +3,12 @@ kind: Service
 metadata:
   name: redlib
   namespace: apps
-
 spec:
   type: ClusterIP
   selector:
     app: redlib
-
   ports:
     - name: http
       port: 80
       targetPort: 8080
-
+      protocol: TCP
