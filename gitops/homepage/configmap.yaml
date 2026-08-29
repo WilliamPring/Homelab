@@ -60,6 +60,16 @@ data:
         cpu: true
         memory: true
         disk: /
+    - openmeteo:
+        label: Toronto
+        latitude: 43.6532
+        longitude: -79.3832
+        timezone: America/Toronto
+        units: metric
+    - rss:
+        title: Homelab News
+        url: https://www.reddit.com/r/homelab/.rss
+        limit: 5
     - search:
         provider: custom
         url: https://search.williampring.ca/search?q=
