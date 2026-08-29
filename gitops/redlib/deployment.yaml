@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: redlib
-          image: ghcr.io/redlib-org/redlib:latest
+          image: quay.io/redlib/redlib:latest
           ports:
             - containerPort: 8080
           envFrom:
