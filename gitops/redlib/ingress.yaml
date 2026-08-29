@@ -9,8 +9,13 @@ metadata:
     # cert-manager.io/cluster-issuer: lets-prod-staging-cluster
     # kubernetes.io/tls-acme: "true"
 spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - redlib.williampring.ca
+      secretName: redlib-tls
   rules:
-    - host: redlib.homelab.local  # Update with your domain
+    - host: redlib.williampring.ca
       http:
         paths:
           - path: /
@@ -19,4 +24,4 @@ spec:
               service:
                 name: redlib
                 port:
-                  number: 80
+                  number: 8080
