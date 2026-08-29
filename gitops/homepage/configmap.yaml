@@ -65,24 +65,16 @@ data:
         disk: /
         uptime: true
         expanded: true
-
+    - search:
+        provider: custom
+        url: https://search.williampring.ca/search?q=
+        target: _blank
     - openmeteo:
         label: Toronto
         latitude: 43.6532
         longitude: -79.3832
         timezone: America/Toronto
-        units: metric
-
-    - search:
-        provider: custom
-        url: https://search.williampring.ca/search?q=
-        target: _blank
-
-    - datetime:
-        text_size: xl
-        format:
-          dateStyle: full
-          timeStyle: short
+        units: metric        
 
   bookmarks.yaml: |
     - Homelab:
