@@ -21,6 +21,9 @@ data:
       Monitoring:
         style: row
         columns: 3
+      Dashboard:
+        style: row
+        columns: 3
 
   services.yaml: |
     - Apps:
