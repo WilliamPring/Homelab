@@ -51,7 +51,7 @@ data:
             description: GitOps deployments
             icon: si-argo
         - Pulse:
-            href: http://pulse.williampring.ca
+            href: http://pulse.williampring.ca:7655
             description: Platform that manages all your Proxmox servers 
             icon: mdi-pulse
 
