@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nitter-valkey
+  namespace: apps
+  labels:
+    app: nitter-valkey
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nitter-valkey
+  template:
+    metadata:
+      labels:
+        app: nitter-valkey
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8-alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nitter-valkey
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: nitter-valkey
+  ports:
+    - port: 6379
+      targetPort: 6379

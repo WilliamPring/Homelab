@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nitter
+  namespace: apps
+  labels:
+    app: nitter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nitter
+  template:
+    metadata:
+      labels:
+        app: nitter
+    spec:
+      containers:
+        - name: nitter
+          image: zedeus/nitter:latest
+          ports:
+            - containerPort: 8080
+
+          volumeMounts:
+            - name: nitter-config
+              mountPath: /src/nitter.conf
+              subPath: nitter.conf
+              readOnly: true
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+      volumes:
+        - name: nitter-config
+          configMap:
+            name: nitter-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nitter
+  namespace: apps
+spec:
+  type: ClusterIP
+  selector:
+    app: nitter
+  ports:
+    - port: 80
+      targetPort: 8080
