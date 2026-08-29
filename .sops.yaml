@@ -1,5 +1,9 @@
 creation_rules:
-  - path_regex: .*degoog-secret\.enc\.yaml$
+  - path_regex: .*secrets\.yaml$
+    encrypted_regex: "^(data|stringData)$"
+    age: "age1rvqfv9w738ucl3w8fctvp30p738s72t682dg5vwws5laxm3ek94qlczs34"
+
+  - path_regex: .*\.enc\.yaml$
     encrypted_regex: "^(data|stringData)$"
     age: "age1rvqfv9w738ucl3w8fctvp30p738s72t682dg5vwws5laxm3ek94qlczs34"
 
