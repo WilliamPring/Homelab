@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redlib
+  namespace: apps
+  labels:
+    app: redlib
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: redlib
+
+  strategy:
+    type: Recreate
+
+  template:
+    metadata:
+      labels:
+        app: redlib
+      containers:
+        - name: redlib
+          image: quay.io/redlib/redlib:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          env:
+            # Enable RSS feeds
+            - name: ENABLE_RSS
+              value: "on"
+
+            - name: FULL_URL
+              value: "https://redlib.williampring.ca"
+
+            - name: REDLIB_DEFAULT_THEME
+              value: "dark"
+
+            - name: REDLIB_DEFAULT_LAYOUT
+              value: "compact"
+
+            - name: REDLIB_DEFAULT_SHOW_NSFW
+              value: "off"
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

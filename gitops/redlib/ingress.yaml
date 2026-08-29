@@ -1,0 +1,22 @@
+# Ingress for Redlib - Reddit frontend
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redlib
+  namespace: apps
+  annotations:
+    # Optional: Add nginx ingress annotations for SSL if needed
+    # cert-manager.io/cluster-issuer: lets-prod-staging-cluster
+    # kubernetes.io/tls-acme: "true"
+spec:
+  rules:
+    - host: redlib.homelab.local  # Update with your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: redlib
+                port:
+                  number: 80

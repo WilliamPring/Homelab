@@ -1,0 +1,20 @@
+# Argo CD Application for Redlib — a private Reddit front-end.
+#
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/redlib.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redlib
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/redlib
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apps
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
