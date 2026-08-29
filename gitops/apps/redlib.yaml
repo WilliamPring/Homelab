@@ -1,6 +1,4 @@
 # Argo CD Application for Redlib — a private Reddit front-end.
-#
-# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/redlib.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
