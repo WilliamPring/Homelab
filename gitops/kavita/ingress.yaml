@@ -1,0 +1,29 @@
+# Ingress → https://library.williampring.ca (Kavita = your unified manga + ebooks library).
+# cert-manager issues kavita-tls from the 'letsencrypt' ClusterIssuer (Cloudflare DNS-01).
+# DNS: library → A → master Tailscale IP.  (rename the host if you prefer manga.* / books.*)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kavita
+  namespace: media
+  labels:
+    app: kavita
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - library.williampring.ca
+      secretName: kavita-tls
+  rules:
+    - host: library.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kavita
+                port:
+                  number: 5000

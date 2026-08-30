@@ -1,29 +1,27 @@
-# Komga — manga/comic server (CBZ/CBR). Reads ComicInfo.xml, real covers, page reader,
-# reading-progress sync, OPDS. Uses its EMBEDDED DB (in /config) — no external Postgres.
+# Kavita — one app for manga/comics (CBZ/CBR) AND ebooks (EPUB/PDF). Reader + progress
+# sync + OPDS + scrobbling. Uses its EMBEDDED DB (in /config) — no external Postgres.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: komga
+  name: kavita
   namespace: media
   labels:
-    app: komga
+    app: kavita
 spec:
   replicas: 1
   strategy:
     type: Recreate            # RWO config volume + single instance
   selector:
     matchLabels:
-      app: komga
+      app: kavita
   template:
     metadata:
       labels:
-        app: komga
+        app: kavita
     spec:
-      securityContext:
-        fsGroup: 1000
       containers:
-        - name: komga
-          image: gotson/komga:latest   # official Komga image — pin a tag later
+        - name: kavita
+          image: lscr.io/linuxserver/kavita:latest   # LSIO image (PUID/PGID) — pin a tag later
           env:
             - name: PUID
               value: "1000"           # must match /data/manga ownership on the file server
@@ -32,22 +30,22 @@ spec:
             - name: TZ
               value: "America/Vancouver"
           ports:
-            - containerPort: 25600    # Komga's web UI / OPDS port
+            - containerPort: 5000     # Kavita's web UI / OPDS port
           volumeMounts:
             - name: config
               mountPath: /config      # embedded DB + settings
-            - name: manga
-              mountPath: /data/manga  # the CBZ/CBR library (NFS)
+            - name: library
+              mountPath: /library     # all content (NFS) — add libraries at /library/manga, /library/books, ...
           resources:
             requests:
               cpu: 100m
-              memory: 512Mi
+              memory: 256Mi
             limits:
-              memory: 2Gi             # Komga does thumbnail/scan work — give it headroom
+              memory: 1Gi
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: komga-config
-        - name: manga
+            claimName: kavita-config
+        - name: library
           persistentVolumeClaim:
-            claimName: komga-manga
+            claimName: kavita-library

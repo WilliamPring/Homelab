@@ -1,0 +1,61 @@
+# Kavita storage — mirrors the Immich/Calibre NFS pattern (file-server LXC 192.168.68.50).
+#   library → /data/library  (ALL Kavita content: manga, books, comics — one shelf per subfolder)  — NFS
+#   config  → local-path PVC (Kavita's embedded DB: index + reading progress)                       — node disk
+#
+# Kavita wants one folder per "library", each with a TYPE. Organize like:
+#   /data/library/manga   → add as a "Manga" library
+#   /data/library/books   → add as a "Book" library
+#   /data/library/comics  → add as a "Comic" library
+#
+# ⚠️ PREREQ on the file server (under the existing /data export):
+#     mkdir -p /data/library/manga /data/library/books
+#     chown -R 1000:1000 /data/library && chmod -R 775 /data/library
+# ⚠️ Whatever node Kavita lands on needs nfs-common (like Immich/Calibre).
+---
+# ── Library root (NFS) — holds manga + books + comics ─────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: kavita-library-nfs
+  labels:
+    app: kavita
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"        # the file-server LXC (same as Immich/Calibre)
+    path: /data/library
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kavita-library
+  namespace: media
+  labels:
+    app: kavita
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: kavita-library-nfs
+  resources:
+    requests:
+      storage: 500Gi
+---
+# ── App config (local-path) — Kavita's embedded DB (index + progress) ─────────────────
+# NOT the irreplaceable data (that's the files on NFS). If lost, Kavita re-scans to rebuild.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kavita-config
+  namespace: media
+  labels:
+    app: kavita
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
