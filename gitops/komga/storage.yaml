@@ -1,0 +1,56 @@
+# Komga storage — mirrors the Calibre/Immich NFS pattern (file-server LXC 192.168.68.50).
+#   manga  → /data/manga     (the CBZ/CBR library — the irreplaceable files)   — NFS
+#   config → local-path PVC  (Komga's embedded DB: index + reading progress)   — node disk
+#
+# ⚠️ PREREQ on the file server (under the existing /data export):
+#     mkdir -p /data/manga && chown -R 1000:1000 /data/manga && chmod -R 775 /data/manga
+# ⚠️ Whatever node Komga lands on needs nfs-common (like Immich/Calibre).
+---
+# ── Manga library (NFS) ─────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: komga-manga-nfs
+  labels:
+    app: komga
+spec:
+  capacity:
+    storage: 300Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"        # the file-server LXC (same as Immich/Calibre)
+    path: /data/manga
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: komga-manga
+  namespace: media
+  labels:
+    app: komga
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: komga-manga-nfs
+  resources:
+    requests:
+      storage: 300Gi
+---
+# ── App config (local-path) — Komga's embedded DB (index + progress) ──────────────────
+# NOT the irreplaceable data (that's the CBZ files on NFS). If lost, Komga re-scans the
+# library to rebuild the index. Kept on local-path (SQLite/H2 — off NFS to avoid locking).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: komga-config
+  namespace: media
+  labels:
+    app: komga
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi

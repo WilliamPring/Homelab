@@ -6,11 +6,10 @@ metadata:
   labels:
     app: calibre
 spec:
-  # type: ClusterIP
-  type: NodePort
+  type: NodePort           # NodePort also keeps a ClusterIP → the Ingress/domain still works
   selector:
     app: calibre
   ports:
     - port: 8083
       targetPort: 8083
-      nodePort: 30083
+      nodePort: 30083      # LAN access: http://<node-LAN-IP>:30083  (for the Kindle browser)

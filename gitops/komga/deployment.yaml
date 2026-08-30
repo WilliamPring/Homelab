@@ -1,0 +1,53 @@
+# Komga — manga/comic server (CBZ/CBR). Reads ComicInfo.xml, real covers, page reader,
+# reading-progress sync, OPDS. Uses its EMBEDDED DB (in /config) — no external Postgres.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: komga
+  namespace: media
+  labels:
+    app: komga
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO config volume + single instance
+  selector:
+    matchLabels:
+      app: komga
+  template:
+    metadata:
+      labels:
+        app: komga
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: komga
+          image: gotson/komga:latest   # official Komga image — pin a tag later
+          env:
+            - name: PUID
+              value: "1000"           # must match /data/manga ownership on the file server
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "America/Vancouver"
+          ports:
+            - containerPort: 25600    # Komga's web UI / OPDS port
+          volumeMounts:
+            - name: config
+              mountPath: /config      # embedded DB + settings
+            - name: manga
+              mountPath: /data/manga  # the CBZ/CBR library (NFS)
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              memory: 2Gi             # Komga does thumbnail/scan work — give it headroom
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: komga-config
+        - name: manga
+          persistentVolumeClaim:
+            claimName: komga-manga
