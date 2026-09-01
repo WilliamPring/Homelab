@@ -24,7 +24,7 @@ spec:
           image: lscr.io/linuxserver/kavita:latest   # LSIO image (PUID/PGID) — pin a tag later
           env:
             - name: PUID
-              value: "1000"           # must match /data/manga ownership on the file server
+              value: "1000"
             - name: PGID
               value: "1000"
             - name: TZ
