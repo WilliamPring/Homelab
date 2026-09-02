@@ -64,12 +64,12 @@ data:
 
     - Infrastructure:
         - Pulse:
-            href: http://pulse.williampring.ca
+            href: http://192.168.68.104
             description: Proxmox management
             widget:
               type: iframe
               name: Pulse
-              src: http://pulse.williampring.ca
+              src: http://192.168.68.104
               classes: h-[700px]
 
   widgets.yaml: |
