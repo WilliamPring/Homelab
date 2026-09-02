@@ -64,12 +64,12 @@ data:
 
     - Infrastructure:
         - Pulse:
-            href: http://192.168.68.104
+            href: http://192.168.68.104:7655
             description: Proxmox management
             widget:
               type: iframe
               name: Pulse
-              src: http://192.168.68.104
+              src: http://192.168.68.104:7655
               classes: h-[700px]
 
   widgets.yaml: |
