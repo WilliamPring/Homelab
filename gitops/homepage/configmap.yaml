@@ -1,6 +1,3 @@
-# Homepage config (gethomepage.dev) — mounted at /app/config.
-# Edit these YAML docs to change what the dashboard shows. Split into the standard files
-# Homepage expects: settings / services / widgets / bookmarks.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,6 +5,7 @@ metadata:
   namespace: apps
   labels:
     app: homepage
+
 data:
   settings.yaml: |
     title: Homelab
@@ -21,65 +19,66 @@ data:
 
       Monitoring:
         style: row
-        columns: 3  
+        columns: 3
 
       Pulse:
         style: row
         columns: 1
 
-services.yaml: |
-  - Apps:
-      - Vaultwarden:
-          href: https://vault.williampring.ca
-          description: Password manager
-          icon: vaultwarden.png
+  services.yaml: |
+    - Apps:
+        - Vaultwarden:
+            href: https://vault.williampring.ca
+            description: Password manager
+            icon: vaultwarden.png
 
-      - Immich:
-          href: https://immich.williampring.ca
-          description: Photo backup
-          icon: immich.png
+        - Immich:
+            href: https://immich.williampring.ca
+            description: Photo backup
+            icon: immich.png
 
-      - SearXNG:
-          href: https://private.williampring.ca
-          description: Private metasearch
-          icon: searxng.png
+        - SearXNG:
+            href: https://private.williampring.ca
+            description: Private metasearch
+            icon: searxng.png
 
-      - degoog:
-          href: https://search.williampring.ca
-          description: Search aggregator
-          icon: si-google
+        - degoog:
+            href: https://search.williampring.ca
+            description: Search aggregator
+            icon: si-google
 
-  - Monitoring:
-      - Grafana:
-          href: https://grafana.williampring.ca
-          description: Logs & metrics
-          icon: grafana.png
+    - Monitoring:
+        - Grafana:
+            href: https://grafana.williampring.ca
+            description: Logs & metrics
+            icon: grafana.png
 
-      - Argo CD:
-          href: https://argocd.williampring.ca
-          description: GitOps deployments
-          icon: si-argo
+        - Argo CD:
+            href: https://argocd.williampring.ca
+            description: GitOps deployments
+            icon: si-argo
 
-  - Pulse:
-      - Pulse:
-          href: https://pulse.williampring.ca
-          description: Proxmox management
-          widget:
-            type: iframe
-            name: Pulse
-            src: https://pulse.williampring.ca
-            classes: h-[700px]
-            
+    - Pulse:
+        - Pulse:
+            href: https://pulse.williampring.ca
+            description: Proxmox management
+            widget:
+              type: iframe
+              name: Pulse
+              src: https://pulse.williampring.ca
+              classes: h-[700px]
 
   widgets.yaml: |
     - resources:
         cpu: true
         memory: true
         disk: /
+
     - search:
         provider: custom
         url: https://search.williampring.ca/search?q=
         target: _blank
+
     - openmeteo:
         label: Toronto
         latitude: 43.6532
@@ -92,9 +91,11 @@ services.yaml: |
         - Repo:
             - abbr: GH
               href: https://github.com/WilliamPring/Homelab
+
         - Sub Proxmox(masterk3s-worker):
             - abbr: PVE
               href: https://192.168.68.96:8006
+
         - Main Proxmox(worker):
             - abbr: PVE
               href: https://192.168.68.89:8006
