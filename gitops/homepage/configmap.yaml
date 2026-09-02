@@ -60,6 +60,7 @@ data:
             href: http://pulse.williampring.ca:7655
             description: Platform that manages all your Proxmox servers 
             icon: mdi-pulse
+            
 
   widgets.yaml: |
     - resources:
@@ -75,7 +76,10 @@ data:
         latitude: 43.6532
         longitude: -79.3832
         timezone: America/Toronto
-        units: metric        
+        units: metric
+    - iframe:
+        name: Pulse
+        url: http://pulse.williampring.ca:7655               
 
   bookmarks.yaml: |
     - Homelab:
