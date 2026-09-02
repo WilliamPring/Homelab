@@ -1,3 +1,6 @@
+# ============================================================
+# Homepage ConfigMap
+# ============================================================
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,6 +15,7 @@ data:
     theme: dark
     color: slate
     headerStyle: clean
+
     layout:
       Apps:
         style: row
@@ -21,7 +25,7 @@ data:
         style: row
         columns: 3
 
-      Pulse:
+      Infrastructure:
         style: row
         columns: 1
 
@@ -58,7 +62,7 @@ data:
             description: GitOps deployments
             icon: si-argo
 
-    - Pulse:
+    - Infrastructure:
         - Pulse:
             href: https://pulse.williampring.ca
             description: Proxmox management
@@ -92,10 +96,10 @@ data:
             - abbr: GH
               href: https://github.com/WilliamPring/Homelab
 
-        - Sub Proxmox(masterk3s-worker):
+        - Sub Proxmox (masterk3s-worker):
             - abbr: PVE
               href: https://192.168.68.96:8006
 
-        - Main Proxmox(worker):
+        - Main Proxmox (worker):
             - abbr: PVE
               href: https://192.168.68.89:8006

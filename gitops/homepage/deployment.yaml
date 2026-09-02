@@ -1,4 +1,3 @@
-# Homepage — the dashboard/landing page. Single container, reads config from the ConfigMap.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,50 +5,58 @@ metadata:
   namespace: apps
   labels:
     app: homepage
+
 spec:
   replicas: 1
+
   selector:
     matchLabels:
       app: homepage
+
   template:
     metadata:
       labels:
         app: homepage
+
     spec:
       containers:
         - name: homepage
-          image: ghcr.io/gethomepage/homepage:latest   # pin a tag later for reproducibility
+          image: ghcr.io/gethomepage/homepage:latest
+
           ports:
             - containerPort: 3000
+
           env:
-            # ⚠️ REQUIRED since Homepage v1.0 — it rejects requests whose Host header isn't
-            #    in this list ("Host validation failed"). Comma-separated host[:port], no scheme.
-            #    Includes localhost + the master IP for local (no-DNS) access via port-forward.
-            #    ⚠️ Replace 192.168.68.10 with YOUR master node's LAN IP (kubectl get nodes -o wide).
             - name: HOMEPAGE_ALLOWED_HOSTS
               value: "home.williampring.ca"
-          # ⚠️ subPath mounts each file INDIVIDUALLY so /app/config stays writable — Homepage
-          #    must create /app/config/logs at startup, which fails if the whole dir is a
-          #    read-only ConfigMap mount ("no such file or directory: /app/config/logs").
+
           volumeMounts:
+            # Keep these as individual subPath mounts.
+            # This allows Homepage to create /app/config/logs.
             - name: config
               mountPath: /app/config/settings.yaml
               subPath: settings.yaml
+
             - name: config
               mountPath: /app/config/services.yaml
               subPath: services.yaml
+
             - name: config
               mountPath: /app/config/widgets.yaml
               subPath: widgets.yaml
+
             - name: config
               mountPath: /app/config/bookmarks.yaml
               subPath: bookmarks.yaml
+
           resources:
             requests:
               cpu: 25m
               memory: 64Mi
+
             limits:
               memory: 256Mi
+
       volumes:
         - name: config
           configMap:
