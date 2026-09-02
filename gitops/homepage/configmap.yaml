@@ -18,15 +18,18 @@ data:
       Apps:
         style: row
         columns: 4
-      Infrastructure:
+
+      Pulse:
         style: row
-        columns: 3  
+        columns: 1
+
       Monitoring:
         style: row
-        columns: 3
-      Dashboard:
+        columns: 3  
+
+      HomeLab:
         style: row
-        columns: 3
+        columns: 1
 
   services.yaml: |
     - Apps:
@@ -46,6 +49,14 @@ data:
             href: https://search.williampring.ca
             description: Search aggregator
             icon: si-google
+    - Pulse:
+        href: https://pulse.williampring.ca
+        description: Proxmox management
+        widget:
+          type: iframe
+          name: Pulse
+          src: https://pulse.williampring.ca
+          classes: h-[700px]        
 
     - Monitoring:
         - Grafana:
@@ -77,9 +88,6 @@ data:
         longitude: -79.3832
         timezone: America/Toronto
         units: metric
-    - iframe:
-        name: Pulse
-        url: http://pulse.williampring.ca:7655               
 
   bookmarks.yaml: |
     - Homelab:
