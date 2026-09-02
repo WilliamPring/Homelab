@@ -70,8 +70,6 @@ data:
               type: iframe
               name: Pulse
               src: http://192.168.68.104:7655
-              classes: size-fit
-
               classes: h-96 sm:h-60 md:h-60 lg:h-auto xl:h-auto 2xl:h-auto # optional, use tailwind height classes, see https://tailwindcss.com/docs/height
 
               span: 6
