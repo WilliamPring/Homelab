@@ -19,58 +19,56 @@ data:
         style: row
         columns: 4
 
-      Pulse:
-        style: row
-        columns: 1
-
       Monitoring:
         style: row
         columns: 3  
 
-      HomeLab:
+      Pulse:
         style: row
         columns: 1
 
-  services.yaml: |
-    - Apps:
-        - Vaultwarden:
-            href: https://vault.williampring.ca
-            description: Password manager
-            icon: vaultwarden.png
-        - Immich:
-            href: https://immich.williampring.ca
-            description: Photo backup
-            icon: immich.png
-        - SearXNG:
-            href: https://private.williampring.ca
-            description: Private metasearch
-            icon: searxng.png
-        - degoog:
-            href: https://search.williampring.ca
-            description: Search aggregator
-            icon: si-google
-    - Pulse:
-        href: https://pulse.williampring.ca
-        description: Proxmox management
-        widget:
-          type: iframe
-          name: Pulse
-          src: https://pulse.williampring.ca
-          classes: h-[700px]        
+services.yaml: |
+  - Apps:
+      - Vaultwarden:
+          href: https://vault.williampring.ca
+          description: Password manager
+          icon: vaultwarden.png
 
-    - Monitoring:
-        - Grafana:
-            href: https://grafana.williampring.ca
-            description: Logs & metrics
-            icon: grafana.png
-        - Argo CD:
-            href: https://argocd.williampring.ca
-            description: GitOps deployments
-            icon: si-argo
-        - Pulse:
-            href: http://pulse.williampring.ca:7655
-            description: Platform that manages all your Proxmox servers 
-            icon: mdi-pulse
+      - Immich:
+          href: https://immich.williampring.ca
+          description: Photo backup
+          icon: immich.png
+
+      - SearXNG:
+          href: https://private.williampring.ca
+          description: Private metasearch
+          icon: searxng.png
+
+      - degoog:
+          href: https://search.williampring.ca
+          description: Search aggregator
+          icon: si-google
+
+  - Monitoring:
+      - Grafana:
+          href: https://grafana.williampring.ca
+          description: Logs & metrics
+          icon: grafana.png
+
+      - Argo CD:
+          href: https://argocd.williampring.ca
+          description: GitOps deployments
+          icon: si-argo
+
+  - Pulse:
+      - Pulse:
+          href: https://pulse.williampring.ca
+          description: Proxmox management
+          widget:
+            type: iframe
+            name: Pulse
+            src: https://pulse.williampring.ca
+            classes: h-[700px]
             
 
   widgets.yaml: |
