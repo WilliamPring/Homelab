@@ -70,6 +70,8 @@ data:
               type: iframe
               name: Pulse
               src: http://192.168.68.104:7655
+              classes: size-fit
+
 
   widgets.yaml: |
     - resources:
