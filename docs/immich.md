@@ -37,9 +37,12 @@ chart split, and lets Postgres sync before Immich):
 | `immich-prereqs` | `gitops/immich/prereqs/` (raw manifests) | vector Postgres (Deployment/PVC/Service) + NFS library PV/PVC |
 | `immich` | OCI chart `ghcr.io/immich-app/immich-charts` + `gitops/immich/values.yaml` | immich-server, machine-learning, valkey |
 
-**Chart/version:** `targetRevision: "*"` (latest chart). `values.yaml` has **no `image.tag`**
-→ runs the chart default appVersion **v3.0.0**. (The chart lags Immich releases: even the
-latest chart still advertises v3.0.0. To run a newer Immich, add `image.tag: vX.Y.Z`.)
+**Chart/version:** `targetRevision: "*"` (latest chart). The **Immich version is pinned** in
+`values.yaml` at `controllers.main.containers.main.image.tag` (currently **v3.1.0**). That
+top-level `controllers` block is shared, so the one tag pins both `immich-server` and
+`immich-machine-learning`. Without the pin you get the chart's default appVersion, which
+changes whenever the chart bumps (chart 0.13.2 → v3.2.0). ⚠️ The key is NOT top-level
+`image.tag` — that is silently ignored by this chart.
 
 ### What stays OUT of git (must already exist)
 | Item | How | Check |
@@ -61,10 +64,29 @@ sudo k3s kubectl apply -f gitops/apps/immich.yaml            # Argo UI → revie
 - ⚠️ Keep sync manual (no `automated:` block) — a chart/version bump runs a **DB migration**;
   snapshot the worker before any Sync that changes the version.
 
-### Upgrading Immich later
-Bump `image.tag` in `gitops/immich/values.yaml` (e.g. `v3.1.0`) → **snapshot the worker +
-`pg_dump`** → git push → review diff → Sync. The migration is one-way; the backup is your
-rollback. (Downgrades are NOT supported once a migration has run.)
+### Upgrading Immich (e.g. 3.0.0 → 3.1.0)
+1. **Read the release notes** for every version you're crossing
+   (https://github.com/immich-app/immich/releases) — check for breaking changes / manual steps.
+   3.1.0 has none that affect this setup (only "drop support for iOS 14" on mobile).
+2. **Snapshot the worker** (Proxmox) and **`pg_dump`** the DB:
+   ```bash
+   sudo k3s kubectl exec -n media deploy/immich-postgres -- \
+     pg_dumpall --clean --if-exists --username=immich | gzip > immich-db-$(date +%F).sql.gz
+   ```
+3. Bump `controllers.main.containers.main.image.tag` in `gitops/immich/values.yaml` → git push.
+4. Argo UI → `immich` app → Refresh → **review the diff** (expect: both Deployments' image tag
+   change, plus any chart-version drift since the last sync) → **Sync**.
+5. Watch the migration + startup:
+   ```bash
+   sudo k3s kubectl get pods -n media -w
+   sudo k3s kubectl logs -n media deploy/immich-server -f      # look for "Migrations" then "Immich Server is listening"
+   ```
+   Then in the web UI: **Administration → Server Status** shows the new version; run a quick
+   upload + search to confirm ML/DB are healthy.
+
+The migration is one-way; the snapshot/dump is your rollback. (Downgrades are NOT supported
+once a migration has run.) The Postgres image (`16-vectorchord0.4.3`) needs no change for 3.x —
+upstream's own compose still ships VectorChord 0.4.3.
 
 ---
 
