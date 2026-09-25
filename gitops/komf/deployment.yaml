@@ -1,0 +1,94 @@
+# Komf — metadata fetcher for Kavita (manga / comics / light novels).
+#
+# WHAT IT DOES: watches Kavita for new series (event listener), looks each one up on
+# MangaUpdates / AniList / MangaDex / …, and pushes title, summary, authors, genres, tags,
+# status, covers back into Kavita through Kavita's API. No files are touched unless you
+# switch updateModes to COMIC_INFO in application.yml.
+#
+# HOW YOU DRIVE IT: Komf 2.x serves its own web UI at https://komf.williampring.ca
+# (settings, providers, match a library, identify a series, job log). Optionally add the
+# "komf" browser extension (Chrome / Firefox) to get "Identify" / "Match library" buttons
+# inside the Kavita UI itself — point it at the same URL.
+#
+# CONFIG: /config/application.yml is SEEDED from the ConfigMap on first start only (init
+# container). After that the copy on the PVC is the live one — the extension can edit it.
+# To re-seed from git: delete /config/application.yml in the pod (or the PVC) and restart.
+# The Kavita API key never lives in the ConfigMap; it comes from the SOPS-encrypted Secret
+# via KOMF_KAVITA_API_KEY (env beats file for that key).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: komf
+  namespace: media
+  labels:
+    app: komf
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO config volume + single instance
+  selector:
+    matchLabels:
+      app: komf
+  template:
+    metadata:
+      labels:
+        app: komf
+    spec:
+      initContainers:
+        - name: seed-config
+          image: busybox:1.38
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /config/application.yml ]; then
+                echo "seeding /config/application.yml from ConfigMap"
+                cp /seed/application.yml /config/application.yml
+              else
+                echo "/config/application.yml exists — keeping it"
+              fi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: seed
+              mountPath: /seed
+      containers:
+        - name: komf
+          image: sndxr/komf:2.0.1
+          env:
+            - name: KOMF_KAVITA_BASE_URI
+              value: "http://kavita.media.svc.cluster.local:5000"
+            - name: KOMF_KAVITA_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: komf-secret
+                  key: KAVITA_API_KEY
+            - name: KOMF_LOG_LEVEL
+              value: "INFO"
+            - name: TZ
+              value: "America/Vancouver"
+          ports:
+            - name: http
+              containerPort: 8085
+          volumeMounts:
+            - name: config
+              mountPath: /config        # application.yml + database.sqlite
+          readinessProbe:
+            httpGet:
+              path: /api/kavita/metadata/providers   # Komf 2.x API (ServerModule.kt: /api/kavita/…)
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 384Mi
+            limits:
+              memory: 1Gi             # JVM — give it headroom during a full-library match
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: komf-config
+        - name: seed
+          configMap:
+            name: komf-config

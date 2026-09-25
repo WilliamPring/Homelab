@@ -1,5 +1,12 @@
 # Kavita — one app for manga/comics (CBZ/CBR) AND ebooks (EPUB/PDF). Reader + progress
 # sync + OPDS + scrobbling. Uses its EMBEDDED DB (in /config) — no external Postgres.
+#
+# Two content mounts:
+#   /library  → NFS /data/library  (manga, comics — Komf fills in the metadata, see gitops/komf)
+#   /books    → the CALIBRE library (read-only). Calibre-Web-Automated ingests + fixes book
+#               metadata; Kavita just reads the finished EPUBs. Add it as a "Book" library.
+#
+# Image is PINNED (Renovate can bump it). LSIO tag format: version-v<kavita version>.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,7 +28,7 @@ spec:
     spec:
       containers:
         - name: kavita
-          image: lscr.io/linuxserver/kavita:latest   # LSIO image (PUID/PGID) — pin a tag later
+          image: lscr.io/linuxserver/kavita:version-v0.9.1.4   # LSIO image (PUID/PGID)
           env:
             - name: PUID
               value: "1000"
@@ -35,7 +42,10 @@ spec:
             - name: config
               mountPath: /config      # embedded DB + settings
             - name: library
-              mountPath: /library     # all content (NFS) — add libraries at /library/manga, /library/books, ...
+              mountPath: /library     # manga/comics (NFS) — add libraries at /library/manga, /library/comics
+            - name: books
+              mountPath: /books       # the Calibre library (NFS, RO) — add as a "Book" library
+              readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -49,3 +59,7 @@ spec:
         - name: library
           persistentVolumeClaim:
             claimName: kavita-library
+        - name: books
+          persistentVolumeClaim:
+            claimName: calibre-books   # shared RWX claim owned by gitops/calibre (same namespace)
+            readOnly: true

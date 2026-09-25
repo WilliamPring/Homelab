@@ -1,0 +1,37 @@
+# Ingress → https://komf.williampring.ca
+#
+# WHY AN INGRESS: this is Komf's web UI. Also, the optional komf browser extension runs inside
+# the Kavita page (https://library.williampring.ca) and calls Komf from there; a page served
+# over HTTPS may not call a plain-http NodePort (mixed content), so Komf needs real HTTPS.
+#
+# ⚠️ Komf has NO authentication. This hostname resolves to the master's Tailscale IP only
+#    (Cloudflare DNS-only record), so it is reachable from your tailnet, not the internet.
+#    Do NOT proxy it through Cloudflare / cloudflared.
+#
+# DNS: komf → A → master Tailscale IP (same as library.*).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: komf
+  namespace: media
+  labels:
+    app: komf
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - komf.williampring.ca
+      secretName: komf-tls
+  rules:
+    - host: komf.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: komf
+                port:
+                  number: 8085

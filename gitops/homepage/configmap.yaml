@@ -51,6 +51,16 @@ data:
             description: Search aggregator
             icon: si-google
 
+        - Library:
+            href: https://library.williampring.ca
+            description: Manga & books (Kavita)
+            icon: kavita.png
+
+        - Books:
+            href: https://books.williampring.ca
+            description: Ebook ingest & metadata (Calibre-Web)
+            icon: calibre-web.png
+
     - Monitoring:
         - Grafana:
             href: https://grafana.williampring.ca

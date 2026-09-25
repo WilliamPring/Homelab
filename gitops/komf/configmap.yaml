@@ -1,0 +1,85 @@
+# Komf application.yml — the SEED copied to the PVC on first start (see deployment.yaml).
+# Reference for every key: https://github.com/Snd-R/komf#example-applicationyml-config
+#
+# ⚠️ NO SECRETS HERE. The Kavita API key is injected as KOMF_KAVITA_API_KEY from komf-secret.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: komf-config
+  namespace: media
+  labels:
+    app: komf
+data:
+  application.yml: |
+    kavita:
+      baseUri: "http://kavita.media.svc.cluster.local:5000"   # overridden by env anyway
+      # apiKey: ← comes from env KOMF_KAVITA_API_KEY (SOPS secret). Do not put it here.
+      eventListener:
+        enabled: true                 # auto-match series as Kavita's scanner adds them
+        metadataLibraryFilter: [ ]    # empty = every Kavita library. Fill with library IDs
+                                      # to restrict (e.g. only the Manga library).
+        metadataSeriesExcludeFilter: [ ]
+        notificationsLibraryFilter: [ ]
+      metadataUpdate:
+        default:
+          libraryType: "MANGA"        # MANGA | NOVEL | COMIC | WEBTOON — hint for number parsing
+          updateModes: [ API ]        # API = write into Kavita's DB only. Add COMIC_INFO to also
+                                      # write ComicInfo.xml into the .cbz files on NFS.
+          aggregate: true             # combine fields from all enabled providers
+          mergeTags: true
+          mergeGenres: true
+          bookCovers: false           # keep Kavita's own per-volume covers (from the files)
+          seriesCovers: true          # fetch a proper series cover
+          overrideExistingCovers: true
+          lockCovers: true            # stop Kavita's scanner from replacing the fetched cover
+          postProcessing:
+            seriesTitle: true         # set the series title to the provider's title …
+            seriesTitleLanguage: "en" # … in English (falls back to first match)
+            alternativeSeriesTitles: true
+            alternativeSeriesTitleLanguages:
+              - "ja-ro"               # keep the romaji title as an alternative
+            orderBooks: false
+            languageValue: "en"
+
+    database:
+      file: /config/database.sqlite   # absolute: the image's WORKDIR is /app, config dir is /config
+
+    metadataProviders:
+      malClientId: ""                 # needed only if you enable `mal` below
+      defaultProviders:
+        mangaUpdates:                 # best general manga DB — keep first
+          priority: 10
+          enabled: true
+          mediaType: "MANGA"
+        aniList:                      # good summaries + tags
+          priority: 20
+          enabled: true
+          mediaType: "MANGA"
+          tagsScoreThreshold: 60
+          tagsSizeLimit: 15
+        mangaDex:                     # covers
+          priority: 30
+          enabled: true
+          coverLanguages:
+            - "en"
+            - "ja"
+        mangaBaka:
+          priority: 40
+          enabled: false
+          mode: API
+        mal:                          # needs malClientId
+          priority: 50
+          enabled: false
+          mediaType: "MANGA"
+        bookWalker:                   # Komf 2.0: uses an offline DB you download via the UI
+          priority: 60
+          enabled: false
+          mediaType: "MANGA"
+        comicVine:                    # western comics — needs comicVineApiKey
+          priority: 70
+          enabled: false
+
+    server:
+      port: 8085
+
+    logLevel: INFO

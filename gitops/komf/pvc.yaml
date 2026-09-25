@@ -1,0 +1,15 @@
+# Komf state (local-path) — application.yml (live copy) + database.sqlite (match cache).
+# NOT irreplaceable: lose it and Komf just re-seeds its config and re-matches on demand.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: komf-config
+  namespace: media
+  labels:
+    app: komf
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

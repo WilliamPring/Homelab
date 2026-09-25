@@ -1,0 +1,23 @@
+# Argo CD Application — Komf (metadata fetcher for Kavita). Kustomize dir + KSOPS secret.
+#
+# ORDER: Kavita must be up and you must have its API key encrypted into
+# gitops/komf/komf-secret.enc.yaml first (see the header of that file). Then Apply → SYNC.
+#
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/komf.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: komf
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/komf
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
