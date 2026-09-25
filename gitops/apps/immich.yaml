@@ -25,9 +25,10 @@ spec:
       # Always the LATEST chart (user's choice — not pinned), matching the old Ansible setup.
       # ⚠️ SAFE ONLY because syncPolicy stays MANUAL below: Argo resolves "latest" but won't
       #    apply it until YOU click Sync. Do NOT add an `automated:` block.
-      #    NOTE: values.yaml has NO image.tag → Immich runs the chart default appVersion
-      #    (v3.0.0). If the cluster is on 3.1, syncing this DOWNGRADES to 3.0.0 — see the
-      #    downgrade warning in values.yaml. SNAPSHOT the worker before any Sync.
+      #    NOTE: the Immich VERSION is pinned in values.yaml
+      #    (controllers.main.containers.main.image.tag). The chart's own default appVersion
+      #    moves with the chart (0.13.2 → v3.2.0), so the pin is what keeps a chart bump from
+      #    silently changing the Immich version. SNAPSHOT the worker before any Sync.
       targetRevision: "*"
       helm:
         valueFiles:

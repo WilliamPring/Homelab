@@ -10,19 +10,29 @@ immich:
     library:
       existingClaim: immich-library
 
-# Let the chart deploy + auto-wire Valkey (Redis). REDIS_HOSTNAME → immich-valkey.
+# Valkey (Redis) is NOT deployed by the chart — Immich uses the external Redis at
+# 192.168.68.103 (REDIS_* env below).
 valkey:
   enabled: false
 
 
+# This top-level `controllers` block is SHARED: the chart merges it into BOTH the
+# immich-server and immich-machine-learning deployments (server.yaml / machine-learning.yaml
+# templates), so the image tag below pins both pods to the same Immich version.
+#
 # Environment — connect to the EXTERNAL vector Postgres (gitops/immich/prereqs/postgres.yaml).
 # MUST live here (controllers.main.containers.main.env) for this chart to apply it.
 # DB_PASSWORD comes from the hand-managed immich-db Secret (out of git, must exist in media).
 controllers:
-  # Immich server
   main:
     containers:
       main:
+        # ⚠️ IMMICH VERSION PIN. Without this the chart default appVersion runs (chart 0.13.2
+        #    → v3.2.0). Bumping this runs a one-way DB migration: SNAPSHOT the worker +
+        #    pg_dump BEFORE syncing. Downgrades are not supported.
+        #    Release notes: https://github.com/immich-app/immich/releases/tag/v3.1.0
+        image:
+          tag: v3.1.0
         env:
           DB_HOSTNAME: immich-postgres
           DB_USERNAME: immich
