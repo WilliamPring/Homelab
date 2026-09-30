@@ -8,7 +8,6 @@
 # OCI NOTE: unlike an HTTP Helm repo, repoURL is the OCI registry path WITHOUT the oci://
 # scheme and WITHOUT the chart name; `chart` is the chart name. If Argo errors that OCI
 # isn't enabled, register the repo once (UI: Settings → Repositories → Connect repo, type
-# Helm, URL ghcr.io/immich-app/immich-charts, Enable OCI = true).
 #
 # Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/immich.yaml
 apiVersion: argoproj.io/v1alpha1
@@ -22,13 +21,6 @@ spec:
     # 1) The Immich chart from the OCI registry.
     - repoURL: ghcr.io/immich-app/immich-charts
       chart: immich
-      # Always the LATEST chart (user's choice — not pinned), matching the old Ansible setup.
-      # ⚠️ SAFE ONLY because syncPolicy stays MANUAL below: Argo resolves "latest" but won't
-      #    apply it until YOU click Sync. Do NOT add an `automated:` block.
-      #    NOTE: the Immich VERSION is pinned in values.yaml
-      #    (controllers.main.containers.main.image.tag). The chart's own default appVersion
-      #    moves with the chart (0.13.2 → v3.2.0), so the pin is what keeps a chart bump from
-      #    silently changing the Immich version. SNAPSHOT the worker before any Sync.
       targetRevision: "*"
       helm:
         valueFiles:
