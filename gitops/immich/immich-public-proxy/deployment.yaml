@@ -30,7 +30,7 @@ spec:
               value: "http://immich-server:2283"
 
             - name: PUBLIC_BASE_URL
-              value: "https://public.immich.williampring.ca"
+              value: "https://public-immich.williampring.ca"
 
           readinessProbe:
             httpGet:
