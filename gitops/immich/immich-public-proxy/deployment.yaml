@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-public-proxy
+  namespace: media
+  labels:
+    app: immich-public-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-public-proxy
+  template:
+    metadata:
+      labels:
+        app: immich-public-proxy
+    spec:
+      containers:
+        - name: immich-public-proxy
+          image: alangrainger/immich-public-proxy:3.3.0
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+
+          env:
+            - name: IMMICH_URL
+              value: "http://immich-server:2283"
+
+            - name: PUBLIC_BASE_URL
+              value: "https://public.immich.williampring.ca"
+
+          readinessProbe:
+            httpGet:
+              path: /share/healthcheck
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /share/healthcheck
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
