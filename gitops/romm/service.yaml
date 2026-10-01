@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: romm
+  namespace: media
+  labels:
+    app: romm
+spec:
+  type: NodePort           # keeps a ClusterIP too → Ingress/domain still works
+  selector:
+    app: romm
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30808      # LAN access: http://<node-LAN-IP>:30808

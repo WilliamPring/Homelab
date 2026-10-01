@@ -1,0 +1,138 @@
+# RomM — ROM library manager + in-browser play (EmulatorJS runs in YOUR browser; the pod just
+# serves files and stores saves/states). Same shape as Kavita/Calibre:
+#
+#   DB        → the EXTERNAL Postgres LXC (192.168.68.7), db/user `romm`   (scripts/postgres-romm-setup.sh)
+#   Redis     → the EXTERNAL Valkey (192.168.68.103), ACL user `romm`      (docs/redis.md pattern)
+#   library   → NFS /data/roms         (ROMs + BIOS — Structure A: roms/<platform>/, bios/<platform>/)
+#   assets    → NFS /data/romm-assets  (saves, states, screenshots you upload — irreplaceable)
+#   resources → local-path PVC         (covers/screenshots fetched from providers — re-fetchable)
+#
+# Secrets (auth key, DB + Redis passwords, provider API keys) come from the SOPS-encrypted
+# romm-secret (romm-secret.enc.yaml). Image is pinned; Renovate bumps it.
+# Docs: https://docs.romm.app   Releases: https://github.com/rommapp/romm/releases
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: romm
+  namespace: media
+  labels:
+    app: romm
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO resources volume + single instance
+  selector:
+    matchLabels:
+      app: romm
+  template:
+    metadata:
+      labels:
+        app: romm
+    spec:
+      nodeSelector:
+        immich-node: "true"   # the 32GB worker — scans hash every file and can use ~1–2 GB RAM
+      containers:
+        - name: romm
+          image: rommapp/romm:5.3.1
+          env:
+            # ── identity / URL ──────────────────────────────────────────────────────────
+            - name: ROMM_BASE_URL
+              value: "https://roms.williampring.ca"
+            - name: TZ
+              value: "America/Vancouver"
+            - name: ROMM_AUTH_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: romm-secret
+                  key: ROMM_AUTH_SECRET_KEY
+            # ── database: external Postgres LXC ─────────────────────────────────────────
+            - name: ROMM_DB_DRIVER
+              value: "postgresql"
+            - name: DB_HOST
+              value: "192.168.68.7"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "romm"
+            - name: DB_USER
+              value: "romm"
+            - name: DB_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: romm-secret
+                  key: DB_PASSWD
+            # ── redis: external Valkey (job queue + cache) ──────────────────────────────
+            - name: REDIS_HOST
+              value: "192.168.68.103"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_USERNAME
+              value: "romm"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: romm-secret
+                  key: REDIS_PASSWORD
+            # ── metadata providers ──────────────────────────────────────────────────────
+            # Free, no account needed:
+            - name: HASHEOUS_API_ENABLED
+              value: "true"
+            - name: PLAYMATCH_API_ENABLED
+              value: "true"
+            # Need accounts/keys — filled in romm-secret (empty = provider disabled):
+            - name: IGDB_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: romm-secret, key: IGDB_CLIENT_ID, optional: true } }
+            - name: IGDB_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: romm-secret, key: IGDB_CLIENT_SECRET, optional: true } }
+            - name: SCREENSCRAPER_USER
+              valueFrom: { secretKeyRef: { name: romm-secret, key: SCREENSCRAPER_USER, optional: true } }
+            - name: SCREENSCRAPER_PASSWORD
+              valueFrom: { secretKeyRef: { name: romm-secret, key: SCREENSCRAPER_PASSWORD, optional: true } }
+            - name: RETROACHIEVEMENTS_API_KEY
+              valueFrom: { secretKeyRef: { name: romm-secret, key: RETROACHIEVEMENTS_API_KEY, optional: true } }
+            - name: STEAMGRIDDB_API_KEY
+              valueFrom: { secretKeyRef: { name: romm-secret, key: STEAMGRIDDB_API_KEY, optional: true } }
+            # ── tuning ──────────────────────────────────────────────────────────────────
+            - name: SCAN_WORKERS
+              value: "4"                 # ROMs hashed in parallel during a scan (NFS-bound)
+            - name: WEB_SERVER_CONCURRENCY
+              value: "2"                 # API workers; raise if several people play at once
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: library
+              mountPath: /romm/library
+            - name: assets
+              mountPath: /romm/assets
+            - name: resources
+              mountPath: /romm/resources
+          readinessProbe:
+            httpGet:
+              path: /api/heartbeat
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /api/heartbeat
+              port: http
+            initialDelaySeconds: 90       # first start runs DB migrations
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+      volumes:
+        - name: library
+          persistentVolumeClaim:
+            claimName: romm-library
+        - name: assets
+          persistentVolumeClaim:
+            claimName: romm-assets
+        - name: resources
+          persistentVolumeClaim:
+            claimName: romm-resources

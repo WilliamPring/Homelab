@@ -1,0 +1,29 @@
+# Ingress → https://roms.williampring.ca (RomM — games library + in-browser play).
+# cert-manager issues romm-tls from the 'letsencrypt' ClusterIssuer (Cloudflare DNS-01).
+# DNS: roms → A → master Tailscale IP (grey cloud / DNS only). Tailscale-only, like library.*
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: romm
+  namespace: media
+  labels:
+    app: romm
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - roms.williampring.ca
+      secretName: romm-tls
+  rules:
+    - host: roms.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: romm
+                port:
+                  number: 8080

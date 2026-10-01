@@ -1,0 +1,94 @@
+# RomM storage — mirrors the Immich/Kavita NFS pattern (file-server LXC 192.168.68.50).
+#   library   → /data/roms          (ROMs + BIOS)                                  — NFS, RWX
+#   assets    → /data/romm-assets   (saves / states / screenshots YOU upload)      — NFS, RWX
+#   resources → local-path PVC      (covers & screenshots fetched from IGDB etc.)  — node disk
+#
+# Library layout RomM expects ("Structure A", mount the PARENT of roms/ as /romm/library):
+#   /data/roms/roms/<platform>/<game file or folder>     e.g. /data/roms/roms/gba/Metroid Fusion.gba
+#   /data/roms/bios/<platform>/<bios files>              e.g. /data/roms/bios/gba/gba_bios.bin
+# Platform folder names = RomM/IGDB slugs (gba, snes, n64, ps, psp, nds, …) — see docs/romm.md.
+#
+# ⚠️ PREREQ on the file server (under the existing /data export):
+#     mkdir -p /data/roms/roms /data/roms/bios /data/romm-assets
+#     chown -R 1000:1000 /data/roms /data/romm-assets && chmod -R 775 /data/roms /data/romm-assets
+#   (the container runs as uid/gid 1000 `romm`, same as Kavita/Calibre)
+# ⚠️ The node RomM lands on needs nfs-common (the Immich worker already has it).
+---
+# ── ROM library (NFS) ──────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: romm-library-nfs
+  labels:
+    app: romm
+spec:
+  capacity:
+    storage: 1Ti
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"
+    path: /data/roms
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: romm-library
+  namespace: media
+  labels:
+    app: romm
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: romm-library-nfs
+  resources:
+    requests:
+      storage: 1Ti
+---
+# ── Assets: saves, states, uploads (NFS) — the irreplaceable user data ────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: romm-assets-nfs
+  labels:
+    app: romm
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"
+    path: /data/romm-assets
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: romm-assets
+  namespace: media
+  labels:
+    app: romm
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: romm-assets-nfs
+  resources:
+    requests:
+      storage: 50Gi
+---
+# ── Resources: provider artwork cache (local-path) — re-fetchable, so node disk is fine ──
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: romm-resources
+  namespace: media
+  labels:
+    app: romm
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi

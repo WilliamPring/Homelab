@@ -61,6 +61,11 @@ data:
             description: Ebook ingest & metadata (Calibre-Web)
             icon: calibre-web.png
 
+        - Games:
+            href: https://roms.williampring.ca
+            description: ROM library & in-browser play (RomM)
+            icon: romm.png
+
     - Monitoring:
         - Grafana:
             href: https://grafana.williampring.ca
