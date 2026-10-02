@@ -8,4 +8,5 @@ metadata:
     app.kubernetes.io/part-of: argocd
 
 data:
-  kustomize.buildOptions: "--enable-alpha-plugins --enable-exec"
+  kustomize.buildOptions: --enable-alpha-plugins
+  # kustomize.buildOptions: "--enable-alpha-plugins --enable-exec"
