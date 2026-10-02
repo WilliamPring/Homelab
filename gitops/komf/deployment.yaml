@@ -54,7 +54,7 @@ spec:
               mountPath: /seed
       containers:
         - name: komf
-          image: sndxr/komf:2.0.1
+          image: sndxr/komf:2.1.0
           env:
             - name: KOMF_KAVITA_BASE_URI
               value: "http://kavita.media.svc.cluster.local:5000"
