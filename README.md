@@ -85,7 +85,8 @@ See [`gitops/README.md`](gitops/README.md) for the full workflow.
 - [`docs/argocd.md`](docs/argocd.md) — Argo CD / GitOps (install, expose, login)
 - [`docs/vaultwarden.md`](docs/vaultwarden.md) · [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) · [`docs/kavita.md`](docs/kavita.md) · [`docs/romm.md`](docs/romm.md) — per-app guides
 - [`docs/logging.md`](docs/logging.md) — Loki + Alloy + Grafana logging stack
-- [`docs/sops-argocd.md`](docs/sops-argocd.md) — encrypt secrets into git (SOPS + age + KSOPS)
+- [`docs/secrets.md`](docs/secrets.md) — **secrets, day-to-day**: what exists, decrypt/edit/reuse, add one to a new app
+- [`docs/sops-argocd.md`](docs/sops-argocd.md) · [`docs/secerts.md`](docs/secerts.md) — SOPS + age + KSOPS: the original plan and the architecture deep-dive
 - [`docs/cheatsheet.md`](docs/cheatsheet.md) — everyday kubectl / Ansible commands
 - [`ansible/LEARN.md`](ansible/LEARN.md) — Ansible concepts, learning notes
 

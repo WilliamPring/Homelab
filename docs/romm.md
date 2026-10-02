@@ -139,7 +139,7 @@ sudo k3s kubectl logs -n media deploy/romm --tail=50  # no DB / Redis connection
 | Platform shows as "unknown" | folder name isn't a known slug → rename, or map it in Settings → Platforms |
 | Play button greyed / "BIOS missing" | put the BIOS files in `/data/roms/bios/<platform>/` and rescan |
 | Game loads slowly / tab crashes | the whole ROM loads into browser memory (PS1 ≈ 700 MB, PSP 1–2 GB). Expected; use a desktop for big ISOs |
-| `secret romm-secret not found` on sync | `romm-secret.enc.yaml` still plaintext or Argo can't decrypt → `docs/sops-argocd.md` |
+| `secret romm-secret not found` on sync | `romm-secret.enc.yaml` still plaintext or Argo can't decrypt → `docs/secrets.md` |
 
 ### Handy checks
 ```bash
