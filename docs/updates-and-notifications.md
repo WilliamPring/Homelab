@@ -38,7 +38,7 @@ Only **pinned** versions. Everything is now pinned:
 | Where | How Renovate tracks it |
 |---|---|
 | `image:` tags in `gitops/**` Deployments | `kubernetes` manager |
-| `targetRevision` of the Helm charts (`immich`, `vaultwarden`, `ntfy`, `cert-manager`) | `argocd` manager — cert-manager gets one PR per minor (`step-by-minor`), merge in order |
+| `targetRevision` of the Helm charts (`immich`, `ntfy`, `cert-manager`) | `argocd` manager — cert-manager gets one PR per minor (`step-by-minor`), merge in order |
 | Immich **app** version in `gitops/immich/values.yaml` (`image.tag`) | custom regex manager → `ghcr.io/immich-app/immich-server` |
 | SearXNG (date-stamped tags, no semver) | pinned to `latest@sha256:…` → **digest** updates |
 
@@ -50,7 +50,7 @@ it. Pin it.
 |---|---|---|
 | homepage, searxng, degoog, komf, ntfy chart, busybox — **patch + digest** | **one grouped PR** "stateless patch updates" — a single thing to read on Monday | `low-risk` |
 | the same apps — minor/major | own PR | |
-| immich (chart, app, postgres), vaultwarden, romm, kavita, calibre | own PR — read the release notes, back up, then merge | `⚠️ db-migration` |
+| immich (chart, app, postgres), romm, kavita, calibre | own PR — read the release notes, back up, then merge | `⚠️ db-migration` |
 | anything in `gitops/argocd/**` | own PR — merge, then re-apply `gitops/argocd/` by hand | `argocd` |
 | any major bump | own PR | `⚠️ major` |
 

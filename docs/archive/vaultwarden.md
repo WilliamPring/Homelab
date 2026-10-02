@@ -1,3 +1,6 @@
+> **ARCHIVED (Oct 2026): Vaultwarden was removed from the homelab.** Kept for reference —
+> the DB on the Postgres LXC and its B2 backups are what remain. Nothing below is deployed.
+
 # Vaultwarden
 
 Self-hosted Bitwarden-compatible password manager. Runs in k3s, but its **data lives in

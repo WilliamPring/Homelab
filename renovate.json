@@ -102,10 +102,9 @@
       "overridePackageName": "codeberg.org/wrenix/helm-charts/ntfy"
     },
     {
-      "description": "DB-migration-sensitive apps: never automerge, flag clearly (Immich chart+image+postgres, Vaultwarden, RomM, Kavita, Calibre)",
+      "description": "DB-migration-sensitive apps: never automerge, flag clearly (Immich chart+image+postgres, RomM, Kavita, Calibre)",
       "matchPackageNames": [
         "/immich/",
-        "/vaultwarden/",
         "/rommapp/",
         "/kavita/",
         "/calibre-web-automated/"

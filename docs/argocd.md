@@ -98,4 +98,4 @@ See `gitops/README.md` for the full add-an-app recipe.
   planned next step is an **app-of-apps** root so a new app = a new file + push.
 - Secrets: `docs/secrets.md`. Updates & phone notifications: `docs/updates-and-notifications.md`.
 - Everything is **manual sync** by design — Argo shows drift but waits for a click, so there
-  are no surprise upgrades (important for Vaultwarden/Immich).
+  are no surprise upgrades (important for Immich).

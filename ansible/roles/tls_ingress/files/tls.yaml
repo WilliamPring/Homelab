@@ -1,44 +1,15 @@
-# The two Ingresses still managed by Ansible (Vaultwarden, Immich). Their APPS are on Argo;
-# only these Ingress objects remain here until they move into gitops/vaultwarden and
-# gitops/immich. The 'letsencrypt' ClusterIssuer they reference is on Argo CD:
+# The one Ingress still managed by Ansible (Immich). Its APP is on Argo; only this Ingress
+# object remains here until it moves into gitops/immich. The 'letsencrypt' ClusterIssuer it
+# references is on Argo CD:
 #   gitops/cert-manager/issuer/letsencrypt.yaml   (app: cert-manager-issuer)
 # and the cloudflare-api-token Secret it needs is hand-created (docs/secrets.md).
----
-# Ingress for Vaultwarden. The cert-manager annotation makes ingress-shim
-# auto-create the cert (into vault-tls) from the ClusterIssuer above.
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: vaultwarden
-  namespace: apps
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
-spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - vault.williampring.ca
-      secretName: vault-tls
-  rules:
-    - host: vault.williampring.ca
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: vaultwarden       # guerzon chart names the service 'vaultwarden'
-                port:
-                  number: 80
 ---
 # NOTE: SearXNG + degoog Ingresses moved to GitOps (gitops/searxng/, gitops/degoog/) —
 # Argo owns those apps end-to-end (workload + domain). The 'letsencrypt' ClusterIssuer
 # above stays here (shared infra). See gitops/README.md.
 #
-# ⚠️ Vaultwarden + Immich Ingresses (below) still live HERE. Their APPS are on Argo, but
-# their domains are still Ansible-managed. This is SAFE (Argo doesn't define these
-# Ingresses, so there's no conflict) — but it's the last bit of app/infra split. To fully
-# fold them in later: move each Ingress into its GitOps app + delete it here.
+# ⚠️ The Immich Ingress (below) still lives HERE. Its APP is on Argo, but its domain is still
+# Ansible-managed. SAFE (Argo doesn't define this Ingress) — fold it into gitops/immich later.
 ---
 # Ingress for Immich (photos). https://immich.williampring.ca — note: media namespace.
 apiVersion: networking.k8s.io/v1

@@ -99,7 +99,7 @@ data:
 
   # ── when: triggers. oncePer stops repeats while the state persists. ─────────────────────
   # NOTE on oncePer: single-source apps fill status.sync.revision; MULTI-source apps (immich,
-  # vaultwarden, ntfy = chart + values repo) leave it empty and fill status.sync.revisions[].
+  # ntfy, cert-manager = chart + values repo) leave it empty and fill status.sync.revisions[].
   # Each trigger has one entry per shape so neither kind fires only once forever.
   trigger.on-out-of-sync: |
     - when: app.status.sync.status == 'OutOfSync' and app.status.sync.revision != ''

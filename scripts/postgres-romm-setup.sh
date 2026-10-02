@@ -1,6 +1,7 @@
 #!/bin/sh
-# postgres-romm-setup.sh — add the RomM database + role to the existing Alpine Postgres LXC
-# (the one Vaultwarden already uses, 192.168.68.7). Companion to postgres-setup.sh.
+# postgres-romm-setup.sh — add the RomM database + role to the Alpine Postgres LXC
+# (192.168.68.7). The LXC itself was set up earlier (listen_addresses='*', LAN pg_hba);
+# on a FRESH LXC also run:  su postgres -c "psql -c \"ALTER SYSTEM SET listen_addresses = '*';\"" && rc-service postgresql restart
 # Run as ROOT inside the Postgres LXC:   sh postgres-romm-setup.sh
 # Idempotent — safe to re-run (re-running RESETS the password → update romm-secret.enc.yaml).
 set -eu
@@ -23,8 +24,7 @@ if [ -z "$(su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='
 fi
 su postgres -c "psql -d ${DB_NAME} -c \"GRANT ALL ON SCHEMA public TO ${DB_USER};\""
 
-# pg_hba: one line for this db/user from the LAN (listen_addresses is already '*' from
-# postgres-setup.sh; the existing vaultwarden line only covers the vaultwarden db/user).
+# pg_hba: one line for this db/user from the LAN (listen_addresses is already '*').
 HBA="$(su postgres -c "psql -tAc 'SHOW hba_file'" | tr -d '[:space:]')"
 HBA_LINE="host    ${DB_NAME}    ${DB_USER}    ${LAN_CIDR}    scram-sha-256"
 echo ">> pg_hba (${HBA}): allow ${DB_USER}@${LAN_CIDR}..."

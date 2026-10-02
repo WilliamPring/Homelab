@@ -19,7 +19,7 @@ tailscale_up_args: "--accept-dns=false"
 # the 32GB worker joined, and immich_db_password set in vars/secrets.local.yaml.
 immich_enabled: true
 
-# ─── TLS — the two Ingresses Ansible still owns (Vaultwarden, Immich) ─────────────
+# ─── TLS — the one Ingress Ansible still owns (Immich) ───────────────────────────
 # cert-manager + the Let's Encrypt ClusterIssuer are on Argo CD (docs/tls.md). Set true to
-# enable Play 6, which only applies those two Ingress objects (they move to gitops later).
+# enable Play 5, which only applies the Immich Ingress object (it moves to gitops later).
 tls_enabled: true

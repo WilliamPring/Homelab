@@ -31,11 +31,6 @@ data:
 
   services.yaml: |
     - Apps:
-        - Vaultwarden:
-            href: https://vault.williampring.ca
-            description: Password manager
-            icon: vaultwarden.png
-
         - Immich:
             href: https://immich.williampring.ca
             description: Photo backup

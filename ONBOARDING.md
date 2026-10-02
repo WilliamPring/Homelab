@@ -51,7 +51,7 @@ Ansible manages the machines (Layer 1). k3s runs the apps (Layer 2). Your laptop
 3. **`ansible/group_vars/all.yml`** — *what's turned on, what are the settings?*
 4. Pick one app and follow it end-to-end:
    - a **manifest** app → `roles/pihole/tasks/main.yml` + `roles/pihole/files/pihole.yaml`
-   - a **Helm** app → `gitops/apps/vaultwarden.yaml` (the Argo Application) + `gitops/vaultwarden/values.yaml` (its config)
+   - a **Helm** app → `gitops/apps/immich.yaml` (the Argo Application) + `gitops/immich/values.yaml` (its config)
 5. **`docs/roadmap.md`** — *where is this all going?*
 
 ---
@@ -64,7 +64,6 @@ Play 2  k3s server    → master
 Play 3  k3s agents    → workers
 Play 4  manifest apps → Pi-hole, qBittorrent, Immich-prereqs
 Play 5  Immich infra  → immich-db Secret + worker node label (Immich itself is on Argo CD)
-Play 6  App secrets   → vaultwarden-db Secret
 Play 6  Samba         → the host file share
 Play 7  TLS ingress   → cert-manager + Gateway API + HTTPRoutes
 ```
@@ -86,7 +85,7 @@ A play names its **roles**; each role's steps live in `roles/<name>/tasks/main.y
 ---
 
 ## ✅ Status at a glance (see `docs/roadmap.md` for detail)
-- **Running:** k3s, Pi-hole, Jellyfin, Vaultwarden, Samba
+- **Running:** k3s + the Argo CD apps in `gitops/apps/`
 - **Staged (off, waiting for the HP):** Immich, qBittorrent, cert-manager + Gateway API (TLS)
 - **Planned / parked:** Seafile, monitoring, backups, storage roles, Proxmox
 

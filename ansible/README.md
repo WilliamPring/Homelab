@@ -11,7 +11,7 @@ Nothing here uses Helm, and the project needs no Ansible collections.
 
 ---
 
-## What `site.yml` does (6 plays, top to bottom)
+## What `site.yml` does (5 plays, top to bottom)
 
 | # | Play | Hosts | Role / tasks | Toggle |
 |---|------|-------|--------------|--------|
@@ -19,10 +19,9 @@ Nothing here uses Helm, and the project needs no Ansible collections.
 | 2 | k3s server | master | `k3s_server` — install control plane, nfs-common, capture the join-token | always |
 | 3 | k3s agents | workers | `k3s_agent` — install agent, nfs-common, join, wait for Ready | always |
 | 4 | Immich infra | master | `immich` — `media` namespace, `immich-db` Secret, `immich-node=true` label on the 32GB worker | `immich_enabled` |
-| 5 | App secrets | master | inline tasks — `apps` namespace, `vaultwarden-db` Secret (Postgres URI) | `vaultwarden_db_password` set |
-| 6 | Ingresses | master | `tls_ingress` — the Vaultwarden + Immich Ingress objects (cert-manager + ClusterIssuer are on Argo) | `tls_enabled` |
+| 5 | Ingress | master | `tls_ingress` — the Immich Ingress object (cert-manager + ClusterIssuer are on Argo) | `tls_enabled` |
 
-Plays 4–6 exist only because Argo cannot create things that must stay out of git (DB
+Plays 4–5 exist only because Argo cannot create things that must stay out of git (DB
 passwords) or that belong to the node (labels). Everything else about an app is in `gitops/`.
 
 ---
@@ -47,9 +46,9 @@ Debian targets need only SSH + Python 3 (both default). If a node is unusually m
 ### Secrets Ansible needs (never committed)
 ```bash
 cp vars/secrets.example.yaml vars/secrets.local.yaml   # *.local.yaml is gitignored
-$EDITOR vars/secrets.local.yaml                        # vaultwarden_db_password, immich_db_password
+$EDITOR vars/secrets.local.yaml                        # immich_db_password
 ```
-Plays 4 and 5 read this file and create the matching k8s Secrets. Without it they are skipped.
+Play 4 reads this file and creates the `immich-db` Secret. Without it the play is skipped.
 The Cloudflare token for cert-manager is created by hand once (see `docs/tls.md`).
 
 ---
@@ -80,7 +79,7 @@ skips what is already done and continues. "Re-run until green" is the Ansible mi
 
 ### Re-running later
 Safe at any time — every task is idempotent. Typical reasons: a rebuilt worker (needs the
-Immich label + nfs-common again) or a lost `immich-db` / `vaultwarden-db` Secret.
+Immich label + nfs-common again) or a lost `immich-db` Secret.
 
 ---
 
@@ -89,7 +88,7 @@ Immich label + nfs-common again) or a lost `immich-db` / `vaultwarden-db` Secret
 ```bash
 sudo k3s kubectl get nodes -o wide                              # all Ready
 sudo k3s kubectl get node -l immich-node=true                   # the 32GB worker is labelled
-sudo k3s kubectl get secret immich-db -n media vaultwarden-db -n apps 2>&1 | head -3
+sudo k3s kubectl get secret immich-db -n media
 ```
 After this, follow `../docs/argocd.md` to bring up Argo CD, then `../docs/tls.md` for cert-manager.
 
@@ -112,7 +111,7 @@ ansible-playbook site.yml --start-at-task "Copy the Ingress manifest to the mast
 ansible/
 ├── ansible.cfg              # inventory path, ssh behaviour, yaml output, ansible.log
 ├── inventory.ini            # the machines: [master], [workers], [k3s_cluster:children]
-├── site.yml                 # the playbook — 6 plays, run this
+├── site.yml                 # the playbook — 5 plays, run this
 ├── group_vars/
 │   └── all.yml              # knobs: k3s_channel, tailscale args, immich_enabled, tls_enabled
 ├── vars/
@@ -122,12 +121,12 @@ ansible/
 │   ├── k3s_server/          # Play 2
 │   ├── k3s_agent/           # Play 3
 │   ├── immich/              # Play 4 — immich-db Secret + node label (Immich itself is on Argo)
-│   └── tls_ingress/         # Play 6 — the two Ingresses still owned here (Vaultwarden, Immich)
+│   └── tls_ingress/         # Play 5 — the Immich Ingress, still owned here
 ├── README.md                # you are here
 └── LEARN.md                 # the teaching guide
 ```
 
 ## Planned changes
-- Move the Vaultwarden and Immich Ingress objects out of `tls_ingress` into their gitops
-  app directories, so one app owns everything about itself.
-- Ansible's end state: Tailscale, k3s, and the out-of-git Secrets/labels. Nothing else.
+- Move the Immich Ingress out of `tls_ingress` into `gitops/immich`, so one app owns everything
+  about itself. Then the role and Play 5 go away.
+- Ansible's end state: Tailscale, k3s, the `immich-db` Secret and the node label. Nothing else.

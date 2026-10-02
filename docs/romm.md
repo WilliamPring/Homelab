@@ -13,7 +13,7 @@ https://roms.williampring.ca  (Tailscale)  ·  http://<node-ip>:30808  (LAN)
         │
         ▼
    romm pod  (media ns, pinned to the 32GB worker)
-     ├─ Postgres  → 192.168.68.7:5432/romm           (external LXC, same server as Vaultwarden)
+     ├─ Postgres  → 192.168.68.7:5432/romm           (external LXC — the shared Postgres)
      ├─ Valkey    → 192.168.68.103:6379, user romm   (external, same host as Immich/degoog)
      ├─ /romm/library   → NFS 192.168.68.50:/data/roms          ROMs + BIOS
      ├─ /romm/assets    → NFS 192.168.68.50:/data/romm-assets   saves, states, uploads  ← irreplaceable

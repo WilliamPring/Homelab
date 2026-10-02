@@ -40,41 +40,12 @@
     - role: immich
       when: immich_enabled | default(false)
 
-# ─── PLAY 5: App secrets (infra) ─────────────────────────────────────────────
-# All apps are deployed by Argo CD (gitops/). This play only creates the out-of-git
-# vaultwarden-db Secret (the Postgres URI Vaultwarden's GitOps app references).
-# (The old Ansible Helm loop + roles/helm_release were removed — Argo owns charts now.)
-- name: App secrets (vaultwarden-db)
-  hosts: master
-  become: true
-  tasks:
-    # Create the vaultwarden-db k8s Secret from a GITIGNORED local file
-    # (vars/secrets.local.yaml) so the DB password stays out of git.
-    # First: cp vars/secrets.example.yaml vars/secrets.local.yaml  + fill in the password.
-    - name: Load local secrets (vars/secrets.local.yaml — gitignored) if present
-      ansible.builtin.include_vars: vars/secrets.local.yaml
-      failed_when: false
-
-    - name: Ensure the apps namespace exists
-      ansible.builtin.shell: >
-        k3s kubectl create namespace apps --dry-run=client -o yaml | k3s kubectl apply -f -
-      changed_when: false
-
-    - name: Create the Vaultwarden DB Secret (FULL connection URI, from vars/secrets.local.yaml)
-      ansible.builtin.shell: >
-        k3s kubectl create secret generic vaultwarden-db -n apps
-        --from-literal=uri='postgresql://vaultwarden:{{ vaultwarden_db_password }}@192.168.68.7:5432/vaultwarden'
-        --dry-run=client -o yaml | k3s kubectl apply -f -
-      no_log: true
-      when: vaultwarden_db_password is defined
-      changed_when: false
-
-# ─── PLAY 6: the last two Ansible-managed Ingresses (Vaultwarden, Immich) ─────
+# ─── PLAY 5: the last Ansible-managed Ingress (Immich) ───────────────────────
 # cert-manager and the Let's Encrypt ClusterIssuer are on Argo CD now
-# (gitops/apps/cert-manager*.yaml). This play only applies the Vaultwarden + Immich
-# Ingress objects, which still live in Ansible until they move into their gitops apps.
+# (gitops/apps/cert-manager*.yaml). This play only applies the Immich Ingress object,
+# which still lives in Ansible until it moves into gitops/immich.
 # Gated by tls_enabled. Requires the 'letsencrypt' ClusterIssuer to exist (Argo).
-- name: Ingresses still owned by Ansible (Vaultwarden, Immich)
+- name: Ingress still owned by Ansible (Immich)
   hosts: master
   become: true
   roles:

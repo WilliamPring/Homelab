@@ -1,6 +1,6 @@
 ---
-# roles/tls_ingress/tasks/main.yml — the Vaultwarden + Immich Ingress objects (the last two
-# not yet in gitops). Runs on the master. Needs the 'letsencrypt' ClusterIssuer, which is
+# roles/tls_ingress/tasks/main.yml — the Immich Ingress object (the last one not yet in
+# gitops). Runs on the master. Needs the 'letsencrypt' ClusterIssuer, which is
 # deployed by Argo (gitops/apps/cert-manager-issuer.yaml).
 
 - name: Copy the Ingress manifest to the master
@@ -8,7 +8,7 @@
     src: tls.yaml
     dest: /etc/tls.yaml
 
-- name: Apply the Vaultwarden + Immich Ingresses
+- name: Apply the Immich Ingress
   ansible.builtin.command: k3s kubectl apply -f /etc/tls.yaml
   register: tls_apply
   changed_when: "'created' in tls_apply.stdout or 'configured' in tls_apply.stdout"
@@ -16,9 +16,9 @@
 - name: TLS — summary
   ansible.builtin.debug:
     msg:
-      - "✅ Ingresses (Vaultwarden, Immich) applied — ClusterIssuer + cert-manager are on Argo"
-      - "🔗 https://vault.williampring.ca (vaultwarden)  ·  https://immich.williampring.ca (immich)"
+      - "✅ Immich Ingress applied — ClusterIssuer + cert-manager are on Argo"
+      - "🔗 https://immich.williampring.ca"
       - "ℹ️  SearXNG + degoog Ingresses are on GitOps (Argo) now — not managed here."
       - "⏳ watch the certs:  sudo k3s kubectl get certificate -A -w   (want READY=True)"
-      - "📡 Cloudflare DNS: add A records vault + immich → the node's Tailscale IP (grey cloud)."
+      - "📡 Cloudflare DNS: immich → A → the master's Tailscale IP (grey cloud)."
       - "ℹ️  cert-manager + the letsencrypt ClusterIssuer: gitops/apps/cert-manager*.yaml (docs/tls.md)"

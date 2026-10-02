@@ -35,8 +35,7 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 |---|---|---|---|
 | `sops-age` | argocd | the age **private key** — the master key, can never be in git | this doc §2 |
 | `immich-db` | media | Postgres password for Immich's in-cluster vector DB | `docs/immich.md` |
-| `vaultwarden-db` | apps | full `postgresql://` URI to the Postgres LXC | `docs/vaultwarden.md` |
-| `vaultwarden-admin` | apps | /admin panel token (panel currently disabled) | `docs/vaultwarden.md` |
+| `vaultwarden-db`, `vaultwarden-admin` | apps | **orphans** — Vaultwarden was removed (Oct 2026); delete both secrets | `docs/archive/vaultwarden.md` |
 | `grafana-admin` | monitoring | Grafana admin user/password — **orphan**: the monitoring stack was removed; delete the secret (and the namespace) | `docs/archive/logging.md` |
 | `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/tls.md` |
 
@@ -76,7 +75,7 @@ If you ever rebuild the cluster, recreate it **first**, or no app with a secret 
 sudo k3s kubectl create secret generic sops-age -n argocd --from-file=keys.txt=$HOME/.config/sops/age/keys.txt
 ```
 
-**Back up `keys.txt`** in Vaultwarden *and* somewhere outside the cluster. Lose it and every
+**Back up `keys.txt`** in your password manager *and* somewhere outside the cluster. Lose it and every
 `.enc.yaml` in git is unreadable forever.
 
 ---
@@ -220,5 +219,5 @@ sudo k3s kubectl -n argocd exec deploy/argocd-repo-server -c argocd-repo-server 
 - `.enc.yaml` → encrypted Secret. `.sops.yaml` → generator. Never swap them, never put the
   `.enc.yaml` under `resources:`.
 - Commit nothing with a plaintext value. §3 VERIFY before every commit.
-- The private key: Arch box, Argo's `sops-age` Secret, Vaultwarden, one offline copy. Never git.
+- The private key: Arch box, Argo's `sops-age` Secret, your password manager, one offline copy. Never git.
 - One Secret per app, one DB role / Redis ACL user per app.

@@ -26,7 +26,6 @@ Argo CD  →  deploys the apps from this git repo    (declarative, self-healing)
 
 | App | What | URL |
 |---|---|---|
-| **Vaultwarden** | Password manager (Bitwarden-compatible), data in external Postgres | `vault.williampring.ca` |
 | **Immich** | Self-hosted photo/video backup (iPhone sync), vector Postgres + NFS library | `immich.williampring.ca` |
 | **SearXNG** | Privacy metasearch engine | `private.williampring.ca` |
 | **degoog** | Search aggregator (Valkey-backed) | `search.williampring.ca` |
@@ -43,10 +42,9 @@ ansible/          Infrastructure as code — the "make the cluster exist" layer
   group_vars/       cluster config + feature toggles
 
 gitops/           Apps as code — Argo CD watches this
-  apps/             one Argo Application per app (searxng, degoog, vaultwarden, immich[-prereqs])
+  apps/             one Argo Application per app (searxng, degoog, immich[-prereqs], kavita, komf, romm, …)
   searxng/          raw manifests (one file per kind)
   degoog/           raw manifests + Valkey + PVCs
-  vaultwarden/      Helm values (chart pulled from the guerzon repo)
   immich/           Helm values + prereqs/ (vector Postgres + NFS library)
   README.md         the GitOps workflow + how to onboard a new app
 
@@ -84,12 +82,13 @@ See [`gitops/README.md`](gitops/README.md) for the full workflow.
 - [`docs/proxmox-install.md`](docs/proxmox-install.md) — Proxmox VE install walkthrough
 - [`docs/argocd.md`](docs/argocd.md) — Argo CD / GitOps (install, expose, login)
 - [`docs/tls.md`](docs/tls.md) — cert-manager + Let's Encrypt (Cloudflare DNS-01) on Argo; step-by-minor upgrades
-- [`docs/vaultwarden.md`](docs/vaultwarden.md) · [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) · [`docs/kavita.md`](docs/kavita.md) · [`docs/romm.md`](docs/romm.md) — per-app guides
+- [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) · [`docs/kavita.md`](docs/kavita.md) · [`docs/romm.md`](docs/romm.md) — per-app guides
 - [`docs/updates-and-notifications.md`](docs/updates-and-notifications.md) — Renovate rules, the CI guard (`scripts/ci/validate.sh`), Argo CD → ntfy pushes
 - [`docs/secrets.md`](docs/secrets.md) — **secrets, day-to-day**: what exists, decrypt/edit/reuse, add one to a new app
 - [`docs/secrets-architecture.md`](docs/secrets-architecture.md) — SOPS + age + KSOPS: how decryption inside Argo works (deep dive)
 - [`docs/archive/`](docs/archive/) — docs for removed/superseded setups (old logging stack, the original SOPS plan)
 - [`docs/cheatsheet.md`](docs/cheatsheet.md) — everyday kubectl / Ansible commands
+- [`docs/cluster-cleanup.md`](docs/cluster-cleanup.md) — runbook: delete the cluster orphans left by removed apps (look → delete, tick as you go)
 - [`ansible/LEARN.md`](ansible/LEARN.md) — Ansible concepts, learning notes
 
 ---
