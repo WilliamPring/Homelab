@@ -36,6 +36,18 @@
       ],
       "depNameTemplate": "ghcr.io/immich-app/immich-server",
       "datasourceTemplate": "docker"
+    },
+    {
+      "description": "argo-cd install: the pinned upstream manifest URL in gitops/argocd/kustomization.yaml",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^gitops/argocd/kustomization\\.yaml$/"
+      ],
+      "matchStrings": [
+        "https://raw\\.githubusercontent\\.com/argoproj/argo-cd/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/manifests/install\\.yaml"
+      ],
+      "depNameTemplate": "argoproj/argo-cd",
+      "datasourceTemplate": "github-releases"
     }
   ],
   "vulnerabilityAlerts": {
@@ -111,12 +123,12 @@
       ]
     },
     {
-      "description": "Argo CD itself (and its Dex/Redis/ksops pieces): PRs only, you merge — the install manifest is applied by hand",
-      "matchFileNames": [
-        "gitops/argocd/**"
-      ],
+      "description": "Argo CD: one PR per upstream release (the pinned install URL). You merge, then re-apply gitops/argocd/ by hand — never automerged",
       "addLabels": [
         "argocd"
+      ],
+      "matchDepNames": [
+        "argoproj/argo-cd"
       ]
     }
   ],

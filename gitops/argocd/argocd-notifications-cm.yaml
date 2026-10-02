@@ -1,6 +1,6 @@
 # Argo CD Notifications → ntfy (your phone).
 #
-# This is a kustomize PATCH on the empty argocd-notifications-cm that argocd-install.yaml
+# This is a kustomize PATCH on the empty argocd-notifications-cm that the upstream install.yaml
 # ships. The notifications-controller is already running; this just tells it WHAT to send
 # and WHERE. No per-app annotations needed: `subscriptions:` below subscribes EVERY
 # Application in the argocd namespace.

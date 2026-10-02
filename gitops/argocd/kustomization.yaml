@@ -2,7 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - argocd-install.yaml
+  # Upstream Argo CD install manifest, PINNED to a release tag. Not vendored: the whole thing
+  # (CRDs, RBAC, ConfigMaps, images incl. Redis/Dex) moves together when the tag moves.
+  # Renovate watches this URL (renovate.json → customManagers "argo-cd install") and opens a
+  # PR per Argo release. After merging: `kubectl apply -k gitops/argocd/ -n argocd` once.
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.3/manifests/install.yaml
   - config.yaml
   - ingress.yaml
   - argocd-cm.yaml

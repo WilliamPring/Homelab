@@ -9,9 +9,9 @@ the per-app workflow.)
 |---|---|
 | **URL** | https://argocd.williampring.ca |
 | **Namespace** | `argocd` |
-| **Installed by** | `kubectl apply -k gitops/argocd/` (by hand — NOT Ansible, NOT self-managed). The directory is a **kustomization**: the pinned upstream install + patches |
+| **Installed by** | `kubectl apply -k gitops/argocd/` (by hand — NOT Ansible, NOT self-managed). The directory is a **kustomization**: the upstream install manifest (fetched from GitHub, pinned to a tag) + your patches |
 | **Sync mode** | Manual per app (`syncPolicy` has `CreateNamespace=true`, no `automated:`) |
-| **Own config** | `gitops/argocd/` — `argocd-install.yaml` (upstream, Renovate-pinned), `config.yaml` (insecure mode), `ingress.yaml`, `argocd-cm.yaml` (kustomize plugin flags for KSOPS), `repo-server-ksops-patch.yaml` (SOPS decryption), `argocd-notifications-cm.yaml` (→ ntfy) |
+| **Own config** | `gitops/argocd/` — `kustomization.yaml` (points at the pinned upstream `install.yaml` URL, Renovate bumps the tag), `config.yaml` (insecure mode), `ingress.yaml`, `argocd-cm.yaml` (kustomize plugin flags for KSOPS), `repo-server-ksops-patch.yaml` (SOPS decryption), `argocd-notifications-cm.yaml` (→ ntfy) |
 
 ## Install / update (by hand, always the same command)
 `gitops/argocd/` is a kustomization, so it MUST be applied with **`-k`** (not `-f`: that would
@@ -29,7 +29,9 @@ Re-run the `apply -k` line after ANY change in `gitops/argocd/` (Renovate bump o
 notification tweaks, …). Argo does not manage itself.
 
 What the directory sets up:
-- `argocd-install.yaml` → the upstream install manifest, pinned (Renovate PRs new Argo versions; label `argocd`).
+- the first `resources:` entry → `https://raw.githubusercontent.com/argoproj/argo-cd/vX.Y.Z/manifests/install.yaml`, the
+  upstream install pinned to a tag. Not vendored, so CRDs/RBAC/images always match. Renovate PRs the
+  tag (label `argocd`); upgrading Argo = merge that PR, run the `apply -k` line once.
 - `config.yaml` → `server.insecure: true` in `argocd-cmd-params-cm` (see below).
 - `ingress.yaml` → `argocd.williampring.ca`, cert-manager TLS (`argocd-tls`), backend `argocd-server:80`.
 - `argocd-cm.yaml` → `kustomize.buildOptions: --enable-alpha-plugins --enable-exec` so KSOPS can run.

@@ -713,7 +713,7 @@ A typical repository may look like:
 │   │
 │   ├── argocd/
 │   │   ├── kustomization.yaml
-│   │   ├── argocd-install.yaml
+│   │   ├── kustomization.yaml      # upstream install.yaml (pinned URL) + patches
 │   │   ├── repo-server-ksops-patch.yaml
 │   │   ├── argocd-cm.yaml
 │   │   ├── config.yaml
@@ -735,9 +735,9 @@ A typical repository may look like:
 
 ## Argo CD Installation
 
-### argocd-install.yaml
+### The upstream install manifest
 
-This contains the Argo CD installation manifests.
+The kustomization pulls `https://raw.githubusercontent.com/argoproj/argo-cd/<tag>/manifests/install.yaml` directly (pinned tag, bumped by Renovate). It is not stored in the repo.
 
 It provides components such as:
 
@@ -762,7 +762,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - argocd-install.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.3/manifests/install.yaml
   - config.yaml
   - ingress.yaml
   - argocd-cm.yaml
@@ -774,7 +774,7 @@ patches:
 Conceptually:
 
 ```text
-argocd-install.yaml
+upstream install.yaml (URL)
         |
         +-- base Argo CD
         |
