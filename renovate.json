@@ -48,6 +48,17 @@
       ],
       "depNameTemplate": "argoproj/argo-cd",
       "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "Generic '# renovate: datasource=… depName=…' comments above a version line (e.g. KUBECONFORM_VERSION in the CI workflow)",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/.+\\.ya?ml$/",
+        "/^scripts/.+\\.sh$/"
+      ],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+)\\s+depName=(?<depName>[^\\s]+)(\\s+versioning=(?<versioning>[a-z-]+))?\\s*\\n\\s*[A-Z_]+:?\\s*[=:]?\\s*\"?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)\"?"
+      ]
     }
   ],
   "vulnerabilityAlerts": {

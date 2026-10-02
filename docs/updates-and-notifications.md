@@ -125,6 +125,34 @@ like the others — `docs/secrets.md`.)
 
 ---
 
+## CI guard (`.github/workflows/validate.yaml` → `scripts/ci/validate.sh`)
+
+Runs on every pull request (Renovate's too) and on pushes to `main`. It is a gate, not a
+deploy — nothing touches the cluster. Same script runs locally:
+```bash
+./scripts/ci/validate.sh          # needs kubectl, helm, ruby, kubeconform on PATH
+```
+
+| # | Check | Catches |
+|---|---|---|
+| 1 | every `*.enc.yaml` has a `sops:` block, all values `ENC[…]`, no `REPLACE_ME` — **WARN-only for now** (`STRICT_SECRETS: "0"` in the workflow) | a plaintext secret template reaching `main` |
+| 2 | every directory with a `kustomization.yaml` renders (KSOPS generator stripped) | bad patch targets, typos, missing resources — the Argo "manifest generation error" class |
+| 3 | every plain manifest directory is valid YAML with k8s objects | broken indentation |
+| 4 | every Argo Application with a chart source renders via `helm template` with its values | chart values-schema errors (immich enforces one), wrong chart version |
+| 5 | kubeconform over everything rendered, with the CRD catalog for Argo / cert-manager | wrong field names that render fine but the API server rejects |
+
+A second job validates `renovate.json` itself with Renovate's own config validator.
+
+What it cannot do: decrypt anything (no age key in CI), or prove a secret's *value* is right.
+It does not block merges unless you make it a required check in GitHub branch protection —
+worth doing once it has been green for a while.
+
+**Secrets check is warn-only today** because `komf-secret.enc.yaml` and `romm-secret.enc.yaml`
+are still plaintext templates. Once you fill + `sops -e -i` them (`docs/secrets.md` §3), set
+`STRICT_SECRETS: "1"` in the workflow so a plaintext secret can never merge again.
+
+---
+
 ## Not automated (on purpose, for now)
 - **k3s upgrades** — needs system-upgrade-controller; declined for now.
 - **ntfy access control** — still open to anyone on the tailnet; also the `base-url` in

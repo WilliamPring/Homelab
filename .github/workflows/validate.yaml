@@ -1,0 +1,44 @@
+# CI guard — runs scripts/ci/validate.sh on every pull request (Renovate's included) and on
+# pushes to main. It is a GATE, not a deploy: nothing here touches the cluster.
+#   1 secrets encrypted · 2 kustomize renders · 3 plain manifests parse · 4 helm charts render
+#   with their values · 5 kubeconform schema check · (separate job) renovate.json is valid
+name: validate
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # renovate: datasource=github-releases depName=yannh/kubeconform
+  KUBECONFORM_VERSION: v0.8.0
+  # Secrets check: "0" = warn only (current — komf/romm templates not yet encrypted),
+  # "1" = a plaintext *.enc.yaml FAILS the run. Flip to "1" once those two are encrypted.
+  STRICT_SECRETS: "0"
+
+jobs:
+  manifests:
+    name: manifests (kustomize · helm · kubeconform · secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v; kubectl version --client; helm version --short; ruby -v
+      - name: Validate
+        run: ./scripts/ci/validate.sh
+
+  renovate-config:
+    name: renovate.json is valid
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx --yes --package renovate -- renovate-config-validator --strict renovate.json
