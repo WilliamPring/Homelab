@@ -14,21 +14,14 @@ The plaintext secret does not need to be stored in Git.
 
 ## Table of Contents
 
+> Companion to **`docs/secrets.md`** (the day-to-day guide: what exists, decrypt/edit/reuse,
+> add a secret to an app). This file is the *why* and the full component walk-through.
+
 - [Overview](#overview)
 - [Why This Architecture Exists](#why-this-architecture-exists)
 - [High-Level Architecture](#high-level-architecture)
 - [The Mental Model](#the-mental-model)
-- [Components](#components)
-  - [Git](#git)
-  - [Kubernetes](#kubernetes)
-  - [Argo CD](#argo-cd)
-  - [Argo CD Repo-Server](#argo-cd-repo-server)
-  - [Kustomize](#kustomize)
-  - [Kustomize Generators](#kustomize-generators)
-  - [KSOPS](#ksops)
-  - [SOPS](#sops)
-  - [age](#age)
-  - [.sops.yaml](#sopsyaml)
+- [Components](#components) — Git · Kubernetes · Argo CD · repo-server · Kustomize · generators · KSOPS · SOPS · age · `.sops.yaml`
 - [How the Components Fit Together](#how-the-components-fit-together)
 - [Directory Structure](#directory-structure)
 - [Argo CD Installation](#argo-cd-installation)
@@ -45,29 +38,7 @@ The plaintext secret does not need to be stored in Git.
 - [Application Kustomization](#application-kustomization)
 - [Full End-to-End Flow](#full-end-to-end-flow)
 - [What Happens During Argo CD Manifest Generation](#what-happens-during-argo-cd-manifest-generation)
-- [What Happens During Argo CD Sync](#what-happens-during-argo-cd-sync)
-- [Creating a New Encrypted Secret](#creating-a-new-encrypted-secret)
-- [Testing Locally](#testing-locally)
-- [Testing Inside Argo CD](#testing-inside-argo-cd)
-- [Testing the Full Argo CD Flow](#testing-the-full-argo-cd-flow)
-- [Troubleshooting](#troubleshooting)
-- [Debugging by Layer](#debugging-by-layer)
-- [Security Model](#security-model)
-- [Trust Boundaries](#trust-boundaries)
-- [What This Setup Protects](#what-this-setup-protects)
-- [What This Setup Does Not Protect](#what-this-setup-does-not-protect)
-- [Bootstrap Problem](#bootstrap-problem)
-- [Key Rotation](#key-rotation)
-- [What Happens if the Private Key Is Compromised](#what-happens-if-the-private-key-is-compromised)
-- [Operational Checklist](#operational-checklist)
-- [Git Checklist](#git-checklist)
-- [Security Rules](#security-rules)
-- [Learning Exercises](#learning-exercises)
-- [Commands Cheat Sheet](#commands-cheat-sheet)
-- [Glossary](#glossary)
-- [Important Concepts to Learn Next](#important-concepts-to-learn-next)
-- [Quick Recipe](#quick-recipe)
-- [Final Mental Model](#final-mental-model)
+- [Where to go next](#where-to-go-next)
 
 ---
 
@@ -1449,4 +1420,25 @@ SOPS_AGE_KEY_FILE=/etc/sops-age/keys.txt
 
 The file is backed by the Kubernetes Secret \`argocd/sops-age\`.
 
-SOPS reads the identity
+SOPS reads the identity from `/etc/sops-age/keys.txt`, decrypts every `ENC[...]` value, and KSOPS emits the
+resulting plain `Secret` into the Kustomize output. From Argo's point of view it is now just
+another rendered manifest.
+
+### Step 8: Argo CD compares and syncs
+
+The rendered manifests (Deployment, Service, Ingress, **Secret**) are compared with the live
+cluster. On Sync, the Secret is applied like any other object. The plaintext existed only in
+the repo-server's memory during rendering — never in Git, never on disk.
+
+---
+
+## Where to go next
+
+Everything operational lives in **`docs/secrets.md`**:
+
+- the inventory of what is encrypted, what is still hand-managed, and known debt
+- one-time machine setup and the `sops-age` bootstrap after a cluster rebuild
+- the five commands (view / extract / edit / encrypt / verify) and the pre-commit check
+- reusing an existing value, adding a secret to a new app, rotation, troubleshooting
+
+The original learning plan that led here is `docs/sops-argocd.md`.

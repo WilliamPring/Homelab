@@ -1,7 +1,7 @@
 # Secrets — the working guide
 
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day
-reference. For the *why* and the full architecture, see `docs/secerts.md` (deep dive) and
+reference. For the *why* and the full architecture, see `docs/secrets-architecture.md` (deep dive) and
 `docs/sops-argocd.md` (the original learning plan).
 
 ```

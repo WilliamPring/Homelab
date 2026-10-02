@@ -9,26 +9,32 @@ the per-app workflow.)
 |---|---|
 | **URL** | https://argocd.williampring.ca |
 | **Namespace** | `argocd` |
-| **Installed by** | plain `kubectl apply` of the upstream manifest (by hand — NOT Ansible, NOT self-managed) |
+| **Installed by** | `kubectl apply -k gitops/argocd/` (by hand — NOT Ansible, NOT self-managed). The directory is a **kustomization**: the pinned upstream install + patches |
 | **Sync mode** | Manual per app (`syncPolicy` has `CreateNamespace=true`, no `automated:`) |
-| **Own config** | `gitops/argocd/` (config.yaml + ingress.yaml) — applied by hand |
+| **Own config** | `gitops/argocd/` — `argocd-install.yaml` (upstream, Renovate-pinned), `config.yaml` (insecure mode), `ingress.yaml`, `argocd-cm.yaml` (kustomize plugin flags for KSOPS), `repo-server-ksops-patch.yaml` (SOPS decryption), `argocd-notifications-cm.yaml` (→ ntfy) |
 
-## Install (one time, by hand)
+## Install / update (by hand, always the same command)
+`gitops/argocd/` is a kustomization, so it MUST be applied with **`-k`** (not `-f`: that would
+apply the patch files as broken half-objects and the kustomization.yaml as garbage). The
+upstream install objects carry no namespace, hence **`-n argocd`**.
 ```bash
-sudo k3s kubectl create namespace argocd
-sudo k3s kubectl apply -n argocd -f \
-  https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+sudo k3s kubectl create namespace argocd                  # first time only
+sudo k3s kubectl create secret generic sops-age -n argocd \
+  --from-file=keys.txt=$HOME/.config/sops/age/keys.txt    # first time only — the age key KSOPS decrypts with (docs/secrets.md)
+sudo k3s kubectl apply -k gitops/argocd/ -n argocd
 sudo k3s kubectl -n argocd rollout status deploy/argocd-server
+sudo k3s kubectl -n argocd rollout status deploy/argocd-repo-server
 ```
+Re-run the `apply -k` line after ANY change in `gitops/argocd/` (Renovate bump of the install,
+notification tweaks, …). Argo does not manage itself.
 
-## Expose the UI at argocd.williampring.ca
-Argo's own config lives in `gitops/argocd/` — apply the whole folder at once:
-```bash
-sudo k3s kubectl apply -f gitops/argocd/                       # config.yaml + ingress.yaml
-sudo k3s kubectl rollout restart deploy/argocd-server -n argocd
-```
-- `config.yaml` → sets `server.insecure: true` in `argocd-cmd-params-cm`.
+What the directory sets up:
+- `argocd-install.yaml` → the upstream install manifest, pinned (Renovate PRs new Argo versions; label `argocd`).
+- `config.yaml` → `server.insecure: true` in `argocd-cmd-params-cm` (see below).
 - `ingress.yaml` → `argocd.williampring.ca`, cert-manager TLS (`argocd-tls`), backend `argocd-server:80`.
+- `argocd-cm.yaml` → `kustomize.buildOptions: --enable-alpha-plugins --enable-exec` so KSOPS can run.
+- `repo-server-ksops-patch.yaml` → installs ksops+kustomize into the repo-server and mounts the `sops-age` key.
+- `argocd-notifications-cm.yaml` → pushes to ntfy (`docs/updates-and-notifications.md`).
 - **DNS:** `argocd → A → <master Tailscale 100.x IP>` (grey cloud).
 
 ### ⚠️ Why insecure mode is required
@@ -77,12 +83,17 @@ See `gitops/README.md` for the full add-an-app recipe.
 |---|---|
 | `ERR_TOO_MANY_REDIRECTS` on the domain | insecure mode not active — apply `gitops/argocd/config.yaml` + `rollout restart deploy/argocd-server`; test in **incognito** (browsers cache redirect loops) |
 | App stuck `OutOfSync / Missing` | you registered it but haven't clicked **SYNC** (manual mode) |
-| `failed to resolve revision` on a Helm app | `targetRevision: "*"` doesn't work for Helm **chart** sources — pin a concrete version |
+| `failed to resolve revision` on a Helm app | chart `targetRevision` must be a concrete version (all charts are pinned now; Renovate bumps them) |
+| `failed to load generator plugin ... ksops` | the repo-server lacks KSOPS → `gitops/argocd/` was applied with `-f` or never re-applied; run the `apply -k` above, then **Hard Refresh** the app (the error is cached) |
+| `Deployment "argocd-repo-server" is invalid` on apply | live repo-server was edited by hand and conflicts with the patch → `kubectl apply -k gitops/argocd/ -n argocd --server-side --force-conflicts` once |
 | Helm-chart app won't pull (OCI) | Settings → Repositories → Connect repo (type Helm, Enable OCI) — e.g. the Immich chart |
 | Namespace shows OutOfSync and won't clear | leftover tracking label from an app that once declared the ns — strip it (`kubectl label ns <ns> app.kubernetes.io/instance-`); NEVER Sync-with-Prune a shared namespace |
 
 ## Notes
-- Argo CD is **not self-managed** (no app-of-apps) — it's installed + configured by hand, on
-  purpose, so it can't break its own bootstrap. Its config files live in `gitops/argocd/`.
+- Argo CD is **not self-managed** — it's installed + configured by hand, on purpose, so it
+  can't break its own bootstrap. Its config files live in `gitops/argocd/`.
+- Applications in `gitops/apps/` are also registered by hand today (`kubectl apply -f`). The
+  planned next step is an **app-of-apps** root so a new app = a new file + push.
+- Secrets: `docs/secrets.md`. Updates & phone notifications: `docs/updates-and-notifications.md`.
 - Everything is **manual sync** by design — Argo shows drift but waits for a click, so there
   are no surprise upgrades (important for Vaultwarden/Immich).

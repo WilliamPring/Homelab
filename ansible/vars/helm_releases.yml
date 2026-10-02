@@ -1,14 +1,18 @@
 ---
-# vars/helm_releases.yml — the list of Helm apps Ansible deploys.
+# vars/helm_releases.yml — Helm charts Ansible deploys. EMPTY on purpose.
 #
-# EMPTY — all apps have been migrated to GitOps (Argo CD). See gitops/.
-#   • Vaultwarden → gitops/apps/vaultwarden.yaml + gitops/vaultwarden/values.yaml
-#   • Immich      → gitops/apps/immich.yaml + gitops/immich/
+# Every app is on GitOps (Argo CD) — see gitops/apps/*.yaml, one Application per app:
+#   vaultwarden · immich · immich-prereqs · immich-public-proxy · kavita · komf · calibre
+#   searxng · degoog · homepage · ntfy · romm
 #
-# Ansible now handles INFRA only (Tailscale, k3s, cert-manager/ClusterIssuer, the
-# out-of-git Secrets + node labels). App deployment lives in Argo.
+# Ansible's remaining job is INFRA only (ansible/site.yml):
+#   Tailscale, k3s server/agent, cert-manager + the Let's Encrypt ClusterIssuer,
+#   the out-of-git bits apps depend on (immich-db Secret, immich-node label, sops-age key).
 #
-# If you ever need Ansible to deploy a Helm chart again (e.g. an infra chart), add a dict
-# here — the loop in site.yml Play 6 + roles/helm_release still work. Fields:
-#   name, repo_name, repo, chart, namespace, values_file, [version], [enabled].
+# Play 6 in site.yml still loops over this list, so it must exist (as []). Add a dict only
+# if an INFRA chart genuinely has to be installed before Argo exists. Fields:
+#   name, repo_name, repo, chart, namespace, values_file, [version], [enabled]
+#
+# Planned: cert-manager moves from the Ansible role to an Argo app too (so Renovate tracks
+# it — it is currently several minor versions behind). After that this file can go.
 helm_releases: []

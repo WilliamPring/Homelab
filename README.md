@@ -87,7 +87,7 @@ See [`gitops/README.md`](gitops/README.md) for the full workflow.
 - [`docs/logging.md`](docs/logging.md) — Loki + Alloy + Grafana logging stack
 - [`docs/updates-and-notifications.md`](docs/updates-and-notifications.md) — Renovate rules, what automerges, Argo CD → ntfy pushes
 - [`docs/secrets.md`](docs/secrets.md) — **secrets, day-to-day**: what exists, decrypt/edit/reuse, add one to a new app
-- [`docs/sops-argocd.md`](docs/sops-argocd.md) · [`docs/secerts.md`](docs/secerts.md) — SOPS + age + KSOPS: the original plan and the architecture deep-dive
+- [`docs/sops-argocd.md`](docs/sops-argocd.md) · [`docs/secrets-architecture.md`](docs/secrets-architecture.md) — SOPS + age + KSOPS: the original plan and the architecture deep-dive
 - [`docs/cheatsheet.md`](docs/cheatsheet.md) — everyday kubectl / Ansible commands
 - [`ansible/LEARN.md`](ansible/LEARN.md) — Ansible concepts, learning notes
 
