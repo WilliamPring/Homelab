@@ -84,10 +84,10 @@ See [`gitops/README.md`](gitops/README.md) for the full workflow.
 - [`docs/proxmox-install.md`](docs/proxmox-install.md) — Proxmox VE install walkthrough
 - [`docs/argocd.md`](docs/argocd.md) — Argo CD / GitOps (install, expose, login)
 - [`docs/vaultwarden.md`](docs/vaultwarden.md) · [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) · [`docs/kavita.md`](docs/kavita.md) · [`docs/romm.md`](docs/romm.md) — per-app guides
-- [`docs/logging.md`](docs/logging.md) — Loki + Alloy + Grafana logging stack
 - [`docs/updates-and-notifications.md`](docs/updates-and-notifications.md) — Renovate rules, the CI guard (`scripts/ci/validate.sh`), Argo CD → ntfy pushes
 - [`docs/secrets.md`](docs/secrets.md) — **secrets, day-to-day**: what exists, decrypt/edit/reuse, add one to a new app
-- [`docs/sops-argocd.md`](docs/sops-argocd.md) · [`docs/secrets-architecture.md`](docs/secrets-architecture.md) — SOPS + age + KSOPS: the original plan and the architecture deep-dive
+- [`docs/secrets-architecture.md`](docs/secrets-architecture.md) — SOPS + age + KSOPS: how decryption inside Argo works (deep dive)
+- [`docs/archive/`](docs/archive/) — docs for removed/superseded setups (old logging stack, the original SOPS plan)
 - [`docs/cheatsheet.md`](docs/cheatsheet.md) — everyday kubectl / Ansible commands
 - [`ansible/LEARN.md`](ansible/LEARN.md) — Ansible concepts, learning notes
 

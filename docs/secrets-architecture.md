@@ -1441,4 +1441,4 @@ Everything operational lives in **`docs/secrets.md`**:
 - the five commands (view / extract / edit / encrypt / verify) and the pre-commit check
 - reusing an existing value, adding a secret to a new app, rotation, troubleshooting
 
-The original learning plan that led here is `docs/sops-argocd.md`.
+The original learning plan that led here is `docs/archive/sops-argocd.md`.

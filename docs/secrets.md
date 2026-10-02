@@ -2,7 +2,7 @@
 
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day
 reference. For the *why* and the full architecture, see `docs/secrets-architecture.md` (deep dive) and
-`docs/sops-argocd.md` (the original learning plan).
+`docs/archive/sops-argocd.md` (the original learning plan, done).
 
 ```
 YOU (Arch box, has the age PRIVATE key)         GIT (public key only)         ARGO CD (has the private key too)
@@ -37,16 +37,16 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 | `immich-db` | media | Postgres password for Immich's in-cluster vector DB | `docs/immich.md` |
 | `vaultwarden-db` | apps | full `postgresql://` URI to the Postgres LXC | `docs/vaultwarden.md` |
 | `vaultwarden-admin` | apps | /admin panel token (panel currently disabled) | `docs/vaultwarden.md` |
-| `grafana-admin` | monitoring | Grafana admin user/password | `docs/logging.md` |
-| `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/sops-argocd.md` Phase 9 |
+| `grafana-admin` | monitoring | Grafana admin user/password — **orphan**: the monitoring stack was removed; delete the secret (and the namespace) | `docs/archive/logging.md` |
+| `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/archive/sops-argocd.md` Phase 9 |
 
-Migrating these into `.enc.yaml` files is the open item from `docs/sops-argocd.md` Phase 9.
+Migrating these into `.enc.yaml` files is the open item from `docs/archive/sops-argocd.md` Phase 9.
 
 ### Known debt ⚠️
 - `gitops/degoog/deployment.yaml` still has the Valkey URL **inline in plaintext**, including the
   password of the shared `redis` user. It is in git history on GitHub. Fix = rotate that password
   on the Valkey host, update `immich-secret`, move the URL into `degoog-secret`. Encrypting later
-  does not un-leak it (Phase 8 of `docs/sops-argocd.md`).
+  does not un-leak it (Phase 8 of `docs/archive/sops-argocd.md`).
 
 ---
 

@@ -23,7 +23,7 @@ data:
 
       Monitoring:
         style: row
-        columns: 3
+        columns: 2
 
       Infrastructure:
         style: row
@@ -67,11 +67,6 @@ data:
             icon: romm.png
 
     - Monitoring:
-        - Grafana:
-            href: https://grafana.williampring.ca
-            description: Logs & metrics
-            icon: grafana.png
-
         - Argo CD:
             href: https://argocd.williampring.ca
             description: GitOps deployments
