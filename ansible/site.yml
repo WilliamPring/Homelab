@@ -29,7 +29,7 @@
   roles:
     - k3s_agent
 
-# ─── PLAY 5: Immich INFRA (immich-db secret + worker node label) ─────────────
+# ─── PLAY 4: Immich INFRA (immich-db secret + worker node label) ─────────────
 # Immich's MANIFESTS + chart are now on GitOps (Argo CD). This play only ensures the
 # out-of-git bits the GitOps manifests reference: the immich-db Secret + the immich-node
 # label on the 32GB worker. Gated by immich_enabled. See gitops/apps/immich*.yaml.
@@ -40,15 +40,13 @@
     - role: immich
       when: immich_enabled | default(false)
 
-# ─── PLAY 6: App secrets (infra) ─────────────────────────────────────────────
-# All apps are on GitOps now, so vars/helm_releases.yml is EMPTY and the Helm loop below
-# is dormant (kept for any future infra Helm chart). What this play still does: create the
-# vaultwarden-db Secret (the out-of-git Postgres URI Vaultwarden's GitOps app references).
-- name: App secrets + (dormant) Helm releases
+# ─── PLAY 5: App secrets (infra) ─────────────────────────────────────────────
+# All apps are deployed by Argo CD (gitops/). This play only creates the out-of-git
+# vaultwarden-db Secret (the Postgres URI Vaultwarden's GitOps app references).
+# (The old Ansible Helm loop + roles/helm_release were removed — Argo owns charts now.)
+- name: App secrets (vaultwarden-db)
   hosts: master
   become: true
-  vars_files:
-    - vars/helm_releases.yml
   tasks:
     # Create the vaultwarden-db k8s Secret from a GITIGNORED local file
     # (vars/secrets.local.yaml) so the DB password stays out of git.
@@ -71,7 +69,7 @@
       when: vaultwarden_db_password is defined
       changed_when: false
 
-# ─── PLAY 7: TLS — real HTTPS via Let's Encrypt (Cloudflare DNS-01) ───────────
+# ─── PLAY 6: TLS — real HTTPS via Let's Encrypt (Cloudflare DNS-01) ───────────
 # Installs cert-manager + a Let's Encrypt ClusterIssuer (Cloudflare DNS-01) + an
 # Ingress for Vaultwarden (vault.williampring.ca). Gated by tls_enabled.
 # ⚠️ ONE-TIME prereq (by hand): create the Cloudflare token secret —

@@ -297,6 +297,7 @@ project) or **[next]** (you'll meet it as you grow). Skim now, return as referen
 - **Collections & Galaxy** — [next] Collections are installable bundles of extra
   modules/roles (e.g. `kubernetes.core` to talk to the k8s API, `community.general`).
   Declared in a `requirements.yml`, installed with `ansible-galaxy collection install`.
+  (This project uses only built-in modules, so it has no `requirements.yml`.)
 - **FQCN (fully-qualified collection name)** — [used here] The full module name like
   `ansible.builtin.systemd`. `builtin` ships with Ansible; others read as
   `<namespace>.<collection>.<module>`. Using the full name avoids ambiguity.

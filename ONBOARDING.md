@@ -30,9 +30,9 @@ Ansible manages the machines (Layer 1). k3s runs the apps (Layer 2). Your laptop
 | **Which machines/nodes exist** | `ansible/inventory.ini` |
 | **What runs, and in what order** | `ansible/site.yml` ← the playbook (7 "plays", top to bottom) |
 | **The on/off switches + settings** | `ansible/group_vars/all.yml` (toggles like `immich_enabled`) |
-| **Which apps are deployed via Helm** | `ansible/vars/helm_releases.yml` (a data list) |
+| **Which apps are deployed, and how** | `gitops/apps/*.yaml` — one Argo CD Application per app (Ansible deploys no apps) |
 | **Which apps get HTTPS hostnames** | `ansible/vars/routes.yml` |
-| **How a *Helm* app is configured** | `ansible/helm-values/<app>.yaml` |
+| **How a *Helm* app is configured** | `gitops/<app>/values.yaml` (fed to the chart by its Argo Application) |
 | **How a *manifest* app is configured** | `ansible/roles/<app>/files/<app>.yaml` |
 | **What a role actually does (steps)** | `ansible/roles/<app>/tasks/main.yml` |
 | **How to run the whole thing** | `ansible/README.md` |
@@ -51,7 +51,7 @@ Ansible manages the machines (Layer 1). k3s runs the apps (Layer 2). Your laptop
 3. **`ansible/group_vars/all.yml`** — *what's turned on, what are the settings?*
 4. Pick one app and follow it end-to-end:
    - a **manifest** app → `roles/pihole/tasks/main.yml` + `roles/pihole/files/pihole.yaml`
-   - a **Helm** app → `vars/helm_releases.yml` (the entry) + `helm-values/jellyfin.yaml` (its config)
+   - a **Helm** app → `gitops/apps/vaultwarden.yaml` (the Argo Application) + `gitops/vaultwarden/values.yaml` (its config)
 5. **`docs/roadmap.md`** — *where is this all going?*
 
 ---
@@ -63,7 +63,8 @@ Play 1  Tailscale     → all nodes
 Play 2  k3s server    → master
 Play 3  k3s agents    → workers
 Play 4  manifest apps → Pi-hole, qBittorrent, Immich-prereqs
-Play 5  Helm apps     → Jellyfin, Vaultwarden, Immich   (loops over vars/helm_releases.yml)
+Play 5  Immich infra  → immich-db Secret + worker node label (Immich itself is on Argo CD)
+Play 6  App secrets   → vaultwarden-db Secret
 Play 6  Samba         → the host file share
 Play 7  TLS ingress   → cert-manager + Gateway API + HTTPRoutes
 ```
@@ -74,13 +75,13 @@ A play names its **roles**; each role's steps live in `roles/<name>/tasks/main.y
 ## 🧩 The conventions (so the patterns make sense)
 - **Each app = a role** in `roles/`.
 - **Small app** → hand-written manifest in `roles/<app>/files/*.yaml`, applied with `kubectl apply`.
-- **Charted app** → a Helm chart: an entry in `vars/helm_releases.yml` + a `helm-values/<app>.yaml`.
-  Adding one = a data line + a values file, **no playbook edits**.
+- **Charted app** → an Argo Application in `gitops/apps/<app>.yaml` pointing at the chart, with
+  values in `gitops/<app>/values.yaml`. Adding one = two files + push, **no playbook edits**.
 - **Toggles** in `group_vars/all.yml` turn features on/off (`<thing>_enabled: true/false`).
   Many heavy things are **staged OFF**, waiting for real hardware (the HP).
 - **Namespaces group apps by function**: `media`, `apps`, `network`, `vpn`, `gateway`, `kube-system`.
 - **Config lives in data, not the playbook**: machines→`inventory.ini`, settings→`group_vars`,
-  Helm apps→`vars/helm_releases.yml`, routes→`vars/routes.yml`, per-app config→`helm-values/`.
+  apps→`gitops/apps/*.yaml`, per-app config→`gitops/<app>/`.
 
 ---
 
@@ -92,5 +93,5 @@ A play names its **roles**; each role's steps live in `roles/<name>/tasks/main.y
 ---
 
 ## The one-line summary
-**`site.yml` is the table of contents; `roles/` is the how; `vars/` + `helm-values/` + `group_vars/`
+**`site.yml` is the table of contents; `roles/` is the how; `vars/` + `group_vars/`
 are the what; `docs/` is the why.** Start at `site.yml`, follow a role, read a doc.

@@ -1,119 +1,110 @@
-# Homelab Ansible — Barebones k3s + Tailscale
+# Homelab Ansible — cluster + infra only
 
-Automates the boring part of the homelab: install **Tailscale** and stand up a
-**k3s** cluster (control plane + optional workers) with one command.
+Ansible builds the **cluster and the infrastructure the apps depend on**: Tailscale, k3s,
+cert-manager, and the few out-of-git Secrets and node labels the GitOps apps reference.
 
-> New to Ansible? Read **[LEARN.md](LEARN.md)** first — it walks through every
-> concept used here, mapped to *this* project. This README is just the how-to-run.
+**Ansible deploys no apps.** Every app lives in `../gitops/` and is deployed by Argo CD.
+Nothing here uses Helm, and the project needs no Ansible collections.
+
+> New to Ansible? Read **[LEARN.md](LEARN.md)** first — it explains every concept used here,
+> mapped to this project. This README is only the how-to-run.
 
 ---
 
-## What this does
+## What `site.yml` does (6 plays, top to bottom)
 
-| Play | Target | Action |
-|------|--------|--------|
-| 1 | all nodes | Install Tailscale, start the daemon, verify login |
-| 2 | master | Install k3s control plane, capture the join-token |
-| 3 | workers | Install k3s agent, join the cluster |
-| 4 | master | Deploy manifest apps — Pi-hole, Vaultwarden (`k3s kubectl apply`) |
-| 5 | master | Deploy Helm releases — Jellyfin (data-driven, `kubernetes.core.helm`) |
-| 6 | master | Samba file share (host-level, not k3s) |
+| # | Play | Hosts | Role / tasks | Toggle |
+|---|------|-------|--------------|--------|
+| 1 | Tailscale | all k3s nodes | `tailscale` — install, start, verify login, report the 100.x IP | always |
+| 2 | k3s server | master | `k3s_server` — install control plane, nfs-common, capture the join-token | always |
+| 3 | k3s agents | workers | `k3s_agent` — install agent, nfs-common, join, wait for Ready | always |
+| 4 | Immich infra | master | `immich` — `media` namespace, `immich-db` Secret, `immich-node=true` label on the 32GB worker | `immich_enabled` |
+| 5 | App secrets | master | inline tasks — `apps` namespace, `vaultwarden-db` Secret (Postgres URI) | `vaultwarden_db_password` set |
+| 6 | TLS | master | `certmanager` (install, pinned version) + `tls_ingress` (Let's Encrypt ClusterIssuer, Vaultwarden + Immich Ingress) | `tls_enabled` |
 
-Currently **vanilla k3s over the LAN** — the simplest thing that works on a VM.
-The Tailscale-as-flannel networking from your real homelab is behind variables in
-`group_vars/all.yml` for when you move to real hardware (see LEARN.md → "Growing this").
-
-**Two ways apps are deployed:** small apps as hand-written manifests
-(`roles/<app>/files/*.yaml` → `kubectl apply`); heavier apps as Helm charts, defined
-as data in `vars/helm_releases.yml` with values in `helm-values/<app>.yaml`.
+Plays 4–6 exist only because Argo cannot create things that must stay out of git (DB
+passwords) or that belong to the node (labels). Everything else about an app is in `gitops/`.
 
 ---
 
 ## One-time setup
 
-Ansible runs from your **control node** (your Arch Linux machine) and SSHes into
-the nodes — nothing is installed on the targets ahead of time (it's *agentless*).
-
-**On your Arch control node:**
+Ansible runs from your **control node** (the Arch box) and SSHes into the nodes. Nothing is
+installed on the targets ahead of time.
 
 ```bash
-# 1. Install Ansible + the collections this project uses
+# control node
 sudo pacman -S ansible
-ansible-galaxy collection install -r requirements.yml   # kubernetes.core (for Helm)
 
-# 2. Make sure you can SSH into each node as a sudo-capable user, key-based:
-ssh <user>@<node-ip>      # should log in without a password prompt
-# If it asks for a password, copy your key first:  ssh-copy-id <user>@<node-ip>
+# key-based SSH to every node as a sudo-capable user
+ssh <user>@<node-ip>              # no password prompt = good
+ssh-copy-id <user>@<node-ip>      # if it did prompt
 ```
 
-**On the Debian nodes (master + workers):** Ansible needs almost nothing there —
-just **SSH access + Python 3**, which Debian includes by default. The `curl` used
-by the k3s installer is also standard on Debian. Nothing to pre-install in the
-normal case; if a node is unusually minimal, `sudo apt install -y python3 curl`.
+Debian targets need only SSH + Python 3 (both default). If a node is unusually minimal:
+`sudo apt install -y python3 curl`.
+
+### Secrets Ansible needs (never committed)
+```bash
+cp vars/secrets.example.yaml vars/secrets.local.yaml   # *.local.yaml is gitignored
+$EDITOR vars/secrets.local.yaml                        # vaultwarden_db_password, immich_db_password
+```
+Plays 4 and 5 read this file and create the matching k8s Secrets. Without it they are skipped.
+The Cloudflare token for cert-manager is created by hand once (see `group_vars/all.yml`).
+
+---
 
 ## Configure
 
-Edit **one file** — `inventory.ini` — and point it at your VM:
+- **`inventory.ini`** — the machines. Today: one master + one worker (the 32GB box).
+- **`group_vars/all.yml`** — the knobs: `k3s_channel`, `tailscale_up_args`, `immich_enabled`,
+  `tls_enabled`, `cert_manager_version`.
 
-```ini
-[master]
-homelab-master ansible_host=<YOUR_VM_IP> ansible_user=<YOUR_SSH_USER>
-```
-
-Leave `[workers]` empty for a single-node cluster.
+---
 
 ## Run
 
 ```bash
 cd ansible
-
-# Dry run first — shows what WOULD change without touching anything.
-ansible-playbook site.yml --check
-
-# For real. Add --ask-become-pass if your SSH user needs a sudo password.
-ansible-playbook site.yml --ask-become-pass
+ansible-playbook site.yml --syntax-check          # parses?
+ansible-playbook site.yml --check                 # dry run — shows what WOULD change
+ansible-playbook site.yml --ask-become-pass       # for real
 ```
 
-### The Tailscale login step
-
-The first run will **stop** on the Tailscale play with a message like
-"not logged in yet". That's expected. On the VM, run once:
-
+### The Tailscale login step (first run only)
+The first run **stops** on Play 1 with "not logged in yet". On that node:
 ```bash
 sudo tailscale up --accept-dns=false
 ```
+Open the printed URL, approve the machine, re-run the same `ansible-playbook` command. It
+skips what is already done and continues. "Re-run until green" is the Ansible mindset.
 
-Open the printed URL, approve the machine, then **re-run the same command**:
-
-```bash
-ansible-playbook site.yml --ask-become-pass
-```
-
-This time it skips everything already done and finishes the k3s install. Getting
-comfortable with "re-run until green" is the core Ansible mindset (see LEARN.md).
+### Re-running later
+Safe at any time — every task is idempotent. Typical reasons: a rebuilt worker (needs the
+Immich label + nfs-common again), a lost `immich-db` / `vaultwarden-db` Secret, or a
+`cert_manager_version` bump.
 
 ---
 
 ## Verify
 
 ```bash
-# From the VM:
-sudo k3s kubectl get nodes -o wide     # node should be Ready
-
-# Grab the kubeconfig to use kubectl from your Arch control node (optional):
-scp <user>@<vm-ip>:/etc/rancher/k3s/k3s.yaml ~/.kube/homelab.yaml
-# then edit the `server:` line in that file to your VM's IP instead of 127.0.0.1
+sudo k3s kubectl get nodes -o wide                              # all Ready
+sudo k3s kubectl get node -l immich-node=true                   # the 32GB worker is labelled
+sudo k3s kubectl get secret immich-db -n media vaultwarden-db -n apps 2>&1 | head -3
+sudo k3s kubectl get clusterissuer letsencrypt                  # READY True
 ```
+After this, follow `../docs/argocd.md` to bring up Argo CD and the apps.
 
 ---
 
 ## Useful commands
 
 ```bash
-ansible all -m ping                    # can Ansible reach every node?
-ansible-playbook site.yml --check      # dry run (no changes)
-ansible-playbook site.yml --list-tasks # show every task without running
-ansible-playbook site.yml --tags ...   # (once you add tags) run a subset
+ansible all -m ping                        # reach every node?
+ansible-playbook site.yml --list-tasks     # every task, without running
+ansible-playbook site.yml --limit workers  # only one group
+ansible-playbook site.yml --start-at-task "Install cert-manager (CRDs + controller)"
 ```
 
 ---
@@ -122,30 +113,27 @@ ansible-playbook site.yml --tags ...   # (once you add tags) run a subset
 
 ```
 ansible/
-├── ansible.cfg            # project config (inventory path, ssh behaviour)
-├── inventory.ini          # THE file you edit: which machines, grouped by role
-├── requirements.yml       # Ansible collections (kubernetes.core) — install once
+├── ansible.cfg              # inventory path, ssh behaviour, yaml output, ansible.log
+├── inventory.ini            # the machines: [master], [workers], [k3s_cluster:children]
+├── site.yml                 # the playbook — 6 plays, run this
 ├── group_vars/
-│   └── all.yml            # global host knobs (k3s channel, tailscale, samba)
+│   └── all.yml              # knobs: k3s_channel, tailscale args, immich_enabled, tls_enabled, cert_manager_version
 ├── vars/
-│   └── helm_releases.yml  # data: the list of Helm apps to deploy (loaded by Play 5)
-├── helm-values/          # Helm chart values as clean .yaml files (e.g. jellyfin.yaml)
-├── site.yml               # top-level playbook: 6 plays, run this
+│   └── secrets.example.yaml # template → copy to vars/secrets.local.yaml (gitignored)
 ├── roles/
-│   ├── tailscale/         # install + connect Tailscale
-│   ├── k3s_server/        # control plane + join-token
-│   ├── k3s_agent/         # workers join the cluster
-│   ├── pihole/            # DNS ad-blocking      → network namespace
-│   ├── vaultwarden/       # password manager     → apps namespace
-│   ├── jellyfin/          # media server         → media namespace
-│   ├── samba/             # SMB file share       → host-level (not k3s)
-│   ├── helm_app/          # Helm via k3s HelmChart CRD (Approach A — zero deps; kept as backup)
-│   ├── helm_release/      # Helm via kubernetes.core.helm module (Approach B — idiomatic Ansible)
-│   └── certmanager_issuer/ # self-signed internal CA + issuers (no Cloudflare)
-├── README.md              # you are here
-└── LEARN.md               # the teaching guide
+│   ├── tailscale/           # Play 1
+│   ├── k3s_server/          # Play 2
+│   ├── k3s_agent/           # Play 3
+│   ├── immich/              # Play 4 — immich-db Secret + node label (Immich itself is on Argo)
+│   ├── certmanager/         # Play 6 — install cert-manager at cert_manager_version
+│   └── tls_ingress/         # Play 6 — ClusterIssuer + the two Ingresses still owned here
+├── README.md                # you are here
+└── LEARN.md                 # the teaching guide
 ```
 
-App manifests live in `roles/<app>/files/<app>.yaml` and are grouped into **function
-namespaces** (see `../docs/roadmap.md`). All are exposed via NodePort for now (Path A);
-TLS ingress comes later.
+## Planned changes
+- Move cert-manager from the `certmanager` role to an Argo CD Helm app, so Renovate tracks its
+  version (it is several minors behind today). Then Play 6 shrinks to the ClusterIssuer.
+- Move the Vaultwarden and Immich Ingress objects out of `tls_ingress` into their gitops
+  app directories, so one app owns everything about itself.
+- Ansible's end state: Tailscale, k3s, and the out-of-git Secrets/labels. Nothing else.

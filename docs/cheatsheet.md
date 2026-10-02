@@ -13,7 +13,7 @@ ansible <host> -m ping                    # test one host
 ansible-playbook site.yml -K              # run everything (-K = ask sudo password)
 ansible-playbook site.yml -K --check      # DRY RUN (won't bootstrap a fresh node — see note)
 ansible-playbook site.yml -K --limit master        # only the master
-ansible-playbook site.yml -K --tags pihole         # only tagged tasks
+ansible-playbook site.yml -K --limit workers       # only one inventory group
 ansible-playbook site.yml -K -vvv         # verbose (debug a failing task)
 ansible-inventory --graph                 # show the group tree
 
