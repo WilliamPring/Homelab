@@ -32,6 +32,9 @@ spec:
             - name: SOPS_AGE_KEY_FILE
               value: /etc/sops-age/keys.txt
 
+            - name: KUSTOMIZE_PLUGIN_HOME
+              value: /custom-tools
+
           volumeMounts:
             - name: custom-tools
               mountPath: /usr/local/bin/ksops
