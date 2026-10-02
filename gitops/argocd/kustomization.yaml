@@ -9,3 +9,4 @@ resources:
 
 patches:
   - path: repo-server-ksops-patch.yaml
+  - path: argocd-notifications-cm.yaml   # notifications → ntfy (patches the empty CM from the install)

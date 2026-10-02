@@ -21,8 +21,8 @@ spec:
     spec:
       containers:
         - name: calibre-web-automated
-          image: crocodilestick/calibre-web-automated:latest
-          imagePullPolicy: Always   # with :latest, pull the newest image on each pod (re)start
+          image: crocodilestick/calibre-web-automated:v4.0.8   # pinned — Renovate PRs bumps (manual merge: CWA migrates app.db)
+          imagePullPolicy: IfNotPresent
           env:
             - name: PUID
               value: "1000"          # must match the file-server ownership of /data/books

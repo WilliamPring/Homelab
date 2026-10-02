@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: homepage
-          image: ghcr.io/gethomepage/homepage:latest
+          image: ghcr.io/gethomepage/homepage:v2.4.0   # pinned — Renovate PRs bumps (grouped weekly, stateless)
 
           ports:
             - containerPort: 3000

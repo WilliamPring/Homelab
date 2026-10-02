@@ -2,38 +2,123 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    ":dependencyDashboard"
+    ":dependencyDashboard",
+    ":semanticCommits"
   ],
   "timezone": "America/Vancouver",
-  "schedule": ["before 9am on monday"],
+  "schedule": [
+    "before 9am on monday"
+  ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 0,
-
+  "minimumReleaseAge": "3 days",
+  "osvVulnerabilityAlerts": true,
+  "dependencyDashboardTitle": "🤖 Renovate Dependency Dashboard",
   "argocd": {
-    "managerFilePatterns": ["/gitops/apps/.+\\.ya?ml$/"]
+    "managerFilePatterns": [
+      "/gitops/apps/.+\\.ya?ml$/"
+    ]
   },
   "kubernetes": {
-    "managerFilePatterns": ["/gitops/.+\\.ya?ml$/"]
+    "managerFilePatterns": [
+      "/gitops/.+\\.ya?ml$/"
+    ]
   },
-
-  "packageRules": [
+  "customManagers": [
     {
-      "description": "Group all Helm chart bumps from a single app into one PR",
-      "matchManagers": ["argocd", "helmv3"],
-      "groupName": "helm charts"
-    },
-    {
-      "description": "Label everything so PRs are easy to spot",
-      "matchManagers": ["argocd", "kubernetes", "helmv3", "helm-values"],
-      "addLabels": ["dependencies"]
-    },
-    {
-      "description": "Immich chart + image are DB-migration sensitive — never auto-merge, flag clearly",
-      "matchPackageNames": ["/immich/"],
-      "addLabels": ["⚠️ db-migration"],
-      "automerge": false
+      "description": "Immich APP version pinned in the chart values (controllers.main.containers.main.image.tag)",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^gitops/immich/values\\.yaml$/"
+      ],
+      "matchStrings": [
+        "tag:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "ghcr.io/immich-app/immich-server",
+      "datasourceTemplate": "docker"
     }
   ],
-
-  "dependencyDashboardTitle": "🤖 Renovate Dependency Dashboard"
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ],
+    "schedule": [
+      "at any time"
+    ],
+    "minimumReleaseAge": null
+  },
+  "packageRules": [
+    {
+      "description": "Label everything so PRs are easy to spot",
+      "matchManagers": [
+        "argocd",
+        "kubernetes",
+        "helmv3",
+        "helm-values",
+        "custom.regex"
+      ],
+      "addLabels": [
+        "dependencies"
+      ]
+    },
+    {
+      "description": "Major bumps always get their own PR + a loud label",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "addLabels": [
+        "⚠️ major"
+      ]
+    },
+    {
+      "description": "ntfy chart: Argo's repoURL carries the chart name, so the argocd manager computes '<path>/ntfy/ntfy' — point the lookup at the real OCI path",
+      "matchDepNames": [
+        "codeberg.org/wrenix/helm-charts/ntfy/ntfy"
+      ],
+      "overridePackageName": "codeberg.org/wrenix/helm-charts/ntfy"
+    },
+    {
+      "description": "DB-migration-sensitive apps: never automerge, flag clearly (Immich chart+image+postgres, Vaultwarden, RomM, Kavita, Calibre)",
+      "matchPackageNames": [
+        "/immich/",
+        "/vaultwarden/",
+        "/rommapp/",
+        "/kavita/",
+        "/calibre-web-automated/"
+      ],
+      "addLabels": [
+        "⚠️ db-migration"
+      ]
+    },
+    {
+      "description": "Stateless apps: PATCH + DIGEST bumps land in ONE weekly PR so there is a single thing to read on Monday. Never automerged — you review, you merge, you Sync.",
+      "matchPackageNames": [
+        "ghcr.io/gethomepage/homepage",
+        "searxng/searxng",
+        "ghcr.io/degoog-org/degoog",
+        "sndxr/komf",
+        "codeberg.org/wrenix/helm-charts/ntfy",
+        "busybox"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "digest"
+      ],
+      "groupName": "stateless patch updates",
+      "addLabels": [
+        "low-risk"
+      ]
+    },
+    {
+      "description": "Argo CD itself (and its Dex/Redis/ksops pieces): PRs only, you merge — the install manifest is applied by hand",
+      "matchFileNames": [
+        "gitops/argocd/**"
+      ],
+      "addLabels": [
+        "argocd"
+      ]
+    }
+  ],
+  "automerge": false
 }

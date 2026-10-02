@@ -55,9 +55,9 @@ spec:
       containers:
         - name: degoog
 
-          image: ghcr.io/degoog-org/degoog:latest
+          image: ghcr.io/degoog-org/degoog:0.26.0   # pinned — Renovate PRs bumps (grouped weekly)
 
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
 
           ports:
             - name: http

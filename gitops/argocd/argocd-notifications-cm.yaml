@@ -1,0 +1,135 @@
+# Argo CD Notifications → ntfy (your phone).
+#
+# This is a kustomize PATCH on the empty argocd-notifications-cm that argocd-install.yaml
+# ships. The notifications-controller is already running; this just tells it WHAT to send
+# and WHERE. No per-app annotations needed: `subscriptions:` below subscribes EVERY
+# Application in the argocd namespace.
+#
+#   Trigger             When                                             ntfy priority
+#   on-out-of-sync      git moved (Renovate merge / your push) → waiting for your Sync click     3
+#   on-deployed         a Sync finished and the app is Healthy                                   3
+#   on-sync-failed      a Sync errored (bad manifest, KSOPS decrypt, missing secret…)            5
+#   on-health-degraded  pods crash-looping / probes failing                                      5
+#
+# Delivery: POST JSON to the in-cluster ntfy Service (no TLS/Ingress dependency), topic
+# `homelab-argocd`. Subscribe to that topic in the ntfy app on your phone.
+#
+# ⚠️ ntfy is currently OPEN (auth-default-access: read-write). When you lock it down, create a
+#    token (`ntfy token add argocd`), put it in argocd-notifications-secret as `ntfy-token`,
+#    and un-comment the Authorization header below.
+#
+# Test without waiting for an event (from the master):
+#   sudo k3s kubectl -n argocd exec deploy/argocd-notifications-controller -- \
+#     argocd-notifications template notify app-sync-failed <some-app-name>
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm   # no namespace on purpose: must match the install's object id (ns is set at apply time)
+data:
+  context: |
+    argocdUrl: https://argocd.williampring.ca
+    ntfyTopic: homelab-argocd
+
+  # ── where: generic webhook → ntfy JSON publish endpoint ─────────────────────────────────
+  service.webhook.ntfy: |
+    url: http://ntfy.notifications.svc.cluster.local:80
+    headers:
+      - name: Content-Type
+        value: application/json
+    #  - name: Authorization
+    #    value: Bearer $ntfy-token
+
+  # ── what: one template per event. Body = ntfy "publish as JSON" format. ────────────────
+  template.app-out-of-sync: |
+    webhook:
+      ntfy:
+        method: POST
+        path: /
+        body: |
+          {
+            "topic": "{{.context.ntfyTopic}}",
+            "title": "{{.app.metadata.name}}: update waiting",
+            "message": "OutOfSync — a change landed in git (Renovate merge or your push). Review the diff and Sync.\nRevision: {{if .app.status.sync.revision}}{{.app.status.sync.revision | trunc 12}}{{else}}{{.app.status.sync.revisions}}{{end}}",
+            "priority": 3,
+            "tags": ["arrows_counterclockwise","argocd"],
+            "click": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
+          }
+  template.app-deployed: |
+    webhook:
+      ntfy:
+        method: POST
+        path: /
+        body: |
+          {
+            "topic": "{{.context.ntfyTopic}}",
+            "title": "{{.app.metadata.name}}: deployed",
+            "message": "Sync succeeded and the app is Healthy.\nRevision: {{if .app.status.operationState.syncResult.revision}}{{.app.status.operationState.syncResult.revision | trunc 12}}{{else}}{{.app.status.operationState.syncResult.revisions}}{{end}}",
+            "priority": 3,
+            "tags": ["white_check_mark","argocd"],
+            "click": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
+          }
+  template.app-sync-failed: |
+    webhook:
+      ntfy:
+        method: POST
+        path: /
+        body: |
+          {
+            "topic": "{{.context.ntfyTopic}}",
+            "title": "{{.app.metadata.name}}: SYNC FAILED",
+            "message": "Phase: {{.app.status.operationState.phase}}. Open Argo for the error (bad manifest, KSOPS decrypt, missing secret, image pull…).",
+            "priority": 5,
+            "tags": ["rotating_light","argocd"],
+            "click": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
+          }
+  template.app-health-degraded: |
+    webhook:
+      ntfy:
+        method: POST
+        path: /
+        body: |
+          {
+            "topic": "{{.context.ntfyTopic}}",
+            "title": "{{.app.metadata.name}}: DEGRADED",
+            "message": "Health is {{.app.status.health.status}} — pods crash-looping or probes failing. Check the pod logs.",
+            "priority": 5,
+            "tags": ["warning","argocd"],
+            "click": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
+          }
+
+  # ── when: triggers. oncePer stops repeats while the state persists. ─────────────────────
+  # NOTE on oncePer: single-source apps fill status.sync.revision; MULTI-source apps (immich,
+  # vaultwarden, ntfy = chart + values repo) leave it empty and fill status.sync.revisions[].
+  # Each trigger has one entry per shape so neither kind fires only once forever.
+  trigger.on-out-of-sync: |
+    - when: app.status.sync.status == 'OutOfSync' and app.status.sync.revision != ''
+      oncePer: app.status.sync.revision
+      send: [app-out-of-sync]
+    - when: app.status.sync.status == 'OutOfSync' and app.status.sync.revision == '' and len(app.status.sync.revisions) > 0
+      oncePer: join(app.status.sync.revisions, '+')
+      send: [app-out-of-sync]
+  trigger.on-deployed: |
+    - when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy' and app.status.operationState.syncResult.revision != ''
+      oncePer: app.status.operationState.syncResult.revision
+      send: [app-deployed]
+    - when: app.status.operationState != nil and app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy' and app.status.operationState.syncResult.revision == '' and len(app.status.operationState.syncResult.revisions) > 0
+      oncePer: join(app.status.operationState.syncResult.revisions, '+')
+      send: [app-deployed]
+  trigger.on-sync-failed: |
+    - when: app.status.operationState != nil and app.status.operationState.phase in ['Error', 'Failed']
+      oncePer: app.status.operationState.finishedAt
+      send: [app-sync-failed]
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      oncePer: app.status.health.status
+      send: [app-health-degraded]
+
+  # ── who: every Application, no annotations needed ───────────────────────────────────────
+  subscriptions: |
+    - recipients:
+        - ntfy
+      triggers:
+        - on-out-of-sync
+        - on-deployed
+        - on-sync-failed
+        - on-health-degraded

@@ -20,12 +20,10 @@ spec:
     # 1) The Helm chart from the guerzon HTTP repo.
     - repoURL: https://guerzon.github.io/vaultwarden
       chart: vaultwarden
-      # Always the LATEST chart version (user's choice — not pinned).
-      # ⚠️ SAFE ONLY because syncPolicy stays MANUAL below: Argo resolves "latest" but
-      #    won't apply it until YOU click Sync. Do NOT add an `automated:` block here, or
-      #    Vaultwarden would auto-upgrade unattended (risky — chart bumps can migrate the DB).
-      #    BACK UP the Postgres LXC before any Sync that pulls a newer version.
-      targetRevision: "*"
+      # PINNED chart version — Renovate opens a PR when a new chart is published; you review
+      # and merge (never automerged: chart bumps can migrate the DB). Sync stays MANUAL —
+      # BACK UP the Postgres LXC before any Sync that pulls a newer version.
+      targetRevision: "0.46.2"
       helm:
         valueFiles:
           - $values/gitops/vaultwarden/values.yaml

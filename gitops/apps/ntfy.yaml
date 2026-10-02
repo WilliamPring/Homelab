@@ -8,7 +8,9 @@ spec:
   sources:
     - repoURL: oci://codeberg.org/wrenix/helm-charts/ntfy
       chart: ntfy
-      targetRevision: "*"
+      # PINNED chart version — Renovate opens a PR when a new chart is published.
+      # (was "*" = always latest; pinning is what lets Renovate see it.)
+      targetRevision: "0.5.22"
       helm:
         valueFiles:
           - $values/gitops/ntfy/values.yaml

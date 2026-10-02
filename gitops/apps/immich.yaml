@@ -21,7 +21,9 @@ spec:
     # 1) The Immich chart from the OCI registry.
     - repoURL: ghcr.io/immich-app/immich-charts
       chart: immich
-      targetRevision: "*"
+      # PINNED chart version — Renovate opens a PR (label ⚠️ db-migration, never automerged).
+      # The Immich APP version is pinned separately in values.yaml (image.tag).
+      targetRevision: "0.13.2"
       helm:
         valueFiles:
           - $values/gitops/immich/values.yaml
