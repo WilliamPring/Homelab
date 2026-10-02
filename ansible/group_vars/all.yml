@@ -19,14 +19,7 @@ tailscale_up_args: "--accept-dns=false"
 # the 32GB worker joined, and immich_db_password set in vars/secrets.local.yaml.
 immich_enabled: true
 
-# ─── TLS (Let's Encrypt via Cloudflare DNS-01) ───────────────────────────────
-# Real HTTPS for apps (Vaultwarden → https://vault.williampring.ca), so the
-# Bitwarden mobile app can connect. Set true to enable Play 6.
-#
-# ⚠️ BEFORE the first run, create the Cloudflare token secret ONCE (by hand):
-#   sudo k3s kubectl create secret generic cloudflare-api-token \
-#     -n cert-manager --from-literal=api-token=<YOUR_CF_TOKEN>
-# (Requires the cert-manager namespace to exist — run once with tls_enabled to
-#  install cert-manager, create the secret, then it issues on the next run.)
+# ─── TLS — the two Ingresses Ansible still owns (Vaultwarden, Immich) ─────────────
+# cert-manager + the Let's Encrypt ClusterIssuer are on Argo CD (docs/tls.md). Set true to
+# enable Play 6, which only applies those two Ingress objects (they move to gitops later).
 tls_enabled: true
-cert_manager_version: "v1.17.2"     # check github.com/cert-manager/cert-manager/releases for latest

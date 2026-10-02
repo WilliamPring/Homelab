@@ -1,0 +1,30 @@
+# cert-manager Helm values (jetstack/cert-manager). Argo feeds this to the chart.
+# Was: Ansible `certmanager` role applying the static release manifest. Now Argo + Renovate.
+#
+# The chart's static manifest and this chart produce the SAME objects (same names/labels),
+# so the first Sync ADOPTS the existing install in place and upgrades it. Certificates,
+# the letsencrypt account key and the cloudflare-api-token Secret are untouched.
+
+crds:
+  enabled: true     # chart manages the CRDs (so Renovate bumps upgrade them too)
+  keep: true        # NEVER delete CRDs on uninstall → Certificates/Issuers (and their data) survive
+
+# Homelab-sized. Defaults are unbounded; these keep the three pods honest.
+resources:
+  requests: { cpu: 10m, memory: 64Mi }
+  limits:   { memory: 256Mi }
+webhook:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits:   { memory: 128Mi }
+cainjector:
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits:   { memory: 256Mi }
+
+# DNS-01 self-check: cert-manager verifies the _acme-challenge TXT record exists before asking
+# Let's Encrypt. If your nodes resolve via Tailscale MagicDNS / a local resolver that caches or
+# can't see public TXT records, issuance hangs at "propagation" — un-comment these to force
+# public resolvers for that check only.
+# dns01RecursiveNameservers: "1.1.1.1:53,9.9.9.9:53"
+# dns01RecursiveNameserversOnly: true

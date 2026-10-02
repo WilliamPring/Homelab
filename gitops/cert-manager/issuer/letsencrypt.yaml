@@ -1,0 +1,29 @@
+# Let's Encrypt ClusterIssuer (Cloudflare DNS-01) — shared infra every Ingress uses via
+#   annotations: cert-manager.io/cluster-issuer: letsencrypt
+#
+# DNS-01 validates through a Cloudflare TXT record, so certs issue even though every host
+# is Tailscale-only. Separate Argo app from cert-manager itself because the CRD must exist
+# before this object can be applied (sync cert-manager first).
+#
+# ⚠️ PREREQ (hand-created, out of git — docs/secrets.md): the Cloudflare "Edit zone DNS" token
+#      sudo k3s kubectl create secret generic cloudflare-api-token \
+#        -n cert-manager --from-literal=api-token=<YOUR_CF_TOKEN>
+#
+# Cluster-scoped: no namespace. The Argo app's destination namespace only matters for the
+# secret refs below (they resolve in cert-manager's own namespace).
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: william.pring@telus.com
+    privateKeySecretRef:
+      name: letsencrypt-account-key          # the ACME account key (already exists — keep)
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token

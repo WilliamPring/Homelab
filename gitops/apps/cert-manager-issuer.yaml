@@ -1,0 +1,19 @@
+# Argo CD Application — the Let's Encrypt ClusterIssuer (raw manifest). Sync AFTER cert-manager.
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/cert-manager-issuer.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-issuer
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/cert-manager/issuer
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

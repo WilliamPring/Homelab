@@ -69,17 +69,14 @@
       when: vaultwarden_db_password is defined
       changed_when: false
 
-# ─── PLAY 6: TLS — real HTTPS via Let's Encrypt (Cloudflare DNS-01) ───────────
-# Installs cert-manager + a Let's Encrypt ClusterIssuer (Cloudflare DNS-01) + an
-# Ingress for Vaultwarden (vault.williampring.ca). Gated by tls_enabled.
-# ⚠️ ONE-TIME prereq (by hand): create the Cloudflare token secret —
-#   sudo k3s kubectl create secret generic cloudflare-api-token \
-#     -n cert-manager --from-literal=api-token=<YOUR_CF_TOKEN>
-- name: TLS (Let's Encrypt via Cloudflare DNS-01)
+# ─── PLAY 6: the last two Ansible-managed Ingresses (Vaultwarden, Immich) ─────
+# cert-manager and the Let's Encrypt ClusterIssuer are on Argo CD now
+# (gitops/apps/cert-manager*.yaml). This play only applies the Vaultwarden + Immich
+# Ingress objects, which still live in Ansible until they move into their gitops apps.
+# Gated by tls_enabled. Requires the 'letsencrypt' ClusterIssuer to exist (Argo).
+- name: Ingresses still owned by Ansible (Vaultwarden, Immich)
   hosts: master
   become: true
   roles:
-    - role: certmanager
-      when: tls_enabled | default(false)
     - role: tls_ingress
       when: tls_enabled | default(false)

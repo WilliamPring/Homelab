@@ -1,31 +1,8 @@
-# Let's Encrypt ClusterIssuer (Cloudflare DNS-01) — shared INFRA — plus the remaining
-# app Ingresses still managed by Ansible (Vaultwarden, Immich). SearXNG + degoog Ingresses
-# moved to GitOps; see the note further down.
-#
-# ⚠️ PREREQUISITE — create the Cloudflare token secret ONCE, by hand (keeps it out
-#    of git). Use your "Edit zone DNS" token:
-#      sudo k3s kubectl create secret generic cloudflare-api-token \
-#        -n cert-manager --from-literal=api-token=<YOUR_CF_TOKEN>
-#
-# DNS-01 validates via a Cloudflare TXT record — so the cert issues even though
-# Vaultwarden is only reachable over Tailscale (no public exposure needed).
----
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: letsencrypt
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: william.pring@telus.com
-    privateKeySecretRef:
-      name: letsencrypt-account-key
-    solvers:
-      - dns01:
-          cloudflare:
-            apiTokenSecretRef:
-              name: cloudflare-api-token
-              key: api-token
+# The two Ingresses still managed by Ansible (Vaultwarden, Immich). Their APPS are on Argo;
+# only these Ingress objects remain here until they move into gitops/vaultwarden and
+# gitops/immich. The 'letsencrypt' ClusterIssuer they reference is on Argo CD:
+#   gitops/cert-manager/issuer/letsencrypt.yaml   (app: cert-manager-issuer)
+# and the cloudflare-api-token Secret it needs is hand-created (docs/secrets.md).
 ---
 # Ingress for Vaultwarden. The cert-manager annotation makes ingress-shim
 # auto-create the cert (into vault-tls) from the ClusterIssuer above.

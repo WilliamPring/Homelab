@@ -1,7 +1,7 @@
 # Homelab Ansible — cluster + infra only
 
 Ansible builds the **cluster and the infrastructure the apps depend on**: Tailscale, k3s,
-cert-manager, and the few out-of-git Secrets and node labels the GitOps apps reference.
+and the few out-of-git Secrets, node labels and Ingresses the GitOps apps still reference.
 
 **Ansible deploys no apps.** Every app lives in `../gitops/` and is deployed by Argo CD.
 Nothing here uses Helm, and the project needs no Ansible collections.
@@ -20,7 +20,7 @@ Nothing here uses Helm, and the project needs no Ansible collections.
 | 3 | k3s agents | workers | `k3s_agent` — install agent, nfs-common, join, wait for Ready | always |
 | 4 | Immich infra | master | `immich` — `media` namespace, `immich-db` Secret, `immich-node=true` label on the 32GB worker | `immich_enabled` |
 | 5 | App secrets | master | inline tasks — `apps` namespace, `vaultwarden-db` Secret (Postgres URI) | `vaultwarden_db_password` set |
-| 6 | TLS | master | `certmanager` (install, pinned version) + `tls_ingress` (Let's Encrypt ClusterIssuer, Vaultwarden + Immich Ingress) | `tls_enabled` |
+| 6 | Ingresses | master | `tls_ingress` — the Vaultwarden + Immich Ingress objects (cert-manager + ClusterIssuer are on Argo) | `tls_enabled` |
 
 Plays 4–6 exist only because Argo cannot create things that must stay out of git (DB
 passwords) or that belong to the node (labels). Everything else about an app is in `gitops/`.
@@ -50,15 +50,14 @@ cp vars/secrets.example.yaml vars/secrets.local.yaml   # *.local.yaml is gitigno
 $EDITOR vars/secrets.local.yaml                        # vaultwarden_db_password, immich_db_password
 ```
 Plays 4 and 5 read this file and create the matching k8s Secrets. Without it they are skipped.
-The Cloudflare token for cert-manager is created by hand once (see `group_vars/all.yml`).
+The Cloudflare token for cert-manager is created by hand once (see `docs/tls.md`).
 
 ---
 
 ## Configure
 
 - **`inventory.ini`** — the machines. Today: one master + one worker (the 32GB box).
-- **`group_vars/all.yml`** — the knobs: `k3s_channel`, `tailscale_up_args`, `immich_enabled`,
-  `tls_enabled`, `cert_manager_version`.
+- **`group_vars/all.yml`** — the knobs: `k3s_channel`, `tailscale_up_args`, `immich_enabled`, `tls_enabled`.
 
 ---
 
@@ -81,8 +80,7 @@ skips what is already done and continues. "Re-run until green" is the Ansible mi
 
 ### Re-running later
 Safe at any time — every task is idempotent. Typical reasons: a rebuilt worker (needs the
-Immich label + nfs-common again), a lost `immich-db` / `vaultwarden-db` Secret, or a
-`cert_manager_version` bump.
+Immich label + nfs-common again) or a lost `immich-db` / `vaultwarden-db` Secret.
 
 ---
 
@@ -92,9 +90,8 @@ Immich label + nfs-common again), a lost `immich-db` / `vaultwarden-db` Secret, 
 sudo k3s kubectl get nodes -o wide                              # all Ready
 sudo k3s kubectl get node -l immich-node=true                   # the 32GB worker is labelled
 sudo k3s kubectl get secret immich-db -n media vaultwarden-db -n apps 2>&1 | head -3
-sudo k3s kubectl get clusterissuer letsencrypt                  # READY True
 ```
-After this, follow `../docs/argocd.md` to bring up Argo CD and the apps.
+After this, follow `../docs/argocd.md` to bring up Argo CD, then `../docs/tls.md` for cert-manager.
 
 ---
 
@@ -104,7 +101,7 @@ After this, follow `../docs/argocd.md` to bring up Argo CD and the apps.
 ansible all -m ping                        # reach every node?
 ansible-playbook site.yml --list-tasks     # every task, without running
 ansible-playbook site.yml --limit workers  # only one group
-ansible-playbook site.yml --start-at-task "Install cert-manager (CRDs + controller)"
+ansible-playbook site.yml --start-at-task "Copy the Ingress manifest to the master"
 ```
 
 ---
@@ -117,7 +114,7 @@ ansible/
 ├── inventory.ini            # the machines: [master], [workers], [k3s_cluster:children]
 ├── site.yml                 # the playbook — 6 plays, run this
 ├── group_vars/
-│   └── all.yml              # knobs: k3s_channel, tailscale args, immich_enabled, tls_enabled, cert_manager_version
+│   └── all.yml              # knobs: k3s_channel, tailscale args, immich_enabled, tls_enabled
 ├── vars/
 │   └── secrets.example.yaml # template → copy to vars/secrets.local.yaml (gitignored)
 ├── roles/
@@ -125,15 +122,12 @@ ansible/
 │   ├── k3s_server/          # Play 2
 │   ├── k3s_agent/           # Play 3
 │   ├── immich/              # Play 4 — immich-db Secret + node label (Immich itself is on Argo)
-│   ├── certmanager/         # Play 6 — install cert-manager at cert_manager_version
-│   └── tls_ingress/         # Play 6 — ClusterIssuer + the two Ingresses still owned here
+│   └── tls_ingress/         # Play 6 — the two Ingresses still owned here (Vaultwarden, Immich)
 ├── README.md                # you are here
 └── LEARN.md                 # the teaching guide
 ```
 
 ## Planned changes
-- Move cert-manager from the `certmanager` role to an Argo CD Helm app, so Renovate tracks its
-  version (it is several minors behind today). Then Play 6 shrinks to the ClusterIssuer.
 - Move the Vaultwarden and Immich Ingress objects out of `tls_ingress` into their gitops
   app directories, so one app owns everything about itself.
 - Ansible's end state: Tailscale, k3s, and the out-of-git Secrets/labels. Nothing else.

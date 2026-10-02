@@ -1,0 +1,38 @@
+# Argo CD Application — cert-manager (the TLS certificate robot). Helm chart + values from git.
+#
+# ⚠️ SYNC ORDER: this FIRST, then 'cert-manager-issuer' (the ClusterIssuer needs the CRDs).
+#
+# ServerSideApply: cert-manager's CRDs are far bigger than the 256 KiB kubectl annotation
+# limit — without this, Sync fails with "metadata.annotations: Too long". SSA also makes the
+# first Sync adopt the existing (Ansible-installed) objects cleanly.
+#
+# Upgrades: Renovate PRs the chart version (one minor at a time — see docs/tls.md). Sync is
+# MANUAL: read the release's upgrade notes, Sync, then `kubectl get certificate -A` all READY.
+#
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/cert-manager.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      # STEP one minor at a time (cert-manager policy). Cluster had v1.17.2 → start at 1.18;
+      # Renovate opens one PR per minor (1.19, 1.20, 1.21…) — merge + Sync them IN ORDER.
+      targetRevision: v1.18.6
+      helm:
+        valueFiles:
+          - $values/gitops/cert-manager/values.yaml
+    - repoURL: https://github.com/WilliamPring/Homelab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

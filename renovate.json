@@ -141,6 +141,16 @@
       "matchDepNames": [
         "argoproj/argo-cd"
       ]
+    },
+    {
+      "description": "cert-manager: upstream says upgrade ONE minor at a time → one PR per minor stream (merge + Sync in order, read each release's upgrade notes)",
+      "matchDepNames": [
+        "cert-manager"
+      ],
+      "separateMultipleMinor": true,
+      "addLabels": [
+        "step-by-minor"
+      ]
     }
   ],
   "automerge": false

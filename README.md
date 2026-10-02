@@ -38,7 +38,7 @@ DNS-01, so no public exposure is required).
 
 ```
 ansible/          Infrastructure as code — the "make the cluster exist" layer
-  site.yml          Tailscale → k3s → infra secrets → cert-manager/TLS
+  site.yml          Tailscale → k3s → infra secrets → the two legacy Ingresses
   roles/            tailscale, k3s_server, k3s_agent, certmanager, tls_ingress, immich(infra)
   group_vars/       cluster config + feature toggles
 
@@ -61,7 +61,7 @@ scripts/          Standalone setup scripts (e.g. the Postgres LXC)
 cd ansible
 ansible-playbook site.yml --ask-become-pass
 ```
-Installs Tailscale + k3s on the nodes, cert-manager + the Let's Encrypt ClusterIssuer, and the
+Installs Tailscale + k3s on the nodes, the two Ingresses not yet in gitops, and the
 out-of-git secrets/labels the apps rely on. Ansible's job ends at "a working cluster."
 
 **Apps (Argo CD)** — deployed from git, not the playbook:
@@ -83,6 +83,7 @@ See [`gitops/README.md`](gitops/README.md) for the full workflow.
 
 - [`docs/proxmox-install.md`](docs/proxmox-install.md) — Proxmox VE install walkthrough
 - [`docs/argocd.md`](docs/argocd.md) — Argo CD / GitOps (install, expose, login)
+- [`docs/tls.md`](docs/tls.md) — cert-manager + Let's Encrypt (Cloudflare DNS-01) on Argo; step-by-minor upgrades
 - [`docs/vaultwarden.md`](docs/vaultwarden.md) · [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) · [`docs/kavita.md`](docs/kavita.md) · [`docs/romm.md`](docs/romm.md) — per-app guides
 - [`docs/updates-and-notifications.md`](docs/updates-and-notifications.md) — Renovate rules, the CI guard (`scripts/ci/validate.sh`), Argo CD → ntfy pushes
 - [`docs/secrets.md`](docs/secrets.md) — **secrets, day-to-day**: what exists, decrypt/edit/reuse, add one to a new app

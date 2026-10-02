@@ -38,7 +38,7 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 | `vaultwarden-db` | apps | full `postgresql://` URI to the Postgres LXC | `docs/vaultwarden.md` |
 | `vaultwarden-admin` | apps | /admin panel token (panel currently disabled) | `docs/vaultwarden.md` |
 | `grafana-admin` | monitoring | Grafana admin user/password — **orphan**: the monitoring stack was removed; delete the secret (and the namespace) | `docs/archive/logging.md` |
-| `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/archive/sops-argocd.md` Phase 9 |
+| `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/tls.md` |
 
 Migrating these into `.enc.yaml` files is the open item from `docs/archive/sops-argocd.md` Phase 9.
 

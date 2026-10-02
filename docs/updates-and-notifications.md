@@ -38,7 +38,7 @@ Only **pinned** versions. Everything is now pinned:
 | Where | How Renovate tracks it |
 |---|---|
 | `image:` tags in `gitops/**` Deployments | `kubernetes` manager |
-| `targetRevision` of the three Helm charts (`immich`, `vaultwarden`, `ntfy`) | `argocd` manager |
+| `targetRevision` of the Helm charts (`immich`, `vaultwarden`, `ntfy`, `cert-manager`) | `argocd` manager — cert-manager gets one PR per minor (`step-by-minor`), merge in order |
 | Immich **app** version in `gitops/immich/values.yaml` (`image.tag`) | custom regex manager → `ghcr.io/immich-app/immich-server` |
 | SearXNG (date-stamped tags, no semver) | pinned to `latest@sha256:…` → **digest** updates |
 
