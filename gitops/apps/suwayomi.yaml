@@ -1,0 +1,23 @@
+# Argo CD Application — Suwayomi (manga source server for Paperback + the WebUI). Kustomize.
+#
+# BEFORE SYNC: set AUTH_USERNAME / AUTH_PASSWORD in gitops/suwayomi/deployment.yaml (hard-coded
+# for now). Downloads go into Kavita's manga folder on NFS, which already exists. docs/suwayomi.md.
+#
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/suwayomi.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: suwayomi
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/suwayomi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: media
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

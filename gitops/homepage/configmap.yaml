@@ -61,6 +61,11 @@ data:
             description: ROM library & in-browser play (RomM)
             icon: romm.png
 
+        - Manga sources:
+            href: https://suwayomi.williampring.ca
+            description: Browse & subscribe to online manga (Suwayomi)
+            icon: suwayomi.png
+
     - Monitoring:
         - Argo CD:
             href: https://argocd.williampring.ca

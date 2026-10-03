@@ -1,0 +1,114 @@
+# Suwayomi — the manga SOURCE server (runs Mihon/Tachiyomi extensions server-side).
+#
+#   browse sources · add to library ("subscribe") · read · download  — from:
+#     computer : https://suwayomi.williampring.ca   (bundled WebUI, also a PWA)
+#     iPhone   : Paperback + the Suwayomi extension → same server, same library
+#
+# Downloads land as CBZ in NFS /data/library/manga/<Source>/<Series>/  — which IS Kavita's
+# Manga library (shared, by decision). Kavita picks them up on scan, Komf adds metadata,
+# so the same chapters are readable in Kavita (and in Paperback via Kavita's Kavya source).
+#
+# Auth: basic_auth (the Paperback extension speaks Basic; Suwayomi's newer ui_login/JWT
+# mode would break it). Credentials are HARD-CODED below for now (user's choice — host is
+# Tailscale-only). ⚠️ Anything committed is in git history forever: use a password you would
+# not mind rotating, and move it to a SOPS secret later (docs/secrets.md §5).
+# State (H2 DB, thumbnails, extensions, daily backups) → local-path PVC. Not irreplaceable:
+# the daily backup lives in the data dir and the CBZs are on NFS.
+#
+# Memory: the image embeds a Chromium (KCEF) some sources need → 1–3 GB. Pinned to the
+# 32GB worker. Docs: https://github.com/Suwayomi/Suwayomi-Server/wiki   ·   docs/suwayomi.md
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: suwayomi
+  namespace: media
+  labels:
+    app: suwayomi
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO data volume + single instance
+  selector:
+    matchLabels:
+      app: suwayomi
+  template:
+    metadata:
+      labels:
+        app: suwayomi
+    spec:
+      nodeSelector:
+        immich-node: "true"
+      securityContext:
+        runAsUser: 1000         # the image's `suwayomi` user — matches NFS ownership (1000:1000)
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: suwayomi
+          image: ghcr.io/suwayomi/suwayomi-server:v2.4.2366   # pinned — Renovate PRs bumps
+          env:
+            - name: TZ
+              value: "America/Vancouver"
+            # ── auth (Basic — what the Paperback extension supports) ──────────────────
+            - name: AUTH_MODE
+              value: "basic_auth"
+            - name: AUTH_USERNAME
+              value: "manga"                    # ← set before pushing
+            - name: AUTH_PASSWORD
+              value: "CHANGE-ME-before-pushing"   # ← set before pushing (also what Paperback uses)
+            # ── downloads → CBZ into the shared Kavita manga library (mounted below) ───
+            - name: DOWNLOAD_AS_CBZ
+              value: "true"
+            # ── extension repository (Keiyoushi = the maintained Tachiyomi extension index) ─
+            - name: EXTENSION_STORES
+              value: '["https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"]'
+            # ── web UI: the stable Suwayomi-WebUI, self-updating ──────────────────────
+            - name: WEB_UI_ENABLED
+              value: "true"
+            - name: WEB_UI_FLAVOR
+              value: "WebUI"
+            - name: WEB_UI_CHANNEL
+              value: "stable"
+            # ── daily backup of the library/DB into the data dir (restore via WebUI) ──
+            - name: BACKUP_INTERVAL
+              value: "1"                  # days
+            - name: BACKUP_TTL
+              value: "14"                 # keep two weeks
+            # ── Cloudflare-protected sources: OFF. See docs/suwayomi.md to add Byparr. ─
+            - name: FLARESOLVERR_ENABLED
+              value: "false"
+          ports:
+            - name: http
+              containerPort: 4567
+          volumeMounts:
+            - name: data
+              mountPath: /home/suwayomi/.local/share/Tachidesk
+            - name: downloads
+              mountPath: /home/suwayomi/.local/share/Tachidesk/downloads   # = NFS /data/library/manga
+            - name: shm
+              mountPath: /dev/shm          # the embedded Chromium wants more than Docker's 64 MB
+          readinessProbe:
+            tcpSocket: { port: http }     # HTTP probes would need Basic auth headers
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 120
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1536Mi
+            limits:
+              cpu: "3"
+              memory: 4Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: suwayomi-data
+        - name: downloads
+          persistentVolumeClaim:
+            claimName: suwayomi-downloads
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi

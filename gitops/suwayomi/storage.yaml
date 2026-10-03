@@ -1,0 +1,53 @@
+# Suwayomi storage.
+#   downloads → NFS /data/library/manga   — the SAME folder as Kavita's Manga library (shared, by
+#                                           decision): Suwayomi writes <Source>/<Series>/<Chapter>.cbz,
+#                                           Kavita reads the Source folder as a "publisher" layer.
+#   data      → local-path PVC            — H2 database, thumbnails, installed extensions, daily backups.
+#
+# ⚠️ PREREQ on the file server: /data/library/manga must exist and be writable by uid 1000
+#    (already done for Kavita: chown -R 1000:1000 /data/library && chmod -R 775 /data/library).
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: suwayomi-downloads-nfs
+  labels:
+    app: suwayomi
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"
+    path: /data/library/manga
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: suwayomi-downloads
+  namespace: media
+  labels:
+    app: suwayomi
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: suwayomi-downloads-nfs
+  resources:
+    requests:
+      storage: 500Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: suwayomi-data
+  namespace: media
+  labels:
+    app: suwayomi
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi

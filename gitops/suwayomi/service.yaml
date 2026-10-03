@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: suwayomi
+  namespace: media
+  labels:
+    app: suwayomi
+spec:
+  type: NodePort           # keeps a ClusterIP too → Ingress/domain still works
+  selector:
+    app: suwayomi
+  ports:
+    - name: http
+      port: 4567
+      targetPort: http
+      nodePort: 30456      # LAN access: http://<node-LAN-IP>:30456  (computer only — iOS 18 needs HTTPS)

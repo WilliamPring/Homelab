@@ -42,6 +42,9 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 Migrating these into `.enc.yaml` files is the open item from `docs/archive/sops-argocd.md` Phase 9.
 
 ### Known debt ⚠️
+- `gitops/suwayomi/deployment.yaml` carries Suwayomi's Basic-auth username/password **inline**
+  (chosen for now; host is Tailscale-only). Move to a SOPS secret with the §5 recipe when ready,
+  then rotate the password since the old one stays in git history.
 - `gitops/degoog/deployment.yaml` still has the Valkey URL **inline in plaintext**, including the
   password of the shared `redis` user. It is in git history on GitHub. Fix = rotate that password
   on the Valkey host, update `immich-secret`, move the URL into `degoog-secret`. Encrypting later

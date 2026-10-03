@@ -40,7 +40,8 @@ irreplaceable: the files are on NFS, and both rebuild their DBs by rescanning / 
 ## Folder layout on the file server (192.168.68.50)
 
 ```
-/data/library/manga/<Series Name>/<Series Name> v01.cbz     ← Manga library (Kavita + Komf)
+/data/library/manga/<Series Name>/<Series Name> v01.cbz     ← Manga library (Kavita + Komf) — hand-copied
+/data/library/manga/<Source>/<Series>/<Chapter>.cbz            ← same library, written by Suwayomi (docs/suwayomi.md)
 /data/library/comics/<Series Name>/...                       ← Comic library (optional)
 /data/books/<Author>/<Title>/<Title>.epub                    ← Book library (Calibre owns this)
 /data/books-ingest/                                          ← drop new ebooks here → CWA imports
@@ -118,7 +119,7 @@ From then on the **event listener** matches new series automatically as Kavita s
 ## How metadata flows
 
 ```
-MANGA:   copy folder → /data/library/manga/  →  Kavita scan  →  Komf event  →  lookup  →  API write → Kavita
+MANGA:   Suwayomi download (or copy a folder) → /data/library/manga/  →  Kavita scan  →  Komf event  →  lookup  →  API write → Kavita
 BOOKS:   drop epub   → /data/books-ingest/    →  CWA import + metadata  →  /data/books  →  Kavita scan (Book lib)
 ```
 

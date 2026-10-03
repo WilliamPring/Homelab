@@ -1,0 +1,29 @@
+# Ingress → https://suwayomi.williampring.ca  (Tailscale-only, like the rest).
+# HTTPS is REQUIRED for the Paperback extension on iOS 18+, so the iPhone always uses this host.
+# DNS: suwayomi → A → master Tailscale IP (grey cloud / DNS only).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: suwayomi
+  namespace: media
+  labels:
+    app: suwayomi
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - suwayomi.williampring.ca
+      secretName: suwayomi-tls
+  rules:
+    - host: suwayomi.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: suwayomi
+                port:
+                  number: 4567
