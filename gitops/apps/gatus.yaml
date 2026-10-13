@@ -1,0 +1,21 @@
+# Argo CD Application — Gatus (uptime checks → ntfy). Raw manifests via kustomize.
+# Namespace `monitoring` is (re)created here; it used to hold the old Loki/Grafana stack —
+# make sure the orphans from docs/cluster-cleanup.md §1 are gone before syncing.
+# Apply by hand, once:  sudo k3s kubectl apply -f gitops/apps/gatus.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gatus
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: gitops/gatus
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

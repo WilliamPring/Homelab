@@ -153,10 +153,18 @@ are still plaintext templates. Once you fill + `sops -e -i` them (`docs/secrets.
 
 ---
 
+## Uptime alerts (Gatus → ntfy)
+Argo's pushes tell you about *deploys*; **Gatus** (`docs/gatus.md`) tells you about *outages*:
+every app's in-cluster URL, every public hostname (incl. cert expiry), the Postgres/Valkey/NFS
+boxes and the Cloudflare DNS records, on a 1–5 min cycle, to the ntfy topic **`homelab-alerts`**.
+Two topics on purpose: `homelab-argocd` = you did something; `homelab-alerts` = something broke.
+
+---
+
 ## Not automated (on purpose, for now)
 - **k3s upgrades** — needs system-upgrade-controller; declined for now.
 - **ntfy access control** — still open to anyone on the tailnet; also the `base-url` in
   `gitops/ntfy/values.yaml` sits under the wrong key (`config:` instead of `ntfy:`), so the
   server still thinks it is `ntfy.example.org`. Declined for now; one-line fix when you want it.
-- **Metrics alerts (Alertmanager)** — the monitoring stack was removed. If it comes back, ntfy
-  has a built-in Alertmanager template (`?template=alertmanager`).
+- **Metrics/history (Prometheus + Grafana)** — removed. Gatus covers "is it up"; bring Grafana
+  back only when a question needs history. ntfy has a built-in Alertmanager template if so.

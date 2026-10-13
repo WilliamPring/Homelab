@@ -1,0 +1,226 @@
+# Gatus config — the list of things that must be UP, and how to shout when they are not.
+# Reference: https://github.com/TwiN/gatus#configuration
+#
+# Groups:
+#   apps   — in-cluster Service URLs (exact, no DNS/TLS in the way): "is the app itself alive?"
+#   edge   — the public hostnames through Traefik: "does DNS + cert + ingress work?"  (+ cert expiry)
+#   public — the ONE internet-facing path (Immich share proxy via Cloudflare)
+#   infra  — the boxes the apps depend on: Postgres LXC, Valkey, NFS, Proxmox
+#   dns    — Cloudflare records still exist
+#
+# ⚠️ `edge` checks resolve *.williampring.ca to the master's TAILSCALE IP from inside a pod. That
+#    works when the nodes route 100.x via their own tailscale0 (they do — Ansible put Tailscale
+#    on every node). If the whole edge group is red while apps are green, see docs/gatus.md →
+#    "edge group all red".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gatus-config
+  namespace: monitoring
+  labels:
+    app: gatus
+data:
+  config.yaml: |
+    ui:
+      title: "Homelab status"
+      header: "Homelab"
+      dashboard-heading: "Status"
+
+    storage:
+      type: sqlite
+      path: /data/data.db
+      maximum-number-of-results: 300     # per endpoint (~5h at 1m, ~25h at 5m)
+      maximum-number-of-events: 100
+
+    alerting:
+      ntfy:
+        url: "http://ntfy.notifications.svc.cluster.local:80"
+        topic: "homelab-alerts"          # subscribe to this in the ntfy app (separate from homelab-argocd)
+        priority: 4                      # high
+        default-alert:
+          enabled: true
+          failure-threshold: 3           # 3 consecutive failures before alerting (no flapping pages)
+          success-threshold: 2           # 2 consecutive successes before "resolved"
+          send-on-resolved: true
+
+    # every endpoint below inherits the ntfy default-alert via `alerts: [ { type: ntfy } ]`
+    endpoints:
+      # ── apps (inside the cluster) ─────────────────────────────────────────────────
+      - name: Immich
+        group: apps
+        url: "http://immich-server.media.svc.cluster.local:2283/api/server/ping"
+        interval: 1m
+        conditions: ["[STATUS] == 200", "[BODY].res == pong"]
+        alerts: [{ type: ntfy }]
+      - name: Immich Postgres
+        group: apps
+        url: "tcp://immich-postgres.media.svc.cluster.local:5432"
+        interval: 1m
+        conditions: ["[CONNECTED] == true"]
+        alerts: [{ type: ntfy }]
+      - name: Kavita
+        group: apps
+        url: "http://kavita.media.svc.cluster.local:5000/api/health"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: Komf
+        group: apps
+        url: "http://komf.media.svc.cluster.local:8085/api/kavita/metadata/providers"
+        interval: 5m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: Calibre-Web
+        group: apps
+        url: "http://calibre.media.svc.cluster.local:8083/"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: Suwayomi
+        group: apps
+        url: "tcp://suwayomi.media.svc.cluster.local:4567"     # HTTP would need Basic auth
+        interval: 1m
+        conditions: ["[CONNECTED] == true"]
+        alerts: [{ type: ntfy }]
+      - name: RomM
+        group: apps
+        url: "http://romm.media.svc.cluster.local:8080/api/heartbeat"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: Immich Public Proxy
+        group: apps
+        url: "http://immich-public-proxy.media.svc.cluster.local:3000/share/healthcheck"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: SearXNG
+        group: apps
+        url: "http://searxng.apps.svc.cluster.local:8080/healthz"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: degoog
+        group: apps
+        url: "http://degoog.apps.svc.cluster.local:4444/"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: Homepage
+        group: apps
+        url: "http://homepage.apps.svc.cluster.local:3000/"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: ntfy
+        group: apps
+        url: "http://ntfy.notifications.svc.cluster.local:80/v1/health"
+        interval: 1m
+        conditions: ["[STATUS] == 200", "[BODY].healthy == true"]
+        alerts: [{ type: ntfy }]       # (if ntfy itself is down this can't page — the dashboard still shows it)
+      - name: Argo CD
+        group: apps
+        url: "http://argocd-server.argocd.svc.cluster.local:80/healthz?full=true"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+
+      # ── edge (DNS → Tailscale IP → Traefik → cert) ─────────────────────────────────
+      - name: library.williampring.ca
+        group: edge
+        url: "https://library.williampring.ca/api/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h", "[RESPONSE_TIME] < 3000"]
+        alerts: [{ type: ntfy }]
+      - name: immich.williampring.ca
+        group: edge
+        url: "https://immich.williampring.ca/api/server/ping"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: ntfy }]
+      - name: suwayomi.williampring.ca
+        group: edge
+        url: "https://suwayomi.williampring.ca/"
+        interval: 5m
+        conditions: ["[STATUS] == 401", "[CERTIFICATE_EXPIRATION] > 168h"]   # Basic auth → 401 means "up"
+        alerts: [{ type: ntfy }]
+      - name: roms.williampring.ca
+        group: edge
+        url: "https://roms.williampring.ca/api/heartbeat"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: ntfy }]
+      - name: argocd.williampring.ca
+        group: edge
+        url: "https://argocd.williampring.ca/healthz"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: ntfy }]
+      - name: ntfy.williampring.ca
+        group: edge
+        url: "https://ntfy.williampring.ca/v1/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: ntfy }]
+
+      # ── public (the only internet-facing path) ─────────────────────────────────────
+      - name: share.williampring.ca (IPP via Cloudflare)
+        group: public
+        url: "https://share.williampring.ca/share/healthcheck"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[RESPONSE_TIME] < 3000"]
+        alerts: [{ type: ntfy }]
+
+      # ── infra (LXCs / hosts the apps depend on) ────────────────────────────────────
+      - name: Postgres LXC
+        group: infra
+        url: "tcp://192.168.68.7:5432"
+        interval: 1m
+        conditions: ["[CONNECTED] == true"]
+        alerts: [{ type: ntfy }]
+      - name: Valkey
+        group: infra
+        url: "tcp://192.168.68.103:6379"
+        interval: 1m
+        conditions: ["[CONNECTED] == true"]
+        alerts: [{ type: ntfy }]
+      - name: NFS file server
+        group: infra
+        url: "tcp://192.168.68.50:2049"
+        interval: 1m
+        conditions: ["[CONNECTED] == true"]
+        alerts: [{ type: ntfy }]
+      - name: Proxmox pve (.96)
+        group: infra
+        url: "https://192.168.68.96:8006/"
+        interval: 5m
+        client: { insecure: true }     # self-signed
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+      - name: Proxmox pve (.89)
+        group: infra
+        url: "https://192.168.68.89:8006/"
+        interval: 5m
+        client: { insecure: true }
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: ntfy }]
+
+      # ── dns (Cloudflare records still there) ───────────────────────────────────────
+      - name: DNS library.williampring.ca
+        group: dns
+        url: "1.1.1.1"
+        interval: 10m
+        dns:
+          query-name: "library.williampring.ca"
+          query-type: "A"
+        conditions: ["[DNS_RCODE] == NOERROR"]
+        alerts: [{ type: ntfy }]
+      - name: DNS share.williampring.ca
+        group: dns
+        url: "1.1.1.1"
+        interval: 10m
+        dns:
+          query-name: "share.williampring.ca"
+          query-type: "CNAME"
+        conditions: ["[DNS_RCODE] == NOERROR"]
+        alerts: [{ type: ntfy }]

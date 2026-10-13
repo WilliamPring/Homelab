@@ -1,0 +1,14 @@
+# Gatus history (sqlite). Not precious — lose it and you lose the uptime graphs, nothing else.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gatus-data
+  namespace: monitoring
+  labels:
+    app: gatus
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

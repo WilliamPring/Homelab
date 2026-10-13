@@ -4,9 +4,10 @@
 #     computer : https://suwayomi.williampring.ca   (bundled WebUI, also a PWA)
 #     iPhone   : Paperback + the Suwayomi extension → same server, same library
 #
-# Downloads land as CBZ in NFS /data/library/manga/<Source>/<Series>/  — which IS Kavita's
-# Manga library (shared, by decision). Kavita picks them up on scan, Komf adds metadata,
-# so the same chapters are readable in Kavita (and in Paperback via Kavita's Kavya source).
+# Two NFS folders (see storage.yaml):
+#   Local source  ← /data/library/manga         your hand-copied manga, visible under Browse → Local source
+#   downloads     → /data/library/manga-online  CBZ per chapter; add as a 2nd folder of Kavita's Manga library
+# Kavita + Komf see both; Paperback reads both via this server (and via Kavita's Kavya source).
 #
 # Auth: basic_auth (the Paperback extension speaks Basic; Suwayomi's newer ui_login/JWT
 # mode would break it). Credentials are HARD-CODED below for now (user's choice — host is
@@ -55,7 +56,7 @@ spec:
               value: "manga"                    # ← set before pushing
             - name: AUTH_PASSWORD
               value: "CHANGE-ME-before-pushing"   # ← set before pushing (also what Paperback uses)
-            # ── downloads → CBZ into the shared Kavita manga library (mounted below) ───
+            # ── downloads → CBZ into /data/library/manga-online (mounted below) ───────
             - name: DOWNLOAD_AS_CBZ
               value: "true"
             # ── extension repository (Keiyoushi = the maintained Tachiyomi extension index) ─
@@ -82,8 +83,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /home/suwayomi/.local/share/Tachidesk
+            - name: local
+              mountPath: /home/suwayomi/.local/share/Tachidesk/local       # = NFS /data/library/manga (Local source)
             - name: downloads
-              mountPath: /home/suwayomi/.local/share/Tachidesk/downloads   # = NFS /data/library/manga
+              mountPath: /home/suwayomi/.local/share/Tachidesk/downloads   # = NFS /data/library/manga-online
             - name: shm
               mountPath: /dev/shm          # the embedded Chromium wants more than Docker's 64 MB
           readinessProbe:
@@ -105,9 +108,12 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: suwayomi-data
+        - name: local
+          persistentVolumeClaim:
+            claimName: suwayomi-local
         - name: downloads
           persistentVolumeClaim:
-            claimName: suwayomi-downloads
+            claimName: suwayomi-online
         - name: shm
           emptyDir:
             medium: Memory

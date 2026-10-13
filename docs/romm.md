@@ -153,7 +153,7 @@ curl -s https://roms.williampring.ca/api/heartbeat | head -c 300
 
 ## Quick reference
 ```
-Web:        https://roms.williampring.ca       (LAN: http://192.168.68.21:30808)
+Web:        https://roms.williampring.ca       (LAN: http://192.168.68.63:30808)
 ROMs:       192.168.68.50:/data/roms/roms/<platform>/
 BIOS:       192.168.68.50:/data/roms/bios/<platform>/
 Saves:      192.168.68.50:/data/romm-assets/

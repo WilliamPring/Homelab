@@ -101,11 +101,11 @@ sudo k3s kubectl get svc immich-server -n media    # TYPE=NodePort, 2283:30041
 ```
 Then, on the **same LAN**:
 ```
-http://192.168.68.21:30041      (worker — where Immich runs)
-http://192.168.68.10:30041      (master — also works; k8s routes it)
+http://192.168.68.63:30041      (worker — where Immich runs)
+http://192.168.68.93:30041      (master — also works; k8s routes it)
 ```
 - Browser: create the admin account here on first run.
-- iPhone app (same WiFi): Server URL = `http://192.168.68.21:30041`.
+- iPhone app (same WiFi): Server URL = `http://192.168.68.63:30041`.
 - ⚠️ NodePort set via `patch` reverts on the next `helm upgrade` — to make it permanent, bake it into the chart values or a standalone Service.
 
 ### 2. LOCAL — hostname with the real cert, NO Cloudflare (/etc/hosts)
@@ -113,7 +113,7 @@ Reach it by hostname on the LAN (real HTTPS) without any Cloudflare DNS. Traefik
 node's `:443` routes by hostname:
 ```bash
 # /etc/hosts on your Mac/Arch:
-192.168.68.10   immich.williampring.ca      # any node's LAN IP
+192.168.68.93   immich.williampring.ca      # any node's LAN IP (master shown; the worker .63 works too)
 ```
 ```
 https://immich.williampring.ca   🔒
@@ -214,7 +214,7 @@ sudo k3s kubectl logs -n media -l app.kubernetes.io/name=immich-server -f
 
 ## Quick reference
 ```
-Local (no CF):   http://192.168.68.21:30041           (NodePort, plain http, same LAN)
+Local (no CF):   http://192.168.68.63:30041           (NodePort, plain http, same LAN)
 Local (cert):    /etc/hosts → node LAN IP → https://immich.williampring.ca
 Remote:          https://immich.williampring.ca       (Cloudflare + Tailscale)
 Admin reset:     kubectl exec … immich-admin reset-admin-password

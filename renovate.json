@@ -121,7 +121,8 @@
         "ghcr.io/degoog-org/degoog",
         "sndxr/komf",
         "codeberg.org/wrenix/helm-charts/ntfy",
-        "busybox"
+        "busybox",
+        "ghcr.io/twin/gatus"
       ],
       "matchUpdateTypes": [
         "patch",

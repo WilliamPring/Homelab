@@ -20,6 +20,11 @@ set -uo pipefail
 cd "$(dirname "$0")/../.."
 OUT="${OUT:-$(mktemp -d)}"; mkdir -p "$OUT"
 KUBECONFORM="${KUBECONFORM:-kubeconform}"
+# All charts are public: give helm an EMPTY registry config so a laptop's docker credential
+# helper (e.g. docker-credential-desktop from Docker Desktop) is never consulted for OCI pulls.
+mkdir -p "$OUT/docker-config"; echo '{}' > "$OUT/docker-config/config.json"
+export DOCKER_CONFIG="${DOCKER_CONFIG_OVERRIDE:-$OUT/docker-config}"     # helm's OCI client reads ~/.docker/config.json → credsStore
+export HELM_REGISTRY_CONFIG="$OUT/docker-config/config.json"
 FAIL=0
 pass(){ printf '  \033[32mPASS\033[0m %s\n' "$*"; }
 fail(){ printf '  \033[31mFAIL\033[0m %s\n' "$*"; FAIL=1; }
@@ -82,16 +87,8 @@ echo "== 4. argo apps: valid Applications; chart sources render with their value
 for f in gitops/apps/*.yaml; do { cat "$f"; echo; echo '---'; } >> "$OUT/argocd-apps.yaml"; done
 pass "gitops/apps  ($(ls gitops/apps/*.yaml | wc -l | tr -d ' ') Applications collected)"
 # ruby prints one line per chart source: name|repoURL|chart|version|values|namespace
-ruby -ryaml -e '
-Dir["gitops/apps/*.yaml"].sort.each do |f|
-  a=YAML.load_file(f); next unless a["kind"]=="Application"
-  srcs=(a.dig("spec","sources")||[a.dig("spec","source")]).compact
-  srcs.each do |s|
-    next unless s["chart"]
-    vals=(s.dig("helm","valueFiles")||[]).map{|v| v.sub(%r{^\$values/},"")}.join(",")
-    puts [a.dig("metadata","name"), s["repoURL"], s["chart"], s["targetRevision"], vals, a.dig("spec","destination","namespace")].join("|")
-  end
-end' | while IFS='|' read -r app repo chart ver vals ns; do
+# (process substitution, NOT a pipe: a pipe would run the loop in a subshell and swallow FAIL=1)
+while IFS='|' read -r app repo chart ver vals ns; do
   args=(); IFS=',' read -ra vf <<< "$vals"; for v in "${vf[@]}"; do [ -n "$v" ] && args+=(-f "$v"); done
   case "$repo" in
     oci://*) ref="$repo"; [[ "$repo" == */"$chart" ]] || ref="$repo/$chart"
@@ -104,7 +101,16 @@ end' | while IFS='|' read -r app repo chart ver vals ns; do
   else
     fail "$app  ← $chart $ver"; sed 's/^/    /' "$OUT/helm-$app.err" | head -20
   fi
-done
+done < <(ruby -ryaml -e '
+Dir["gitops/apps/*.yaml"].sort.each do |f|
+  a=YAML.load_file(f); next unless a["kind"]=="Application"
+  srcs=(a.dig("spec","sources")||[a.dig("spec","source")]).compact
+  srcs.each do |s|
+    next unless s["chart"]
+    vals=(s.dig("helm","valueFiles")||[]).map{|v| v.sub(%r{^\$values/},"")}.join(",")
+    puts [a.dig("metadata","name"), s["repoURL"], s["chart"], s["targetRevision"], vals, a.dig("spec","destination","namespace")].join("|")
+  end
+end')
 
 # ── 5. kubeconform ──────────────────────────────────────────────────────────────────────
 echo "== 5. schema: kubeconform over everything rendered =="

@@ -70,6 +70,20 @@ kubectl apply -f gitops/apps/<app>.yaml
 ```
 See [`gitops/README.md`](gitops/README.md) for the full workflow.
 
+## Addresses (LAN)
+
+| What | IP | Notes |
+|---|---|---|
+| k3s master | `192.168.68.93` | Argo/Traefik entry; any NodePort also answers here |
+| k3s worker (32GB) | `192.168.68.63` | Immich, RomM, Suwayomi are pinned here |
+| file server (NFS `/data`) | `192.168.68.50` | photos, manga, books, ROMs |
+| Postgres LXC | `192.168.68.7` | RomM (and formerly Vaultwarden) |
+| Valkey / Redis | `192.168.68.103` | Immich, degoog, RomM |
+
+LAN NodePorts (plain http, same WiFi — e.g. for the Kindle): Kavita `:30500` · Calibre-Web `:30083` ·
+Suwayomi `:30456` · RomM `:30808` · Immich `:30041`. Hostnames (`*.williampring.ca`) resolve to the
+master's **Tailscale** IP and need Tailscale on the device.
+
 ## Design principles
 
 - **One owner per thing.** Infra lives in Ansible; apps live in GitOps. Nothing is deployed twice.
@@ -81,8 +95,9 @@ See [`gitops/README.md`](gitops/README.md) for the full workflow.
 
 - [`docs/proxmox-install.md`](docs/proxmox-install.md) — Proxmox VE install walkthrough
 - [`docs/argocd.md`](docs/argocd.md) — Argo CD / GitOps (install, expose, login)
+- [`docs/gatus.md`](docs/gatus.md) — uptime checks → ntfy (`status.williampring.ca`), what is probed and how alerts behave
 - [`docs/tls.md`](docs/tls.md) — cert-manager + Let's Encrypt (Cloudflare DNS-01) on Argo; step-by-minor upgrades
-- [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) · [`docs/kavita.md`](docs/kavita.md) · [`docs/romm.md`](docs/romm.md) · [`docs/suwayomi.md`](docs/suwayomi.md) — per-app guides
+- [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) · [`docs/kavita.md`](docs/kavita.md) · [`docs/romm.md`](docs/romm.md) · [`docs/suwayomi.md`](docs/suwayomi.md) · [`docs/kindle.md`](docs/kindle.md) — per-app guides
 - [`docs/updates-and-notifications.md`](docs/updates-and-notifications.md) — Renovate rules, the CI guard (`scripts/ci/validate.sh`), Argo CD → ntfy pushes
 - [`docs/secrets.md`](docs/secrets.md) — **secrets, day-to-day**: what exists, decrypt/edit/reuse, add one to a new app
 - [`docs/secrets-architecture.md`](docs/secrets-architecture.md) — SOPS + age + KSOPS: how decryption inside Argo works (deep dive)

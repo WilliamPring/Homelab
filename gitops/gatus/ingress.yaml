@@ -1,0 +1,27 @@
+# Ingress → https://status.williampring.ca (Tailscale-only). DNS: status → A → master Tailscale IP.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gatus
+  namespace: monitoring
+  labels:
+    app: gatus
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - status.williampring.ca
+      secretName: gatus-tls
+  rules:
+    - host: status.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gatus
+                port:
+                  number: 8080

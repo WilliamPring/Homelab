@@ -67,6 +67,11 @@ data:
             icon: suwayomi.png
 
     - Monitoring:
+        - Status:
+            href: https://status.williampring.ca
+            description: Uptime checks & alerts (Gatus)
+            icon: gatus.png
+
         - Argo CD:
             href: https://argocd.williampring.ca
             description: GitOps deployments
