@@ -41,7 +41,7 @@ irreplaceable: the files are on NFS, and both rebuild their DBs by rescanning / 
 
 ```
 /data/library/manga/<Series Name>/<Series Name> v01.cbz     ← Manga library (Kavita + Komf) — hand-copied
-/data/library/manga-online/<Source>/<Series>/<Chapter>.cbz     ← Suwayomi downloads — add EACH <Source> folder to the Manga library (docs/suwayomi.md §6)
+/data/library/manga/<Source>/<Series>/<Chapter>.cbz            ← same library, written by Suwayomi (docs/suwayomi.md)
 /data/library/comics/<Series Name>/...                       ← Comic library (optional)
 /data/books/<Author>/<Title>/<Title>.epub                    ← Book library (Calibre owns this)
 /data/books-ingest/                                          ← drop new ebooks here → CWA imports
@@ -65,7 +65,7 @@ Web UI → **Server Settings → Libraries → Add Library**:
 
 | Name | Type | Folder |
 |---|---|---|
-| Manga | Manga | `/library/manga` **plus one folder per Suwayomi source**: `/library/manga-online/<Source>` (never `/library/manga-online` itself — Kavita would show the source as a series; see `docs/suwayomi.md` §6) |
+| Manga | Manga | `/library/manga` (add `/library/manga/<Source>` as extra folders if Suwayomi's source folders show up as series — `docs/suwayomi.md` §6) |
 | Comics | Comic | `/library/comics` (optional) |
 | Books | Book | `/books` |
 

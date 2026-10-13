@@ -21,8 +21,8 @@ LAN NodePorts (plain http — fine on your LAN; the hostnames would need Tailsca
 4. **Suwayomi manga** — Tools → App Store → `suwayomi.koplugin` → install → restart → Search →
    Suwayomi → URL + **Basic Auth** creds → Test connection → pick a download folder.
    Library by category, source search, extension install, chapter download (CBZ, offline), read/unread
-   synced to the server, *Auto-download* of the next unread chapters. Your hand-copied manga appears
-   via the Local source like any other series.
+   synced to the server, *Auto-download* of the next unread chapters. Hand-copied series are not
+   visible in Suwayomi — read those through the Kavita OPDS catalog instead.
 
 ## Gotchas
 | Symptom | Fix |

@@ -81,7 +81,7 @@ See [`gitops/README.md`](gitops/README.md) for the full workflow.
 | Valkey / Redis | `192.168.68.103` | Immich, degoog, RomM |
 
 LAN NodePorts (plain http, same WiFi — e.g. for the Kindle): Kavita `:30500` · Calibre-Web `:30083` ·
-Suwayomi `:30456` · RomM `:30808` · Immich `:30041`. Hostnames (`*.williampring.ca`) resolve to the
+Suwayomi `:30456` · RomM `:30808` · Immich `:30041` · Immich share proxy `:30042` · SearXNG `:30880` · Gatus `:30881` · degoog `:30882`. Hostnames (`*.williampring.ca`) resolve to the
 master's **Tailscale** IP and need Tailscale on the device.
 
 ## Design principles

@@ -13,4 +13,4 @@ spec:
     - name: http
       port: 8080
       targetPort: http
-      nodePort: 30880      # LAN: http://<node-LAN-IP>:30880
+      nodePort: 30881      # LAN: http://<node-LAN-IP>:30881  (30880 = SearXNG)

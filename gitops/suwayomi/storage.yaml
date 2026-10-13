@@ -1,29 +1,16 @@
-# Suwayomi storage — TWO NFS folders + one local volume.
+# Suwayomi storage.
+#   downloads → NFS /data/library/manga   — the SAME folder as Kavita's Manga library (shared, by
+#                                           decision): Suwayomi writes <Source>/<Series>/<Chapter>.cbz,
+#                                           Kavita reads the Source folder as a "publisher" layer.
+#   data      → local-path PVC            — H2 database, thumbnails, installed extensions, daily backups.
 #
-#   local     → NFS /data/library/manga          your hand-copied manga (<Series>/<file>.cbz).
-#                                                 Mounted as Suwayomi's LOCAL SOURCE so it shows
-#                                                 under Browse → Local source. Same folder Kavita reads.
-#   downloads → NFS /data/library/manga-online   what Suwayomi downloads from online sources,
-#                                                 as <Source>/<Series>/<Chapter>.cbz. Add this folder
-#                                                 to Kavita's Manga library as a SECOND folder
-#                                                 (one Kavita library, two folders = still "shared").
-#   data      → local-path PVC                   H2 database, thumbnails, extensions, daily backups.
-#
-# Why two folders: Suwayomi never scans its downloads dir as a library, and its Local source
-# treats every top-level folder as a series — so mixing <Source>/ folders with hand-copied
-# <Series>/ folders in one place would show sources as fake series.
-#
-# ⚠️ PREREQ on the file server (uid 1000 like everything else under /data/library):
-#     mkdir -p /data/library/manga-online
-#     chown -R 1000:1000 /data/library && chmod -R 775 /data/library
-# ⚠️ PV sources are immutable: these PVs are NEW names. If the old suwayomi-downloads PV/PVC
-#    exist from the first sync, Sync with Prune (or delete them by hand) — nothing is lost,
-#    the files are on NFS.
+# ⚠️ PREREQ on the file server: /data/library/manga must exist and be writable by uid 1000
+#    (already done for Kavita: chown -R 1000:1000 /data/library && chmod -R 775 /data/library).
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: suwayomi-local-nfs
+  name: suwayomi-downloads-nfs
   labels:
     app: suwayomi
 spec:
@@ -39,45 +26,14 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: suwayomi-local
+  name: suwayomi-downloads
   namespace: media
   labels:
     app: suwayomi
 spec:
   accessModes: [ReadWriteMany]
   storageClassName: ""
-  volumeName: suwayomi-local-nfs
-  resources:
-    requests:
-      storage: 500Gi
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: suwayomi-online-nfs
-  labels:
-    app: suwayomi
-spec:
-  capacity:
-    storage: 500Gi
-  accessModes: [ReadWriteMany]
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: ""
-  nfs:
-    server: "192.168.68.50"
-    path: /data/library/manga-online
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: suwayomi-online
-  namespace: media
-  labels:
-    app: suwayomi
-spec:
-  accessModes: [ReadWriteMany]
-  storageClassName: ""
-  volumeName: suwayomi-online-nfs
+  volumeName: suwayomi-downloads-nfs
   resources:
     requests:
       storage: 500Gi

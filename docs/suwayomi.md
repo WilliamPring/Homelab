@@ -13,21 +13,20 @@ library. Everything Suwayomi downloads lands in Kavita's manga folder, so it is 
                  suwayomi (media ns, 32GB worker)  ──► Mihon extensions (Keiyoushi repo) ──► online sources
                       │ downloads as CBZ
                       ▼
-          NFS /data/library/manga-online/<Source>/<Series>/<Chapter>.cbz
-                      │                                   ▲
-                      │     NFS /data/library/manga ──────┘ hand-copied manga = Suwayomi's "Local source"
+          NFS /data/library/manga/<Source>/<Series>/<Chapter>.cbz   ◄── also where you hand-copy manga
+                      │
                       ▼
-                 Kavita Manga library (BOTH folders) ──► Komf metadata ──► Kavita / Paperback (Kavya)
+                 Kavita (Manga library) ──► Komf metadata ──► read in Kavita / Paperback
 ```
 
 | Argo app | Path | Deploys |
 |---|---|---|
-| `suwayomi` | `gitops/suwayomi` | Deployment, data PVC, two NFS claims (local source + downloads), NodePort, Ingress |
+| `suwayomi` | `gitops/suwayomi` | Deployment, data PVC, NFS downloads claim, NodePort, Ingress |
 
 Design decisions: Basic auth with hard-coded credentials for now (the Paperback extension speaks
 Basic; Suwayomi's newer login mode does not work with it) · H2 database on local-path with daily built-in backups ·
-your existing manga folder is Suwayomi's **Local source**, downloads go to a sibling folder, and
-Kavita's one Manga library reads both · no FlareSolverr by default.
+downloads go into the **shared** Kavita manga folder · no FlareSolverr by default.
+(A two-folder layout with a Local-source mount was tried and reverted on 2026-10-13.)
 
 ---
 
@@ -39,11 +38,7 @@ These are the credentials for **both** the WebUI and Paperback.
 ⚠️ They end up in git history. Pick something you would not mind rotating; moving them into a
 SOPS secret later is the four-file recipe in `docs/secrets.md` §5.
 
-### 2. File server folder, DNS, deploy
-```bash
-# file server (once): the downloads folder next to the existing manga folder
-mkdir -p /data/library/manga-online && chown -R 1000:1000 /data/library && chmod -R 775 /data/library
-```
+### 2. DNS + deploy
 ```
 Cloudflare DNS:  suwayomi → A → <master's Tailscale IP>   (grey cloud / DNS only)
 ```
@@ -91,26 +86,18 @@ Tailscale must be ON on the phone (same as every other hostname).
 Progress is per client+server pair: read a given series through ONE path (Suwayomi *or*
 Kavita) so its read state stays coherent.
 
-### 6. Kavita side (one folder PER SOURCE)
-Suwayomi writes `manga-online/<Source>/<Series>/Chapter 12.cbz`. The file names carry no series
-name, so Kavita cannot treat `<Source>` as a publisher layer — it falls back to the first folder
-under the library root and shows **the source as a series** with a random cover. Fix: make each
-source folder a library root of its own.
-
-Kavita → Administration → Settings → Libraries → Manga → Edit → **Folders**:
-```
-/library/manga                      ← hand-copied series (and Suwayomi's Local source)
-/library/manga-online/MangaDex      ← one line per source you download from
-/library/manga-online/Weebcentral
-```
-(do NOT add `/library/manga-online` itself). Save → Scan. Repeat the "add a folder" step when you
-start downloading from a new source. Folder names: `kubectl exec -n media deploy/kavita -- ls /library/manga-online`.
+### 6. Kavita side
+`/data/library/manga` is already Kavita's Manga library, so downloads appear after a scan
+(Library → Scan). Suwayomi writes `<Source>/<Series>/Chapter 12.cbz` and the file names carry no
+series name, so Kavita may show **the source folder as a series** with a random cover. If that
+happens, add each source folder as its own library folder in Kavita (Administration → Libraries →
+Manga → Folders → `/library/manga/<Source>`) so the series folders sit directly under a root.
 Komf matches series from all folders.
 
-### 7. Your existing manga inside Suwayomi
-Browse → **Local source** lists every `<Series>/` folder in `/data/library/manga` (pull to
-refresh after adding files). Format: `Series/Chapter.cbz` or `Series/Chapter folder/images` —
-the Kavita layout already satisfies it. Add a local series to the library like any other.
+### 7. Your existing (hand-copied) manga
+Suwayomi does **not** list the downloads folder as a library, so hand-copied series under
+`/data/library/manga` are not visible in Suwayomi — read those in Kavita. (Mounting that folder
+as Suwayomi's Local source was tried and reverted.)
 
 ---
 
@@ -150,10 +137,9 @@ the Kavita layout already satisfies it. Add a local series to the library like a
 | Paperback "Test Server" fails | not HTTPS, Tailscale off on the phone, cert not issued (`kubectl get certificate -n media suwayomi-tls`), or auth switch off |
 | Paperback shows empty homepage | library empty on the server, or category rows disabled in the source's Homepage Settings |
 | Source returns nothing / 403 | extension needs FlareSolverr (above) or the site changed — update the extension (Extensions tab) |
-| Downloads not in Kavita | that source's folder (`/library/manga-online/<Source>`) not added to the Manga library (step 6); scan not run; or chapter not finished (Suwayomi zips at the end) |
-| Kavita shows a SOURCE (e.g. "MangaDex") as a series with a random cover | the library folder is `/library/manga-online` (or a source folder landed in `/library/manga`) → use one folder per source (step 6); move strays with `mv /data/library/manga/<Source> /data/library/manga-online/`; rescan |
-| Browse → Local source is empty | files must be `<Series>/<chapter>` directly under `/data/library/manga`; pull-to-refresh; check `kubectl exec deploy/suwayomi -- ls /home/suwayomi/.local/share/Tachidesk/local` |
-| Sync error: PV spec is immutable | first sync created the old `suwayomi-downloads` PV → Sync with **Prune** (or delete the old PV/PVC); files are on NFS, nothing is lost |
+| Downloads not in Kavita | scan not run yet; or chapter not finished (Suwayomi zips at the end). `kubectl exec deploy/kavita -- ls /library/manga` |
+| Kavita shows a SOURCE (e.g. "MangaDex") as a series with a random cover | add `/library/manga/<Source>` as an extra library folder in Kavita (step 6) and rescan |
+| Sync error: PV spec is immutable | a PV with the same name but a different path exists from an earlier version → Sync with **Prune** (or delete the old PV/PVC by hand); files are on NFS, nothing is lost |
 | OOMKilled | raise `limits.memory` in the Deployment; the embedded Chromium is the hungry part |
 
 ### Handy checks
@@ -168,7 +154,6 @@ curl -u <user>:<pass> -s https://suwayomi.williampring.ca/api/graphql -H 'Conten
 ```
 Computer:   https://suwayomi.williampring.ca      (LAN http: http://192.168.68.63:30456)
 iPhone:     Paperback → extension https://tahouse.github.io/tachidesk-paperback-ext/ → Server URL above + creds
-Downloads:  192.168.68.50:/data/library/manga-online/<Source>/<Series>/   → Kavita Manga library: one folder PER <Source>
-Local src:  192.168.68.50:/data/library/manga/<Series>/                   → Browse → Local source
+Downloads:  192.168.68.50:/data/library/manga/<Source>/<Series>/   → Kavita Manga library
 Creds:      gitops/suwayomi/deployment.yaml (AUTH_USERNAME / AUTH_PASSWORD)
 ```
