@@ -64,12 +64,6 @@ data:
         interval: 1m
         conditions: ["[STATUS] == 200"]
         alerts: [{ type: ntfy }]
-      - name: Komf
-        group: apps
-        url: "http://komf.media.svc.cluster.local:8085/api/kavita/metadata/providers"
-        interval: 5m
-        conditions: ["[STATUS] == 200"]
-        alerts: [{ type: ntfy }]
       - name: Calibre-Web
         group: apps
         url: "http://calibre.media.svc.cluster.local:8083/"
@@ -81,12 +75,6 @@ data:
         url: "tcp://suwayomi.media.svc.cluster.local:4567"     # HTTP would need Basic auth
         interval: 1m
         conditions: ["[CONNECTED] == true"]
-        alerts: [{ type: ntfy }]
-      - name: RomM
-        group: apps
-        url: "http://romm.media.svc.cluster.local:8080/api/heartbeat"
-        interval: 1m
-        conditions: ["[STATUS] == 200"]
         alerts: [{ type: ntfy }]
       - name: Immich Public Proxy
         group: apps
@@ -144,12 +132,6 @@ data:
         interval: 5m
         conditions: ["[STATUS] == 401", "[CERTIFICATE_EXPIRATION] > 168h"]   # Basic auth → 401 means "up"
         alerts: [{ type: ntfy }]
-      - name: roms.williampring.ca
-        group: edge
-        url: "https://roms.williampring.ca/api/heartbeat"
-        interval: 5m
-        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: ntfy }]
       - name: argocd.williampring.ca
         group: edge
         url: "https://argocd.williampring.ca/healthz"
@@ -161,14 +143,6 @@ data:
         url: "https://ntfy.williampring.ca/v1/health"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: ntfy }]
-
-      # ── public (the only internet-facing path) ─────────────────────────────────────
-      - name: share.williampring.ca (IPP via Cloudflare)
-        group: public
-        url: "https://share.williampring.ca/share/healthcheck"
-        interval: 5m
-        conditions: ["[STATUS] == 200", "[RESPONSE_TIME] < 3000"]
         alerts: [{ type: ntfy }]
 
       # ── infra (LXCs / hosts the apps depend on) ────────────────────────────────────
