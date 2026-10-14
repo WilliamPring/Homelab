@@ -31,7 +31,7 @@ spec:
     - repoURL: https://github.com/WilliamPring/Homelab.git
       targetRevision: main
       ref: values
-  
+
   destination:
     server: https://kubernetes.default.svc
     namespace: media

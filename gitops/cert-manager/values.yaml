@@ -12,15 +12,15 @@ crds:
 # Homelab-sized. Defaults are unbounded; these keep the three pods honest.
 resources:
   requests: { cpu: 10m, memory: 64Mi }
-  limits:   { memory: 256Mi }
+  limits: { memory: 256Mi }
 webhook:
   resources:
     requests: { cpu: 10m, memory: 32Mi }
-    limits:   { memory: 128Mi }
+    limits: { memory: 128Mi }
 cainjector:
   resources:
     requests: { cpu: 10m, memory: 64Mi }
-    limits:   { memory: 256Mi }
+    limits: { memory: 256Mi }
 
 # DNS-01 self-check: cert-manager verifies the _acme-challenge TXT record exists before asking
 # Let's Encrypt. If your nodes resolve via Tailscale MagicDNS / a local resolver that caches or

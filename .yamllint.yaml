@@ -1,0 +1,31 @@
+# yamllint — style + sanity for every YAML in the repo (manifests, values, Ansible, workflows).
+# Run: make lint   (or pre-commit). CI runs it on every PR. Tuned so the repo passes today;
+# tighten rules when the files are ready for them, don't loosen to hide a problem.
+extends: default
+
+ignore: |
+  docs/archive/
+  .git/
+  # SOPS writes its own formatting (4-space indent, long ENC[] lines) — never hand-edited, never linted
+  **/*.enc.yaml
+
+rules:
+  line-length:
+    max: 160                 # manifests carry long explanatory comments on purpose
+    level: warning
+  document-start: disable    # `---` only where multi-doc files need it
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  truthy:
+    allowed-values: ["true", "false", "on", "off", "yes", "no"]   # Homepage / GitHub Actions use on:/yes
+    check-keys: false
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+  braces:
+    max-spaces-inside: 1     # `{ cpu: 10m }` flow style is used for short maps
+  brackets:
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true

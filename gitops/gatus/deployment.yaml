@@ -53,7 +53,7 @@ spec:
             periodSeconds: 30
           resources:
             requests: { cpu: 20m, memory: 64Mi }
-            limits:   { memory: 256Mi }
+            limits: { memory: 256Mi }
       volumes:
         - name: config
           configMap:

@@ -84,6 +84,15 @@ LAN NodePorts (plain http, same WiFi — e.g. for the Kindle): Kavita `:30500` �
 Suwayomi `:30456` · RomM `:30808` · Immich `:30041` · Immich share proxy `:30042` · SearXNG `:30880` · Gatus `:30881` · degoog `:30882`. Hostnames (`*.williampring.ca`) resolve to the
 master's **Tailscale** IP and need Tailscale on the device.
 
+## Working in this repo
+```bash
+make            # list commands
+make lint       # yamllint
+make validate   # render every app + kubeconform (what CI runs)
+make hooks      # install pre-commit (cheap checks on commit, full validate on push)
+```
+Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: `.editorconfig`.
+
 ## Design principles
 
 - **One owner per thing.** Infra lives in Ansible; apps live in GitOps. Nothing is deployed twice.

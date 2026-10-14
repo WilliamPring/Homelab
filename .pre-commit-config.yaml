@@ -1,0 +1,37 @@
+# pre-commit hooks — the cheap checks run on every commit; the slow full validation on push.
+#   one-time:  pip install pre-commit  (or pipx) → pre-commit install --hook-type pre-commit --hook-type pre-push
+# Renovate tracks the `rev:` pins below.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^(kubernetes|gitops)/.*/(kustomization|.*\.sops)\.yaml$|^docs/archive/
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: check-merge-conflict
+      - id: detect-private-key          # an age/SSH private key must never land in git
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        args: [-c, .yamllint.yaml]
+
+  - repo: local
+    hooks:
+      - id: sops-encrypted
+        name: "*.enc.yaml must be SOPS-encrypted"
+        entry: scripts/ci/check-sops.sh
+        language: script
+        files: \.enc\.yaml$
+      - id: validate
+        name: "render everything (scripts/ci/validate.sh)"
+        entry: scripts/ci/validate.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-push]              # slow (pulls charts) → only on push

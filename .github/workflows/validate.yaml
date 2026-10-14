@@ -33,6 +33,13 @@ jobs:
       - name: Validate
         run: ./scripts/ci/validate.sh
 
+  lint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pipx install yamllint && yamllint -c .yamllint.yaml .
+
   renovate-config:
     name: renovate.json is valid
     runs-on: ubuntu-latest
