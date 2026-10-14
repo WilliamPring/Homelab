@@ -46,6 +46,6 @@ cat <<EOF
  Postgres ready for RomM
    host 192.168.68.7 · port 5432 · db ${DB_NAME} · user ${DB_USER}
    PASSWORD: ${DB_PASS}
- >>> put this in gitops/romm/romm-secret.enc.yaml as DB_PASSWD, then sops --encrypt
+ >>> put this in kubernetes/apps/media/romm/romm-secret.enc.yaml as DB_PASSWD, then sops --encrypt
 ============================================================
 EOF

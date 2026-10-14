@@ -10,7 +10,7 @@ two metasearch approaches.
 | **URL (domain)** | https://search.williampring.ca |
 | **URL (raw)** | http://\<node-ip\>:30882 (NodePort) |
 | **Namespace** | `apps` |
-| **Deployed by** | Argo CD (GitOps) — `gitops/apps/degoog.yaml` → `gitops/degoog/` |
+| **Deployed by** | Argo CD (GitOps) — `kubernetes/bootstrap/apps/degoog.yaml` → `kubernetes/apps/apps/degoog/` |
 | **Image** | `ghcr.io/degoog-org/degoog:latest` |
 | **Cache** | Valkey (`degoog-valkey:6379`, in-cluster) |
 | **Storage** | 2Gi PVC (`degoog-data`) + 1Gi PVC (`degoog-valkey-data`), local-path |
@@ -29,7 +29,7 @@ browser
 
 ## Files (GitOps — one per resource)
 ```
-gitops/degoog/
+kubernetes/apps/apps/degoog/
 ├── deployment.yaml       # degoog (initContainer fix-perms → chown /app/data; Recreate)
 ├── degoog-service.yaml   # NodePort 30882 → 4444
 ├── ingress.yaml          # search.williampring.ca → degoog:4444 (cert degoog-tls)
@@ -37,7 +37,7 @@ gitops/degoog/
 ├── valkey.yaml           # Valkey Deployment
 ├── valkey-service.yaml   # degoog-valkey:6379 (ClusterIP)
 └── pvc.yaml              # degoog-data (2Gi) + degoog-valkey-data (1Gi)
-gitops/apps/degoog.yaml   # the Argo Application (manual sync, CreateNamespace=true)
+kubernetes/bootstrap/apps/degoog.yaml   # the Argo Application (manual sync, CreateNamespace=true)
 ```
 
 Key wiring:
@@ -77,7 +77,7 @@ sudo k3s kubectl create secret generic degoog-secret -n apps \
 ## Deploy / sync (GitOps)
 ```bash
 # after git push:
-sudo k3s kubectl apply -f gitops/apps/degoog.yaml
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/degoog.yaml
 # Argo UI → degoog → review DIFF (esp. the Secret) → SYNC → SYNCHRONIZE
 ```
 Since degoog was originally deployed by Ansible, Argo **adopts** the running resources on

@@ -8,7 +8,7 @@ LAN NodePorts (plain http — fine on your LAN; the hostnames would need Tailsca
 | Kavita OPDS | `http://192.168.68.63:30500/api/opds/<key>` | none — the key is in the URL (Kavita → avatar → Settings → 3rd Party Clients → *OPDS URL*, swap the host) |
 | Kavita KOReader sync | `http://192.168.68.63:30500/api/koreader/<key>` | username = your Kavita user, password = anything |
 | Calibre-Web OPDS | `http://192.168.68.63:30083/opds` | your CWA username + password |
-| Suwayomi | `http://192.168.68.63:30456` | Basic auth — the creds in `gitops/suwayomi/deployment.yaml` |
+| Suwayomi | `http://192.168.68.63:30456` | Basic auth — the creds in `kubernetes/apps/media/suwayomi/deployment.yaml` |
 
 ## Setup
 1. **KOReader** via the jailbreak (MRPI/KUAL — see the KOReader wiki for Kindle). Then install the

@@ -30,9 +30,9 @@ Ansible manages the machines (Layer 1). k3s runs the apps (Layer 2). Your laptop
 | **Which machines/nodes exist** | `ansible/inventory.ini` |
 | **What runs, and in what order** | `ansible/site.yml` ← the playbook (7 "plays", top to bottom) |
 | **The on/off switches + settings** | `ansible/group_vars/all.yml` (toggles like `immich_enabled`) |
-| **Which apps are deployed, and how** | `gitops/apps/*.yaml` — one Argo CD Application per app (Ansible deploys no apps) |
+| **Which apps are deployed, and how** | `kubernetes/bootstrap/apps/*.yaml` — one Argo CD Application per app (Ansible deploys no apps) |
 | **Which apps get HTTPS hostnames** | `ansible/vars/routes.yml` |
-| **How a *Helm* app is configured** | `gitops/<app>/values.yaml` (fed to the chart by its Argo Application) |
+| **How a *Helm* app is configured** | `kubernetes/apps/<namespace>/<app>/values.yaml` (fed to the chart by its Argo Application) |
 | **How a *manifest* app is configured** | `ansible/roles/<app>/files/<app>.yaml` |
 | **What a role actually does (steps)** | `ansible/roles/<app>/tasks/main.yml` |
 | **How to run the whole thing** | `ansible/README.md` |
@@ -51,7 +51,7 @@ Ansible manages the machines (Layer 1). k3s runs the apps (Layer 2). Your laptop
 3. **`ansible/group_vars/all.yml`** — *what's turned on, what are the settings?*
 4. Pick one app and follow it end-to-end:
    - a **manifest** app → `roles/pihole/tasks/main.yml` + `roles/pihole/files/pihole.yaml`
-   - a **Helm** app → `gitops/apps/immich.yaml` (the Argo Application) + `gitops/immich/values.yaml` (its config)
+   - a **Helm** app → `kubernetes/bootstrap/apps/immich.yaml` (the Argo Application) + `kubernetes/apps/media/immich/values.yaml` (its config)
 5. **`docs/roadmap.md`** — *where is this all going?*
 
 ---
@@ -74,18 +74,18 @@ A play names its **roles**; each role's steps live in `roles/<name>/tasks/main.y
 ## 🧩 The conventions (so the patterns make sense)
 - **Each app = a role** in `roles/`.
 - **Small app** → hand-written manifest in `roles/<app>/files/*.yaml`, applied with `kubectl apply`.
-- **Charted app** → an Argo Application in `gitops/apps/<app>.yaml` pointing at the chart, with
-  values in `gitops/<app>/values.yaml`. Adding one = two files + push, **no playbook edits**.
+- **Charted app** → an Argo Application in `kubernetes/bootstrap/apps/<app>.yaml` pointing at the chart, with
+  values in `kubernetes/apps/<namespace>/<app>/values.yaml`. Adding one = two files + push, **no playbook edits**.
 - **Toggles** in `group_vars/all.yml` turn features on/off (`<thing>_enabled: true/false`).
   Many heavy things are **staged OFF**, waiting for real hardware (the HP).
 - **Namespaces group apps by function**: `media`, `apps`, `network`, `vpn`, `gateway`, `kube-system`.
 - **Config lives in data, not the playbook**: machines→`inventory.ini`, settings→`group_vars`,
-  apps→`gitops/apps/*.yaml`, per-app config→`gitops/<app>/`.
+  apps→`kubernetes/bootstrap/apps/*.yaml`, per-app config→`kubernetes/apps/<namespace>/<app>/`.
 
 ---
 
 ## ✅ Status at a glance (see `docs/roadmap.md` for detail)
-- **Running:** k3s + the Argo CD apps in `gitops/apps/`
+- **Running:** k3s + the Argo CD apps in `kubernetes/bootstrap/apps/`
 - **Staged (off, waiting for the HP):** Immich, qBittorrent, cert-manager + Gateway API (TLS)
 - **Planned / parked:** Seafile, monitoring, backups, storage roles, Proxmox
 

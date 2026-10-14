@@ -16,8 +16,8 @@ Secret <app>-tls  (Traefik serves it)
 
 | Argo app | Source | Deploys | Sync order |
 |---|---|---|---|
-| `cert-manager` | Helm chart `jetstack/cert-manager` + `gitops/cert-manager/values.yaml` | CRDs, controller, webhook, cainjector (ns `cert-manager`) | **1st** |
-| `cert-manager-issuer` | `gitops/cert-manager/issuer/` | the `letsencrypt` ClusterIssuer | 2nd (needs the CRDs) |
+| `cert-manager` | Helm chart `jetstack/cert-manager` + `kubernetes/apps/cert-manager/cert-manager/values.yaml` | CRDs, controller, webhook, cainjector (ns `cert-manager`) | **1st** |
+| `cert-manager-issuer` | `kubernetes/apps/cert-manager/cert-manager-issuer/` | the `letsencrypt` ClusterIssuer | 2nd (needs the CRDs) |
 
 Out of git, hand-created once: the **`cloudflare-api-token`** Secret in `cert-manager`
 (`docs/secrets.md`). Everything else is reproducible from the repo.
@@ -43,8 +43,8 @@ sudo k3s kubectl get certificate -A                         # all READY=True —
 sudo k3s kubectl -n cert-manager get deploy -o wide          # v1.17.2 images
 
 # 1. register both apps (by hand — no app-of-apps yet)
-sudo k3s kubectl apply -f gitops/apps/cert-manager.yaml
-sudo k3s kubectl apply -f gitops/apps/cert-manager-issuer.yaml
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/cert-manager.yaml
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/cert-manager-issuer.yaml
 
 # 2. Argo UI → cert-manager → review the diff (expect: image tags 1.17.2→1.18.6, CRD updates,
 #    resource limits, Argo tracking labels) → SYNC (plain; ServerSideApply is already set)

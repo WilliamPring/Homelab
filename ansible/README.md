@@ -127,6 +127,6 @@ ansible/
 ```
 
 ## Planned changes
-- Move the Immich Ingress out of `tls_ingress` into `gitops/immich`, so one app owns everything
+- Move the Immich Ingress out of `tls_ingress` into `kubernetes/apps/media/immich`, so one app owns everything
   about itself. Then the role and Play 5 go away.
 - Ansible's end state: Tailscale, k3s, the `immich-db` Secret and the node label. Nothing else.

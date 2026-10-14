@@ -28,9 +28,9 @@ reading progress, OPDS and a web reader. Two helpers feed it good metadata:
 
 | Argo app | Path | Deploys |
 |---|---|---|
-| `kavita` | `gitops/kavita` | Kavita + NFS library PV/PVC + config PVC + Ingress |
-| `komf` | `gitops/komf` | Komf + seed ConfigMap + config PVC + Ingress + KSOPS secret |
-| `calibre` | `gitops/calibre` | CWA + the `calibre-books` / `calibre-ingest` NFS claims Kavita reuses |
+| `kavita` | `kubernetes/apps/media/kavita` | Kavita + NFS library PV/PVC + config PVC + Ingress |
+| `komf` | `kubernetes/apps/media/komf` | Komf + seed ConfigMap + config PVC + Ingress + KSOPS secret |
+| `calibre` | `kubernetes/apps/media/calibre` | CWA + the `calibre-books` / `calibre-ingest` NFS claims Kavita reuses |
 
 Both Kavita and Komf keep their state on `local-path` PVCs. Neither holds anything
 irreplaceable: the files are on NFS, and both rebuild their DBs by rescanning / rematching.
@@ -81,9 +81,9 @@ Kavita → avatar (top-right) → Settings → "3rd Party Clients" → API Key  
 Then on the Arch box (it has the age key):
 ```bash
 # paste the key into the template, then encrypt in place
-$EDITOR gitops/komf/komf-secret.enc.yaml            # replace REPLACE_ME_WITH_KAVITA_API_KEY
-sops --encrypt --in-place gitops/komf/komf-secret.enc.yaml
-git add gitops/komf gitops/apps/komf.yaml && git commit -m "feat: komf" && git push
+$EDITOR kubernetes/apps/media/komf/komf-secret.enc.yaml            # replace REPLACE_ME_WITH_KAVITA_API_KEY
+sops --encrypt --in-place kubernetes/apps/media/komf/komf-secret.enc.yaml
+git add kubernetes/apps/media/komf kubernetes/bootstrap/apps/komf.yaml && git commit -m "feat: komf" && git push
 ```
 Check the file before pushing: `stringData.KAVITA_API_KEY` must read `ENC[AES256_GCM,...]`.
 
@@ -92,7 +92,7 @@ Check the file before pushing: `stringData.KAVITA_API_KEY` must read `ENC[AES256
 Cloudflare DNS:  komf → A → <master's Tailscale IP>   (grey cloud / DNS only — Komf has NO login)
 ```
 ```bash
-sudo k3s kubectl apply -f gitops/apps/komf.yaml      # Argo UI → komf → review → SYNC
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/komf.yaml      # Argo UI → komf → review → SYNC
 sudo k3s kubectl get pods -n media -l app=komf        # Running (init container seeds config first)
 sudo k3s kubectl logs -n media deploy/komf | tail     # "Started" + kavita event listener connected
 curl -s https://komf.williampring.ca/api/kavita/metadata/providers   # → JSON list of enabled providers
@@ -124,7 +124,7 @@ BOOKS:   drop epub   → /data/books-ingest/    →  CWA import + metadata  → 
 ```
 
 - Komf's `updateModes: [API]` writes into Kavita's DB only. Add `COMIC_INFO` in
-  `gitops/komf/configmap.yaml` if you also want `ComicInfo.xml` written into the `.cbz` files
+  `kubernetes/apps/media/komf/configmap.yaml` if you also want `ComicInfo.xml` written into the `.cbz` files
   (portable metadata, but Komf then needs the NFS mounted read-write — not wired today).
 - `lockCovers: true` stops Kavita's scanner from overwriting Komf's chosen series cover.
 - Komf's config is **seeded once** from the ConfigMap. Edits in git after the first start do
@@ -133,10 +133,10 @@ BOOKS:   drop epub   → /data/books-ingest/    →  CWA import + metadata  → 
 ---
 
 ## Upgrading
-- **Kavita**: bump `image:` in `gitops/kavita/deployment.yaml`
+- **Kavita**: bump `image:` in `kubernetes/apps/media/kavita/deployment.yaml`
   (`lscr.io/linuxserver/kavita:version-vX.Y.Z.W`). Kavita migrates its DB on start; it is on a
   local-path PVC, so take a worker snapshot first if the release notes mention a migration.
-- **Komf**: bump `sndxr/komf:X.Y.Z` in `gitops/komf/deployment.yaml`. Read the release notes —
+- **Komf**: bump `sndxr/komf:X.Y.Z` in `kubernetes/apps/media/komf/deployment.yaml`. Read the release notes —
   2.0.0 dropped several providers and moved BookWalker to an offline DB.
 
 ---
@@ -146,7 +146,7 @@ BOOKS:   drop epub   → /data/books-ingest/    →  CWA import + metadata  → 
 | Symptom | Cause / fix |
 |---|---|
 | Komf pod `Init:Error` / CrashLoop, log says `failed to decrypt` or secret missing | `komf-secret.enc.yaml` not encrypted, or Argo can't decrypt → redo step 2; check `kubectl get secret komf-secret -n media` |
-| Komf log `401` / `Unauthorized` from Kavita | wrong/rotated API key → update with `sops gitops/komf/komf-secret.enc.yaml`, push, sync, `rollout restart deploy/komf -n media` |
+| Komf log `401` / `Unauthorized` from Kavita | wrong/rotated API key → update with `sops kubernetes/apps/media/komf/komf-secret.enc.yaml`, push, sync, `rollout restart deploy/komf -n media` |
 | komf.williampring.ca unreachable | DNS record missing, `komf-tls` not issued (`kubectl get certificate -n media`), or Tailscale off |
 | Series matched to the wrong thing | Komf UI (or extension) → Identify → pick the right one. Rename the folder to the common English title to help future matches |
 | Nothing happens when new manga is added | `eventListener.enabled` false in the LIVE config on the PVC, or Kavita hasn't scanned yet (Library → Scan) |

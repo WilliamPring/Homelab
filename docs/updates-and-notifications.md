@@ -37,9 +37,9 @@ Only **pinned** versions. Everything is now pinned:
 
 | Where | How Renovate tracks it |
 |---|---|
-| `image:` tags in `gitops/**` Deployments | `kubernetes` manager |
+| `image:` tags in `kubernetes/**` Deployments | `kubernetes` manager |
 | `targetRevision` of the Helm charts (`immich`, `ntfy`, `cert-manager`) | `argocd` manager — cert-manager gets one PR per minor (`step-by-minor`), merge in order |
-| Immich **app** version in `gitops/immich/values.yaml` (`image.tag`) | custom regex manager → `ghcr.io/immich-app/immich-server` |
+| Immich **app** version in `kubernetes/apps/media/immich/values.yaml` (`image.tag`) | custom regex manager → `ghcr.io/immich-app/immich-server` |
 | SearXNG (date-stamped tags, no semver) | pinned to `latest@sha256:…` → **digest** updates |
 
 If you ever add an app with `:latest` or a chart with `targetRevision: "*"`, Renovate is blind to
@@ -51,7 +51,7 @@ it. Pin it.
 | homepage, searxng, degoog, komf, ntfy chart, busybox — **patch + digest** | **one grouped PR** "stateless patch updates" — a single thing to read on Monday | `low-risk` |
 | the same apps — minor/major | own PR | |
 | immich (chart, app, postgres), romm, kavita, calibre | own PR — read the release notes, back up, then merge | `⚠️ db-migration` |
-| anything in `gitops/argocd/**` | own PR — merge, then re-apply `gitops/argocd/` by hand | `argocd` |
+| anything in `kubernetes/bootstrap/argocd/**` | own PR — merge, then re-apply `kubernetes/bootstrap/argocd/` by hand | `argocd` |
 | any major bump | own PR | `⚠️ major` |
 
 Why not automerge: Argo sync is manual, so automerge would never have saved a deploy decision,
@@ -67,7 +67,7 @@ grouped PR keeps review cheap instead.
 
 ---
 
-## Argo CD → ntfy (`gitops/argocd/argocd-notifications-cm.yaml`)
+## Argo CD → ntfy (`kubernetes/bootstrap/argocd/argocd-notifications-cm.yaml`)
 
 The notifications-controller ships with Argo; the ConfigMap patch tells it what to send.
 Every Application is subscribed by default — no annotations to maintain.
@@ -85,11 +85,11 @@ Each notification's tap-target opens the app in Argo (`argocd.williampring.ca`).
 1. Push, then re-apply the Argo kustomization (`-k`, not `-f`: the directory has patches; `-n argocd`
    because the upstream install objects carry no namespace):
    ```bash
-   sudo k3s kubectl apply -k gitops/argocd/ -n argocd
+   sudo k3s kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd
    sudo k3s kubectl -n argocd rollout restart deploy/argocd-notifications-controller
    sudo k3s kubectl -n argocd get cm argocd-notifications-cm -o jsonpath='{.data.subscriptions}'   # shows the 4 triggers
    ```
-   (`docs/argocd.md` still says `apply -f gitops/argocd/` — that predates the kustomization + KSOPS patch.)
+   (`docs/argocd.md` still says `apply -f kubernetes/bootstrap/argocd/` — that predates the kustomization + KSOPS patch.)
 2. On your phone, ntfy app → **+** → server `https://ntfy.williampring.ca` → topic
    `homelab-argocd`.
 3. Prove the path works end-to-end without waiting for a real event:
@@ -164,7 +164,7 @@ Two topics on purpose: `homelab-argocd` = you did something; `homelab-alerts` = 
 ## Not automated (on purpose, for now)
 - **k3s upgrades** — needs system-upgrade-controller; declined for now.
 - **ntfy access control** — still open to anyone on the tailnet; also the `base-url` in
-  `gitops/ntfy/values.yaml` sits under the wrong key (`config:` instead of `ntfy:`), so the
+  `kubernetes/apps/notifications/ntfy/values.yaml` sits under the wrong key (`config:` instead of `ntfy:`), so the
   server still thinks it is `ntfy.example.org`. Declined for now; one-line fix when you want it.
 - **Metrics/history (Prometheus + Grafana)** — removed. Gatus covers "is it up"; bring Grafana
   back only when a question needs history. ntfy has a built-in Alertmanager template if so.

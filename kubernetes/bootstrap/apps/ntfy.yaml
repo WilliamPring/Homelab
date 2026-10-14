@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ntfy
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: oci://codeberg.org/wrenix/helm-charts/ntfy
+      chart: ntfy
+      # PINNED chart version — Renovate opens a PR when a new chart is published.
+      # (was "*" = always latest; pinning is what lets Renovate see it.)
+      targetRevision: "0.5.22"
+      helm:
+        valueFiles:
+          - $values/kubernetes/apps/notifications/ntfy/values.yaml
+
+    - repoURL: https://github.com/WilliamPring/Homelab.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: notifications
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

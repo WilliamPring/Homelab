@@ -34,8 +34,8 @@ chart split, and lets Postgres sync before Immich):
 
 | Argo Application | Source | What it deploys |
 |---|---|---|
-| `immich-prereqs` | `gitops/immich/prereqs/` (raw manifests) | vector Postgres (Deployment/PVC/Service) + NFS library PV/PVC |
-| `immich` | OCI chart `ghcr.io/immich-app/immich-charts` + `gitops/immich/values.yaml` | immich-server, machine-learning, valkey |
+| `immich-prereqs` | `kubernetes/apps/media/immich-prereqs/` (raw manifests) | vector Postgres (Deployment/PVC/Service) + NFS library PV/PVC |
+| `immich` | OCI chart `ghcr.io/immich-app/immich-charts` + `kubernetes/apps/media/immich/values.yaml` | immich-server, machine-learning, valkey |
 
 **Chart/version:** `targetRevision: "*"` (latest chart). The **Immich version is pinned** in
 `values.yaml` at `controllers.main.containers.main.image.tag` (currently **v3.1.0**). That
@@ -54,8 +54,8 @@ changes whenever the chart bumps (chart 0.13.2 → v3.2.0). ⚠️ The key is NO
 ### Deploy / sync (order matters — prereqs FIRST)
 ```bash
 # after git push, and confirming the secret + node label exist:
-sudo k3s kubectl apply -f gitops/apps/immich-prereqs.yaml    # Argo UI → review diff → SYNC
-sudo k3s kubectl apply -f gitops/apps/immich.yaml            # Argo UI → review diff → SYNC
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/immich-prereqs.yaml    # Argo UI → review diff → SYNC
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/immich.yaml            # Argo UI → review diff → SYNC
 ```
 - Sync is **MANUAL** — Argo shows OutOfSync and waits for you to click Sync.
 - **OCI gotcha:** if the `immich` app errors that OCI isn't enabled, register it once —
@@ -73,7 +73,7 @@ sudo k3s kubectl apply -f gitops/apps/immich.yaml            # Argo UI → revie
    sudo k3s kubectl exec -n media deploy/immich-postgres -- \
      pg_dumpall --clean --if-exists --username=immich | gzip > immich-db-$(date +%F).sql.gz
    ```
-3. Bump `controllers.main.containers.main.image.tag` in `gitops/immich/values.yaml` → git push.
+3. Bump `controllers.main.containers.main.image.tag` in `kubernetes/apps/media/immich/values.yaml` → git push.
 4. Argo UI → `immich` app → Refresh → **review the diff** (expect: both Deployments' image tag
    change, plus any chart-version drift since the last sync) → **Sync**.
 5. Watch the migration + startup:

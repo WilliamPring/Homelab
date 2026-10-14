@@ -22,7 +22,7 @@ https://roms.williampring.ca  (Tailscale)  ·  http://<node-ip>:30808  (LAN)
 
 | Argo app | Path | Deploys |
 |---|---|---|
-| `romm` | `gitops/romm` | Deployment, NFS PV/PVCs, resources PVC, NodePort Service, Ingress, KSOPS secret |
+| `romm` | `kubernetes/apps/media/romm` | Deployment, NFS PV/PVCs, resources PVC, NodePort Service, Ingress, KSOPS secret |
 
 **Why k3s and not an LXC:** RomM is a stateless web app whose state is a DB + files, and both
 already live outside the cluster. Playing is client-side, so the pod does nothing heavy. See the
@@ -82,9 +82,9 @@ ACL SAVE
 ### 3. Secrets → SOPS (Arch box)
 ```bash
 openssl rand -hex 32                                   # → ROMM_AUTH_SECRET_KEY
-$EDITOR gitops/romm/romm-secret.enc.yaml               # fill auth key, DB_PASSWD (step 1), REDIS_PASSWORD (step 2)
-sops --encrypt --in-place gitops/romm/romm-secret.enc.yaml
-git diff gitops/romm/romm-secret.enc.yaml              # every value must be ENC[AES256_GCM,...]
+$EDITOR kubernetes/apps/media/romm/romm-secret.enc.yaml               # fill auth key, DB_PASSWD (step 1), REDIS_PASSWORD (step 2)
+sops --encrypt --in-place kubernetes/apps/media/romm/romm-secret.enc.yaml
+git diff kubernetes/apps/media/romm/romm-secret.enc.yaml              # every value must be ENC[AES256_GCM,...]
 ```
 Provider keys are optional. Hasheous and PlayMatch are free and already on. For box art on
 retro systems make a free **ScreenScraper** account; for broad metadata make an **IGDB** (Twitch
@@ -95,8 +95,8 @@ dev) app. Add them to the secret any time → `sops` edit → push → sync → 
 Cloudflare DNS:  roms → A → <master's Tailscale IP>   (grey cloud / DNS only)
 ```
 ```bash
-git add gitops/romm gitops/apps/romm.yaml scripts/postgres-romm-setup.sh && git commit -m "feat: romm" && git push
-sudo k3s kubectl apply -f gitops/apps/romm.yaml       # Argo UI → romm → review → SYNC
+git add kubernetes/apps/media/romm kubernetes/bootstrap/apps/romm.yaml scripts/postgres-romm-setup.sh && git commit -m "feat: romm" && git push
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/romm.yaml       # Argo UI → romm → review → SYNC
 sudo k3s kubectl get pods -n media -l app=romm -w     # Running + 1/1 Ready (migrations take ~1 min)
 sudo k3s kubectl logs -n media deploy/romm --tail=50  # no DB / Redis connection errors
 ```
@@ -118,7 +118,7 @@ sudo k3s kubectl logs -n media deploy/romm --tail=50  # no DB / Redis connection
   # from the Postgres LXC:
   pg_dump -U romm romm > romm-$(date +%F).sql
   ```
-- **Upgrading:** bump `rommapp/romm:X.Y.Z` in `gitops/romm/deployment.yaml` (Renovate PRs it).
+- **Upgrading:** bump `rommapp/romm:X.Y.Z` in `kubernetes/apps/media/romm/deployment.yaml` (Renovate PRs it).
   RomM migrates the DB on start; `pg_dump` first on major versions.
 - **Streaming (server-side emulation):** RomM has an opt-in webstation add-on that renders
   emulators on the server. It wants a GPU, is amd64-only and still marked development. If you ever
@@ -158,5 +158,5 @@ ROMs:       192.168.68.50:/data/roms/roms/<platform>/
 BIOS:       192.168.68.50:/data/roms/bios/<platform>/
 Saves:      192.168.68.50:/data/romm-assets/
 DB:         192.168.68.7:5432/romm   (pg_dump -U romm romm)
-Secrets:    sops gitops/romm/romm-secret.enc.yaml
+Secrets:    sops kubernetes/apps/media/romm/romm-secret.enc.yaml
 ```

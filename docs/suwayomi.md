@@ -21,7 +21,7 @@ library. Everything Suwayomi downloads lands in Kavita's manga folder, so it is 
 
 | Argo app | Path | Deploys |
 |---|---|---|
-| `suwayomi` | `gitops/suwayomi` | Deployment, data PVC, NFS downloads claim, NodePort, Ingress |
+| `suwayomi` | `kubernetes/apps/media/suwayomi` | Deployment, data PVC, NFS downloads claim, NodePort, Ingress |
 
 Design decisions: Basic auth with hard-coded credentials for now (the Paperback extension speaks
 Basic; Suwayomi's newer login mode does not work with it) · H2 database on local-path with daily built-in backups ·
@@ -33,7 +33,7 @@ downloads go into the **shared** Kavita manga folder · no FlareSolverr by defau
 ## First-time setup
 
 ### 1. Credentials (hard-coded, for now)
-Edit `AUTH_USERNAME` / `AUTH_PASSWORD` in `gitops/suwayomi/deployment.yaml` before pushing.
+Edit `AUTH_USERNAME` / `AUTH_PASSWORD` in `kubernetes/apps/media/suwayomi/deployment.yaml` before pushing.
 These are the credentials for **both** the WebUI and Paperback.
 ⚠️ They end up in git history. Pick something you would not mind rotating; moving them into a
 SOPS secret later is the four-file recipe in `docs/secrets.md` §5.
@@ -44,7 +44,7 @@ Cloudflare DNS:  suwayomi → A → <master's Tailscale IP>   (grey cloud / DNS 
 ```
 ```bash
 git push
-sudo k3s kubectl apply -f gitops/apps/suwayomi.yaml     # Argo UI → suwayomi → review → SYNC
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/suwayomi.yaml     # Argo UI → suwayomi → review → SYNC
 sudo k3s kubectl get pods -n media -l app=suwayomi -w    # first start ~1–2 min (downloads the WebUI)
 sudo k3s kubectl logs -n media deploy/suwayomi --tail=30
 ```
@@ -122,7 +122,7 @@ as Suwayomi's Local source was tried and reverted.)
   into its data volume, keeps 14. Restore: WebUI → Settings → Backup → Restore. The CBZs are on
   NFS and need no backup from Suwayomi.
 - **Cloudflare-protected sources** (extension says "Cloudflare"/403): add a Byparr/FlareSolverr
-  Deployment in `gitops/suwayomi/` (image `ghcr.io/thephaseless/byparr`, port 8191) and set
+  Deployment in `kubernetes/apps/media/suwayomi/` (image `ghcr.io/thephaseless/byparr`, port 8191) and set
   `FLARESOLVERR_ENABLED=true`, `FLARESOLVERR_URL=http://suwayomi-byparr:8191`. It runs a full
   Chromium (~1 GB RAM), which is why it is off by default.
 
@@ -155,5 +155,5 @@ curl -u <user>:<pass> -s https://suwayomi.williampring.ca/api/graphql -H 'Conten
 Computer:   https://suwayomi.williampring.ca      (LAN http: http://192.168.68.63:30456)
 iPhone:     Paperback → extension https://tahouse.github.io/tachidesk-paperback-ext/ → Server URL above + creds
 Downloads:  192.168.68.50:/data/library/manga/<Source>/<Series>/   → Kavita Manga library
-Creds:      gitops/suwayomi/deployment.yaml (AUTH_USERNAME / AUTH_PASSWORD)
+Creds:      kubernetes/apps/media/suwayomi/deployment.yaml (AUTH_USERNAME / AUTH_PASSWORD)
 ```

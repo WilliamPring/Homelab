@@ -1,15 +1,15 @@
 # The one Ingress still managed by Ansible (Immich). Its APP is on Argo; only this Ingress
-# object remains here until it moves into gitops/immich. The 'letsencrypt' ClusterIssuer it
+# object remains here until it moves into kubernetes/apps/media/immich. The 'letsencrypt' ClusterIssuer it
 # references is on Argo CD:
-#   gitops/cert-manager/issuer/letsencrypt.yaml   (app: cert-manager-issuer)
+#   kubernetes/apps/cert-manager/cert-manager-issuer/letsencrypt.yaml   (app: cert-manager-issuer)
 # and the cloudflare-api-token Secret it needs is hand-created (docs/secrets.md).
 ---
-# NOTE: SearXNG + degoog Ingresses moved to GitOps (gitops/searxng/, gitops/degoog/) —
+# NOTE: SearXNG + degoog Ingresses moved to GitOps (kubernetes/apps/apps/searxng/, kubernetes/apps/apps/degoog/) —
 # Argo owns those apps end-to-end (workload + domain). The 'letsencrypt' ClusterIssuer
-# above stays here (shared infra). See gitops/README.md.
+# above stays here (shared infra). See kubernetes/README.md.
 #
 # ⚠️ The Immich Ingress (below) still lives HERE. Its APP is on Argo, but its domain is still
-# Ansible-managed. SAFE (Argo doesn't define this Ingress) — fold it into gitops/immich later.
+# Ansible-managed. SAFE (Argo doesn't define this Ingress) — fold it into kubernetes/apps/media/immich later.
 ---
 # Ingress for Immich (photos). https://immich.williampring.ca — note: media namespace.
 apiVersion: networking.k8s.io/v1

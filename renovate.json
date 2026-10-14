@@ -16,12 +16,12 @@
   "dependencyDashboardTitle": "🤖 Renovate Dependency Dashboard",
   "argocd": {
     "managerFilePatterns": [
-      "/gitops/apps/.+\\.ya?ml$/"
+      "/kubernetes/bootstrap/apps/.+\\.ya?ml$/"
     ]
   },
   "kubernetes": {
     "managerFilePatterns": [
-      "/gitops/.+\\.ya?ml$/"
+      "/kubernetes/.+\\.ya?ml$/"
     ]
   },
   "customManagers": [
@@ -29,7 +29,7 @@
       "description": "Immich APP version pinned in the chart values (controllers.main.containers.main.image.tag)",
       "customType": "regex",
       "managerFilePatterns": [
-        "/^gitops/immich/values\\.yaml$/"
+        "/^kubernetes/apps/media/immich/values\\.yaml$/"
       ],
       "matchStrings": [
         "tag:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
@@ -38,10 +38,10 @@
       "datasourceTemplate": "docker"
     },
     {
-      "description": "argo-cd install: the pinned upstream manifest URL in gitops/argocd/kustomization.yaml",
+      "description": "argo-cd install: the pinned upstream manifest URL in kubernetes/bootstrap/argocd/kustomization.yaml",
       "customType": "regex",
       "managerFilePatterns": [
-        "/^gitops/argocd/kustomization\\.yaml$/"
+        "/^kubernetes/bootstrap/argocd/kustomization\\.yaml$/"
       ],
       "matchStrings": [
         "https://raw\\.githubusercontent\\.com/argoproj/argo-cd/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/manifests/install\\.yaml"
@@ -134,7 +134,7 @@
       ]
     },
     {
-      "description": "Argo CD: one PR per upstream release (the pinned install URL). You merge, then re-apply gitops/argocd/ by hand — never automerged",
+      "description": "Argo CD: one PR per upstream release (the pinned install URL). You merge, then re-apply kubernetes/bootstrap/argocd/ by hand — never automerged",
       "addLabels": [
         "argocd"
       ],

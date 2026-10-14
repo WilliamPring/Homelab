@@ -1,0 +1,57 @@
+# Pin all Immich pods to the labeled 32GB worker.
+defaultPodOptions:
+  nodeSelector:
+    immich-node: "true"
+
+
+# Photo library → the pre-created NFS-backed PVC (kubernetes/apps/media/immich-prereqs/library.yaml).
+immich:
+  persistence:
+    library:
+      existingClaim: immich-library
+
+# Valkey (Redis) is NOT deployed by the chart — Immich uses the external Redis at
+# 192.168.68.103 (REDIS_* env below).
+valkey:
+  enabled: false
+
+
+# This top-level `controllers` block is SHARED: the chart merges it into BOTH the
+# immich-server and immich-machine-learning deployments (server.yaml / machine-learning.yaml
+# templates), so the image tag below pins both pods to the same Immich version.
+#
+# Environment — connect to the EXTERNAL vector Postgres (kubernetes/apps/media/immich-prereqs/postgres.yaml).
+# MUST live here (controllers.main.containers.main.env) for this chart to apply it.
+# DB_PASSWORD comes from the hand-managed immich-db Secret (out of git, must exist in media).
+controllers:
+  main:
+    containers:
+      main:
+        # ⚠️ IMMICH VERSION PIN. Without this the chart default appVersion runs (chart 0.13.2
+        #    → v3.2.0). Bumping this runs a one-way DB migration: SNAPSHOT the worker +
+        #    pg_dump BEFORE syncing. Downgrades are not supported.
+        #    Release notes: https://github.com/immich-app/immich/releases/tag/v3.1.0
+        env:
+          DB_HOSTNAME: immich-postgres
+          DB_USERNAME: immich
+          DB_DATABASE_NAME: immich
+          DB_PASSWORD:
+            valueFrom:
+              secretKeyRef:
+                name: immich-db
+                key: password
+          REDIS_HOSTNAME: "192.168.68.103"
+          REDIS_PORT: "6379"
+          REDIS_USERNAME: "redis"
+          REDIS_PASSWORD:
+            valueFrom:
+              secretKeyRef:
+                name: immich-secret
+                key: REDIS_PASSWORD
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "2Gi"
+          limits:
+            cpu: "6"
+            memory: "8Gi"

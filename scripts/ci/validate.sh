@@ -47,7 +47,7 @@ while IFS= read -r f; do
     inblk && /^[ \t]+[A-Za-z0-9_.-]+:[ \t]*[^ \t]/ { if ($0 !~ /ENC\[/) print "    " $0 }
   ' "$f")
   if [ -n "$bad" ]; then secret_problem "$f — plaintext value(s):"; echo "$bad"; else pass "$f"; fi
-done < <(find gitops -name '*.enc.yaml' | sort)
+done < <(find kubernetes -name '*.enc.yaml' | sort)
 
 # ── 2. kustomize ────────────────────────────────────────────────────────────────────────
 echo "== 2. kustomize: every kustomization renders (generators stripped) =="
@@ -62,13 +62,12 @@ while IFS= read -r k; do
     fail "$d"; sed 's/^/    /' "$OUT/kustomize-$name.err"
   fi
   rm -rf "$tmp"
-done < <(find gitops -name kustomization.yaml | sort)
+done < <(find kubernetes -name kustomization.yaml | sort)
 
 # ── 3. plain manifest dirs ──────────────────────────────────────────────────────────────
 echo "== 3. plain: manifest directories without a kustomization =="
 while IFS= read -r d; do
   [ -f "$d/kustomization.yaml" ] && continue
-  case "$d" in gitops/apps|gitops/argocd) continue;; esac
   name=$(echo "$d" | tr '/' '-'); : > "$OUT/plain-$name.yaml"; n=0
   for f in "$d"/*.yaml; do
     [ -e "$f" ] || continue
@@ -79,13 +78,13 @@ while IFS= read -r d; do
     else fail "$f — invalid YAML"; sed 's/^/    /' "$OUT/plain-$name.err"; fi
   done
   [ "$n" -gt 0 ] && pass "$d  ($n files)" || rm -f "$OUT/plain-$name.yaml"
-done < <(find gitops -mindepth 1 -maxdepth 2 -type d | sort)
+done < <(find kubernetes/apps -mindepth 2 -maxdepth 2 -type d | sort)   # kubernetes/apps/<ns>/<app>
 
 # ── 4. Argo Applications + helm charts ──────────────────────────────────────────────────
 echo "== 4. argo apps: valid Applications; chart sources render with their values =="
 : > "$OUT/argocd-apps.yaml"
-for f in gitops/apps/*.yaml; do { cat "$f"; echo; echo '---'; } >> "$OUT/argocd-apps.yaml"; done
-pass "gitops/apps  ($(ls gitops/apps/*.yaml | wc -l | tr -d ' ') Applications collected)"
+for f in kubernetes/bootstrap/apps/*.yaml; do { cat "$f"; echo; echo '---'; } >> "$OUT/argocd-apps.yaml"; done
+pass "kubernetes/bootstrap/apps  ($(ls kubernetes/bootstrap/apps/*.yaml | wc -l | tr -d ' ') Applications collected)"
 # ruby prints one line per chart source: name|repoURL|chart|version|values|namespace
 # (process substitution, NOT a pipe: a pipe would run the loop in a subshell and swallow FAIL=1)
 while IFS='|' read -r app repo chart ver vals ns; do
@@ -102,7 +101,7 @@ while IFS='|' read -r app repo chart ver vals ns; do
     fail "$app  ← $chart $ver"; sed 's/^/    /' "$OUT/helm-$app.err" | head -20
   fi
 done < <(ruby -ryaml -e '
-Dir["gitops/apps/*.yaml"].sort.each do |f|
+Dir["kubernetes/bootstrap/apps/*.yaml"].sort.each do |f|
   a=YAML.load_file(f); next unless a["kind"]=="Application"
   srcs=(a.dig("spec","sources")||[a.dig("spec","source")]).compact
   srcs.each do |s|

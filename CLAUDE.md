@@ -12,9 +12,10 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 - **One owner per thing.** Ansible = nodes (Tailscale, k3s, the few out-of-git secrets/labels). Argo = every app.
 - **Hostnames** are `*.williampring.ca` → the master's Tailscale IP (DNS-only). Only `share.williampring.ca` is public.
 
-## Layout (today; see docs for the planned move to `kubernetes/apps/<namespace>/<app>/`)
-- `gitops/apps/*.yaml` — one Argo `Application` per app (applied by hand once). `gitops/<app>/` — its manifests.
-- `gitops/argocd/` — Argo's own install (pinned upstream URL + patches). Applied with `kubectl apply -k … -n argocd`.
+## Layout
+- `kubernetes/apps/<namespace>/<app>/` — every app's manifests. Directory name = Argo app name; parent = its namespace.
+- `kubernetes/bootstrap/argocd/` — Argo's own install (pinned upstream URL + patches). Applied with `kubectl apply -k … -n argocd`.
+- `kubernetes/bootstrap/apps/*.yaml` — one Argo `Application` per app, applied by hand once (to be replaced by an ApplicationSet).
 - `ansible/` — node provisioning. `docs/` — one doc per app + platform docs. `scripts/ci/` — validation.
 
 ## Shape of an app directory
@@ -35,4 +36,4 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 - ntfy topic `homelab-argocd` = deploy events (Argo). `homelab-alerts` = outages (Gatus). Keep them separate.
 
 ## When unsure
-Check how `gitops/komf/` does it — it is the smallest complete example (manifests + SOPS secret + docs/kavita.md).
+Check how `kubernetes/apps/media/komf/` does it — it is the smallest complete example (manifests + SOPS secret + docs/kavita.md).

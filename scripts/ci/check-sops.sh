@@ -10,6 +10,6 @@ check() {
 if [ "$#" -gt 0 ]; then
   for f in "$@"; do check "$f"; done
 else
-  while IFS= read -r f; do check "$f"; done < <(find gitops kubernetes -name '*.enc.yaml' 2>/dev/null | sort)
+  while IFS= read -r f; do check "$f"; done < <(find kubernetes -name '*.enc.yaml' 2>/dev/null | sort)
 fi
 exit $rc

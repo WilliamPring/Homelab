@@ -17,7 +17,7 @@ Dashboard: https://status.williampring.ca   (LAN: http://192.168.68.63:30881)
 
 | Argo app | Path | Deploys |
 |---|---|---|
-| `gatus` | `gitops/gatus` | Deployment, config ConfigMap, 1Gi PVC, NodePort, Ingress — namespace `monitoring` |
+| `gatus` | `kubernetes/apps/monitoring/gatus` | Deployment, config ConfigMap, 1Gi PVC, NodePort, Ingress — namespace `monitoring` |
 
 ---
 
@@ -27,7 +27,7 @@ Cloudflare DNS:  status → A → <master's Tailscale IP>   (grey cloud / DNS on
 ```
 ```bash
 # the monitoring namespace used to hold Loki/Grafana — clear the orphans first (docs/cluster-cleanup.md §1)
-sudo k3s kubectl apply -f gitops/apps/gatus.yaml       # Argo UI → gatus → SYNC
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps/gatus.yaml       # Argo UI → gatus → SYNC
 sudo k3s kubectl get pods -n monitoring -w
 ```
 Phone: ntfy app → **+** → topic `homelab-alerts` (same server as `homelab-argocd`).
@@ -45,7 +45,7 @@ RomM/Komf if not synced). Fix or delete those entries rather than living with re
 - If **ntfy itself** is down nothing can page you; the dashboard still shows it red.
 
 ## Editing checks
-Everything is in `gitops/gatus/configmap.yaml`. Add an endpoint = copy a block, change name/url/
+Everything is in `kubernetes/apps/monitoring/gatus/configmap.yaml`. Add an endpoint = copy a block, change name/url/
 conditions, push, Sync. **Gatus reads its config at start**, so after a Sync that changes the
 ConfigMap: `sudo k3s kubectl -n monitoring rollout restart deploy/gatus` (CI validates the YAML).
 

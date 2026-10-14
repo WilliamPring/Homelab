@@ -6,7 +6,7 @@ reference. For the *why* and the full architecture, see `docs/secrets-architectu
 
 ```
 YOU (Arch box, has the age PRIVATE key)         GIT (public key only)         ARGO CD (has the private key too)
-sops -e / sops <file>  ──encrypt──►  gitops/<app>/<app>-secret.enc.yaml  ──►  repo-server + KSOPS decrypt
+sops -e / sops <file>  ──encrypt──►  kubernetes/apps/<namespace>/<app>/<app>-secret.enc.yaml  ──►  repo-server + KSOPS decrypt
                                          values are ENC[...], keys readable          → real k8s Secret → pods
 ```
 
@@ -21,10 +21,10 @@ git at all.** Plaintext never gets committed.
 
 | File | Secret → namespace | Keys | Used by |
 |---|---|---|---|
-| `gitops/immich/prereqs/immich-secret.enc.yaml` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
-| `gitops/degoog/degoog-secret.enc.yaml` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS` | degoog |
-| `gitops/komf/komf-secret.enc.yaml` | `komf-secret` → media | `KAVITA_API_KEY` | Komf ⚠️ **template, not yet encrypted** |
-| `gitops/romm/romm-secret.enc.yaml` | `romm-secret` → media | `ROMM_AUTH_SECRET_KEY`, `DB_PASSWD`, `REDIS_PASSWORD`, 6 optional provider keys | RomM ⚠️ **template, not yet encrypted** |
+| `kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
+| `kubernetes/apps/apps/degoog/degoog-secret.enc.yaml` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS` | degoog |
+| `kubernetes/apps/media/komf/komf-secret.enc.yaml` | `komf-secret` → media | `KAVITA_API_KEY` | Komf ⚠️ **template, not yet encrypted** |
+| `kubernetes/apps/media/romm/romm-secret.enc.yaml` | `romm-secret` → media | `ROMM_AUTH_SECRET_KEY`, `DB_PASSWD`, `REDIS_PASSWORD`, 6 optional provider keys | RomM ⚠️ **template, not yet encrypted** |
 
 Each one has a sibling `<app>-secret.sops.yaml` (the KSOPS *generator*, not a secret — it just
 says "decrypt that file") and is listed under `generators:` in the app's `kustomization.yaml`.
@@ -42,10 +42,10 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 Migrating these into `.enc.yaml` files is the open item from `docs/archive/sops-argocd.md` Phase 9.
 
 ### Known debt ⚠️
-- `gitops/suwayomi/deployment.yaml` carries Suwayomi's Basic-auth username/password **inline**
+- `kubernetes/apps/media/suwayomi/deployment.yaml` carries Suwayomi's Basic-auth username/password **inline**
   (chosen for now; host is Tailscale-only). Move to a SOPS secret with the §5 recipe when ready,
   then rotate the password since the old one stays in git history.
-- `gitops/degoog/deployment.yaml` still has the Valkey URL **inline in plaintext**, including the
+- `kubernetes/apps/apps/degoog/deployment.yaml` still has the Valkey URL **inline in plaintext**, including the
   password of the shared `redis` user. It is in git history on GitHub. Fix = rotate that password
   on the Valkey host, update `immich-secret`, move the URL into `degoog-secret`. Encrypting later
   does not un-leak it (Phase 8 of `docs/archive/sops-argocd.md`).
@@ -66,13 +66,13 @@ mkdir -p ~/.config/sops/age && scp arch:~/.config/sops/age/keys.txt ~/.config/so
 chmod 600 ~/.config/sops/age/keys.txt
 
 # prove it works (prints the decrypted immich secret to the terminal, changes nothing):
-sops -d gitops/immich/prereqs/immich-secret.enc.yaml
+sops -d kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
 ```
 `.sops.yaml` at the repo root already matches `*.enc.yaml`, `*.sops.yaml` and `*secrets.yaml`
 and names the public key, so none of the commands below need flags.
 
 The cluster side is already done: the `sops-age` Secret in the `argocd` namespace is mounted
-into the repo-server at `/etc/sops-age/keys.txt` (`gitops/argocd/repo-server-ksops-patch.yaml`).
+into the repo-server at `/etc/sops-age/keys.txt` (`kubernetes/bootstrap/argocd/repo-server-ksops-patch.yaml`).
 If you ever rebuild the cluster, recreate it **first**, or no app with a secret will sync:
 ```bash
 sudo k3s kubectl create secret generic sops-age -n argocd --from-file=keys.txt=$HOME/.config/sops/age/keys.txt
@@ -87,22 +87,22 @@ sudo k3s kubectl create secret generic sops-age -n argocd --from-file=keys.txt=$
 
 ```bash
 # VIEW — whole file decrypted to the terminal, file untouched
-sops -d gitops/immich/prereqs/immich-secret.enc.yaml
+sops -d kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
 
 # EXTRACT — one value, e.g. to paste it somewhere else
-sops -d --extract '["stringData"]["REDIS_PASSWORD"]' gitops/immich/prereqs/immich-secret.enc.yaml
+sops -d --extract '["stringData"]["REDIS_PASSWORD"]' kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
 
 # EDIT — decrypts into $EDITOR, re-encrypts on save (add/change/remove keys here)
-sops gitops/degoog/degoog-secret.enc.yaml
+sops kubernetes/apps/apps/degoog/degoog-secret.enc.yaml
 
 # ENCRYPT — a plaintext template, in place, first time only
-sops -e -i gitops/komf/komf-secret.enc.yaml
+sops -e -i kubernetes/apps/media/komf/komf-secret.enc.yaml
 
 # VERIFY — before every commit. sops refuses to decrypt a file that was never encrypted,
 # so a clean round-trip proves the file is ciphertext:
-sops -d gitops/komf/komf-secret.enc.yaml > /dev/null && echo "ENCRYPTED - safe to commit"
+sops -d kubernetes/apps/media/komf/komf-secret.enc.yaml > /dev/null && echo "ENCRYPTED - safe to commit"
 #   "sops metadata not found"  → still plaintext, do NOT commit
-grep -c 'ENC\[' gitops/komf/komf-secret.enc.yaml      # should equal the number of values (+1 for the mac line)
+grep -c 'ENC\[' kubernetes/apps/media/komf/komf-secret.enc.yaml      # should equal the number of values (+1 for the mac line)
 ```
 
 After changing a secret: push → Argo → Sync. **Pods do not restart on Secret changes**, so:
@@ -119,10 +119,10 @@ Valkey host, one Postgres LXC). Pattern: extract → paste into the other app's 
 
 ```bash
 # example: give RomM the same Valkey password Immich uses
-sops -d --extract '["stringData"]["REDIS_PASSWORD"]' gitops/immich/prereqs/immich-secret.enc.yaml
-#  → paste into REDIS_PASSWORD in gitops/romm/romm-secret.enc.yaml
-#  → in gitops/romm/deployment.yaml set REDIS_USERNAME to "redis" (the shared user) instead of "romm"
-sops -e -i gitops/romm/romm-secret.enc.yaml
+sops -d --extract '["stringData"]["REDIS_PASSWORD"]' kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
+#  → paste into REDIS_PASSWORD in kubernetes/apps/media/romm/romm-secret.enc.yaml
+#  → in kubernetes/apps/media/romm/deployment.yaml set REDIS_USERNAME to "redis" (the shared user) instead of "romm"
+sops -e -i kubernetes/apps/media/romm/romm-secret.enc.yaml
 ```
 Do **not** do this with the Valkey password until the debt in §1 is fixed — you would be
 spreading a password that is already public in git history. Prefer a fresh ACL user per app
@@ -140,7 +140,7 @@ sudo k3s kubectl get secret immich-db -n media -o jsonpath='{.data.password}' | 
 Using `myapp` in namespace `media` as the example. Four files touch:
 
 ```yaml
-# 1. gitops/myapp/myapp-secret.enc.yaml  — plaintext for ~30 seconds, then encrypted
+# 1. kubernetes/apps/<namespace>/myapp/myapp-secret.enc.yaml  — plaintext for ~30 seconds, then encrypted
 apiVersion: v1
 kind: Secret
 metadata:
@@ -151,7 +151,7 @@ stringData:
   API_KEY: "the-real-value"
 ```
 ```yaml
-# 2. gitops/myapp/myapp-secret.sops.yaml  — the KSOPS generator (safe, holds no secret)
+# 2. kubernetes/apps/<namespace>/myapp/myapp-secret.sops.yaml  — the KSOPS generator (safe, holds no secret)
 apiVersion: viaduct.ai/v1
 kind: ksops
 metadata:
@@ -165,7 +165,7 @@ files:
   - ./myapp-secret.enc.yaml
 ```
 ```yaml
-# 3. gitops/myapp/kustomization.yaml  — generator, NOT resource
+# 3. kubernetes/apps/<namespace>/myapp/kustomization.yaml  — generator, NOT resource
 resources:
   - deployment.yaml
 generators:
@@ -181,11 +181,11 @@ env:
         key: API_KEY
 ```
 ```bash
-sops -e -i gitops/myapp/myapp-secret.enc.yaml     # 5. encrypt
+sops -e -i kubernetes/apps/<namespace>/myapp/myapp-secret.enc.yaml     # 5. encrypt
 # 6. VERIFY (see §3) → commit → push → kubectl apply the Argo app → Sync
 sudo k3s kubectl get secret myapp-secret -n media  # 7. exists → KSOPS worked
 ```
-Copy `gitops/komf/` as a template — it is the smallest complete example.
+Copy `kubernetes/apps/media/komf/` as a template — it is the smallest complete example.
 
 ---
 
@@ -193,7 +193,7 @@ Copy `gitops/komf/` as a template — it is the smallest complete example.
 
 1. Change the real credential at its source (DB `ALTER ROLE`, Valkey `ACL SETUSER`, regenerate
    the API key in the app's UI).
-2. `sops gitops/<app>/<app>-secret.enc.yaml` → paste the new value → save.
+2. `sops kubernetes/apps/<namespace>/<app>/<app>-secret.enc.yaml` → paste the new value → save.
 3. Push → Sync → `rollout restart` the deployment.
 4. If the old value was ever committed in plaintext, rotating is **mandatory**, not optional.
 
@@ -206,7 +206,7 @@ Copy `gitops/komf/` as a template — it is the smallest complete example.
 | `sops: no key could be found` / `failed to decrypt` on your machine | no `~/.config/sops/age/keys.txt` here → §2 |
 | `sops: no matching creation rules` | filename doesn't end in `.enc.yaml` / `.sops.yaml` |
 | Argo: `secret "<app>-secret" not found`, pod `CreateContainerConfigError` | the `.enc.yaml` is still plaintext (KSOPS refuses it) → encrypt, push, sync |
-| Argo: `plugin ... not allowed` / `exec` error | repo-server KSOPS patch or `--enable-alpha-plugins --enable-exec` missing (`gitops/argocd/argocd-cm.yaml`) |
+| Argo: `plugin ... not allowed` / `exec` error | repo-server KSOPS patch or `--enable-alpha-plugins --enable-exec` missing (`kubernetes/bootstrap/argocd/argocd-cm.yaml`) |
 | Argo: `Failed to verify data integrity` / `MAC mismatch` | an encrypted file was hand-edited → restore from git and use `sops <file>` instead |
 | Secret updated, app still uses old value | `kubectl rollout restart deploy/<app>` |
 | Everything fails after a cluster rebuild | `sops-age` Secret missing in `argocd` → §2 |

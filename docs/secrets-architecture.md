@@ -709,7 +709,7 @@ A typical repository may look like:
 .
 ├── .sops.yaml
 │
-├── gitops/
+├── kubernetes/
 │   │
 │   ├── argocd/
 │   │   ├── kustomization.yaml
@@ -938,7 +938,7 @@ Without the appropriate plugin options, Argo CD may not execute KSOPS.
 **Verify:**
 
 ```bash
-kubectl kustomize gitops/argocd/ | grep -A2 -B2 'kustomize.buildOptions'
+kubectl kustomize kubernetes/bootstrap/argocd/ | grep -A2 -B2 'kustomize.buildOptions'
 ```
 
 Expected:
@@ -1141,7 +1141,7 @@ Expected:
 A typical application looks like:
 
 ```text
-gitops/myapp/
+kubernetes/apps/<namespace>/myapp/
 
 ├── kustomization.yaml
 ├── deployment.yaml
@@ -1373,7 +1373,7 @@ Conceptually:
 kustomize build \
   --enable-alpha-plugins \
   --enable-exec \
-  gitops/myapp
+  kubernetes/apps/<namespace>/myapp
 ```
 
 ### Step 4: Kustomize sees the generator
