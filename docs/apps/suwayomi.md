@@ -44,7 +44,7 @@ Cloudflare DNS:  suwayomi → A → <master's Tailscale IP>   (grey cloud / DNS 
 ```
 ```bash
 git push
-sudo k3s kubectl apply -f kubernetes/bootstrap/apps/suwayomi.yaml     # Argo UI → suwayomi → review → SYNC
+# push → the ApplicationSet registers `suwayomi` within ~3 min → Argo UI → suwayomi → review → SYNC
 sudo k3s kubectl get pods -n media -l app=suwayomi -w    # first start ~1–2 min (downloads the WebUI)
 sudo k3s kubectl logs -n media deploy/suwayomi --tail=30
 ```

@@ -9,7 +9,7 @@ games (RomM), search (SearXNG, degoog), and the glue (cert-manager, ntfy, Gatus,
 | Directory | What | Who touches it |
 |---|---|---|
 | `ansible/` | the nodes: Tailscale, k3s, the few out-of-git secrets/labels | you, `ansible-playbook site.yml` |
-| `kubernetes/bootstrap/` | Argo CD itself + the `Application` pointers | you, `kubectl apply`, rarely |
+| `kubernetes/bootstrap/` | Argo CD itself + the ApplicationSet that discovers apps | you, `kubectl apply`, rarely |
 | `kubernetes/apps/<namespace>/<app>/` | every app's manifests | git push → Argo → **you click Sync** |
 | `docs/` | this | |
 | `scripts/ci/` | the validation CI runs (and you can run) | `make validate` |

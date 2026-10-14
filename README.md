@@ -65,7 +65,7 @@ out-of-git secrets/labels the apps rely on. Ansible's job ends at "a working clu
 **Apps (Argo CD)** — deployed from git, not the playbook:
 ```bash
 # one-time: install Argo CD, then register an app
-kubectl apply -f kubernetes/bootstrap/apps/<app>.yaml
+git push   # the ApplicationSet (kubernetes/bootstrap/apps.yaml) registers the new directory as an app
 # thereafter: edit a manifest → git push → Argo syncs it
 ```
 See [`kubernetes/README.md`](kubernetes/README.md) for the full workflow.

@@ -83,8 +83,8 @@ done < <(find kubernetes/apps -mindepth 2 -maxdepth 2 -type d | sort)   # kubern
 # ── 4. Argo Applications + helm charts ──────────────────────────────────────────────────
 echo "== 4. argo apps: valid Applications; chart sources render with their values =="
 : > "$OUT/argocd-apps.yaml"
-for f in kubernetes/bootstrap/apps/*.yaml; do { cat "$f"; echo; echo '---'; } >> "$OUT/argocd-apps.yaml"; done
-pass "kubernetes/bootstrap/apps  ($(ls kubernetes/bootstrap/apps/*.yaml | wc -l | tr -d ' ') Applications collected)"
+for f in kubernetes/bootstrap/apps.yaml kubernetes/bootstrap/apps/*.yaml; do [ -e "$f" ] || continue; case "$f" in *.md) continue;; esac; { cat "$f"; echo; echo '---'; } >> "$OUT/argocd-apps.yaml"; done
+pass "bootstrap: ApplicationSet + $(ls kubernetes/bootstrap/apps/*.yaml 2>/dev/null | wc -l | tr -d ' ') legacy Applications collected"
 # ruby prints one line per chart source: name|repoURL|chart|version|values|namespace
 # (process substitution, NOT a pipe: a pipe would run the loop in a subshell and swallow FAIL=1)
 while IFS='|' read -r app repo chart ver vals ns; do
@@ -102,7 +102,7 @@ while IFS='|' read -r app repo chart ver vals ns; do
   fi
 done < <(ruby -ryaml -e '
 Dir["kubernetes/bootstrap/apps/*.yaml"].sort.each do |f|
-  a=YAML.load_file(f); next unless a["kind"]=="Application"
+  a=YAML.load_file(f) rescue next; next unless a.is_a?(Hash) && a["kind"]=="Application"
   srcs=(a.dig("spec","sources")||[a.dig("spec","source")]).compact
   srcs.each do |s|
     next unless s["chart"]

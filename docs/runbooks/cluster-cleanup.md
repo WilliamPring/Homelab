@@ -101,7 +101,7 @@ Also, by hand:
 **LOOK**
 ```bash
 k get applications -n argocd -o name | sed 's|application.argoproj.io/||' | sort > /tmp/live.txt
-ls kubernetes/bootstrap/apps/*.yaml | xargs -n1 basename | sed 's/\.yaml$//' | sort > /tmp/git.txt   # run from the repo
+ls -d kubernetes/apps/*/* | xargs -n1 basename | sort > /tmp/git.txt   # run from the repo (one dir per app)
 comm -23 /tmp/live.txt /tmp/git.txt                             # live but NOT in git
 ```
 Expect: `vaultwarden` (until item 4), nothing else. Anything else listed is a leftover.
@@ -143,7 +143,7 @@ git stash drop stash@{0}
 ```bash
 k get ns                                              # no monitoring / nitter
 k get pvc -A                                          # only claims that belong to current apps
-k get applications -n argocd                          # exactly the files in kubernetes/bootstrap/apps/
+k get applications -n argocd                          # exactly the directories under kubernetes/apps/*/
 k get certificate -A                                  # all READY, one per live hostname
 ```
 Then delete this file, or keep it as the template for the next removal.

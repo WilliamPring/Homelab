@@ -42,9 +42,9 @@ creation); 1.18 changes new Certificates' default `rotationPolicy` to `Always`, 
 sudo k3s kubectl get certificate -A                         # all READY=True — note the list
 sudo k3s kubectl -n cert-manager get deploy -o wide          # v1.17.2 images
 
-# 1. register both apps (by hand — no app-of-apps yet)
-sudo k3s kubectl apply -f kubernetes/bootstrap/apps/cert-manager.yaml
-sudo k3s kubectl apply -f kubernetes/bootstrap/apps/cert-manager-issuer.yaml
+# 1. both apps are registered by the ApplicationSet once pushed (nothing to apply by hand)
+# push → the ApplicationSet registers `cert-manager` within ~3 min → Argo UI → cert-manager → review → SYNC
+# push → the ApplicationSet registers `cert-manager-issuer` within ~3 min → Argo UI → cert-manager-issuer → review → SYNC
 
 # 2. Argo UI → cert-manager → review the diff (expect: image tags 1.17.2→1.18.6, CRD updates,
 #    resource limits, Argo tracking labels) → SYNC (plain; ServerSideApply is already set)

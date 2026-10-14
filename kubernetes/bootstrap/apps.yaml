@@ -1,0 +1,57 @@
+# The ApplicationSet — discovers every app from the directory tree and creates its Argo Application.
+#
+#   kubernetes/apps/<namespace>/<app>/   →   Application "<app>" deploying that directory into <namespace>
+#
+#   add an app    = new directory + push  → appears in Argo within ~3 min (no kubectl)
+#   remove an app = delete the directory  → its Application is removed; the deployed resources STAY
+#                                           (no finalizer on generated apps — delete them by hand if wanted)
+#
+# This is the ONE Application-level object applied by hand, once:
+#   sudo k3s kubectl apply -f kubernetes/bootstrap/apps.yaml
+#
+# Scope: the set automates REGISTRATION only. Every generated app has the usual manual syncPolicy —
+# nothing deploys until you click Sync. Hand-edits to a generated Application spec are reverted by
+# the controller: change the directory, not the object.
+#
+# Per-app exceptions live in `templatePatch` (today: cert-manager needs ServerSideApply — its CRDs
+# exceed the client-side annotation limit).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    preserveResourcesOnDeletion: true     # deleting THIS object leaves the Applications in place
+  generators:
+    - git:
+        repoURL: https://github.com/WilliamPring/Homelab.git
+        revision: main
+        directories:
+          - path: kubernetes/apps/*/*
+  template:
+    metadata:
+      name: "{{ .path.basename }}"                 # directory name = app name
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/WilliamPring/Homelab.git
+        targetRevision: main
+        path: "{{ .path.path }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ index .path.segments 2 }}"  # kubernetes/apps/<namespace>/<app> → segment 2
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+  templatePatch: |
+    {{- if eq .path.basename "cert-manager" }}
+    spec:
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+    {{- end }}

@@ -17,7 +17,8 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 ## Layout
 - `kubernetes/apps/<namespace>/<app>/` — every app's manifests. Directory name = Argo app name; parent = its namespace.
 - `kubernetes/bootstrap/argocd/` — Argo's own install (pinned upstream URL + patches). Applied with `kubectl apply -k … -n argocd`.
-- `kubernetes/bootstrap/apps/*.yaml` — one Argo `Application` per app, applied by hand once (to be replaced by an ApplicationSet).
+- `kubernetes/bootstrap/apps.yaml` — the ApplicationSet: every `kubernetes/apps/<namespace>/<app>/` directory becomes an
+  Application automatically. New app = new directory. Never hand-write Application files.
 - `ansible/` — node provisioning. `docs/` — one doc per app + platform docs. `scripts/ci/` — validation.
 
 ## Shape of an app directory

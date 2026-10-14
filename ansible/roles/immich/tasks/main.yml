@@ -5,7 +5,7 @@
 # The actual Immich manifests (vector Postgres, library PV/PVC) + the Helm chart now live
 # in GitOps / Argo CD:
 #   kubernetes/apps/media/immich-prereqs/   (Postgres + NFS library)   → app: immich-prereqs
-#   kubernetes/apps/media/immich/values.yaml + kubernetes/bootstrap/apps/immich.yaml (OCI Helm chart) → app: immich
+#   kubernetes/apps/media/immich/values.yaml + kubernetes/apps/media/immich/ (OCI Helm chart) → app: immich
 # So this role no longer applies any manifests — it only ensures the secret + label exist
 # (which the GitOps manifests reference but can't create themselves).
 
@@ -37,7 +37,7 @@
     msg:
       - "✅ Immich INFRA ready: immich-db Secret + worker node label (immich-node=true)."
       - "   The Immich MANIFESTS + chart are deployed by Argo CD, not Ansible:"
-      - "     kubernetes/bootstrap/apps/immich-prereqs.yaml  → Postgres + NFS library (sync FIRST)"
-      - "     kubernetes/bootstrap/apps/immich.yaml          → the OCI Helm chart"
+      - "     kubernetes/apps/media/immich-prereqs/  → Postgres + NFS library (sync FIRST)"
+      - "     kubernetes/apps/media/immich/          → the OCI Helm chart"
       - "🔍 sudo k3s kubectl get secret immich-db -n media"
       - "🔍 sudo k3s kubectl get node k3s-worker-01 --show-labels | grep immich-node"

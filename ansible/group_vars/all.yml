@@ -15,7 +15,7 @@ tailscale_up_args: "--accept-dns=false"
 
 # ─── Immich (photos) — HEAVY, pinned to the 32GB worker ─────────────────────────
 # Controls Play 5 (the out-of-git immich-db Secret + the immich-node label on the 32GB
-# worker). Immich itself is deployed by Argo CD (kubernetes/bootstrap/apps/immich*.yaml). Requires:
+# worker). Immich itself is deployed by Argo CD (kubernetes/apps/media/immich*). Requires:
 # the 32GB worker joined, and immich_db_password set in vars/secrets.local.yaml.
 immich_enabled: true
 

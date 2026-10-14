@@ -32,7 +32,7 @@
 # ─── PLAY 4: Immich INFRA (immich-db secret + worker node label) ─────────────
 # Immich's MANIFESTS + chart are now on GitOps (Argo CD). This play only ensures the
 # out-of-git bits the GitOps manifests reference: the immich-db Secret + the immich-node
-# label on the 32GB worker. Gated by immich_enabled. See kubernetes/bootstrap/apps/immich*.yaml.
+# label on the 32GB worker. Gated by immich_enabled. See kubernetes/apps/media/immich*.
 - name: Immich infra (secret + node label)
   hosts: master
   become: true
@@ -42,7 +42,7 @@
 
 # ─── PLAY 5: the last Ansible-managed Ingress (Immich) ───────────────────────
 # cert-manager and the Let's Encrypt ClusterIssuer are on Argo CD now
-# (kubernetes/bootstrap/apps/cert-manager*.yaml). This play only applies the Immich Ingress object,
+# (kubernetes/apps/cert-manager/). This play only applies the Immich Ingress object,
 # which still lives in Ansible until it moves into kubernetes/apps/media/immich.
 # Gated by tls_enabled. Requires the 'letsencrypt' ClusterIssuer to exist (Argo).
 - name: Ingress still owned by Ansible (Immich)

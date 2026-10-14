@@ -83,7 +83,7 @@ Then on the Arch box (it has the age key):
 # paste the key into the template, then encrypt in place
 $EDITOR kubernetes/apps/media/komf/komf-secret.enc.yaml            # replace REPLACE_ME_WITH_KAVITA_API_KEY
 sops --encrypt --in-place kubernetes/apps/media/komf/komf-secret.enc.yaml
-git add kubernetes/apps/media/komf kubernetes/bootstrap/apps/komf.yaml && git commit -m "feat: komf" && git push
+git add kubernetes/apps/media/komf && git commit -m "feat: komf" && git push
 ```
 Check the file before pushing: `stringData.KAVITA_API_KEY` must read `ENC[AES256_GCM,...]`.
 
@@ -92,7 +92,7 @@ Check the file before pushing: `stringData.KAVITA_API_KEY` must read `ENC[AES256
 Cloudflare DNS:  komf → A → <master's Tailscale IP>   (grey cloud / DNS only — Komf has NO login)
 ```
 ```bash
-sudo k3s kubectl apply -f kubernetes/bootstrap/apps/komf.yaml      # Argo UI → komf → review → SYNC
+# push → the ApplicationSet registers `komf` within ~3 min → Argo UI → komf → review → SYNC
 sudo k3s kubectl get pods -n media -l app=komf        # Running (init container seeds config first)
 sudo k3s kubectl logs -n media deploy/komf | tail     # "Started" + kavita event listener connected
 curl -s https://komf.williampring.ca/api/kavita/metadata/providers   # → JSON list of enabled providers

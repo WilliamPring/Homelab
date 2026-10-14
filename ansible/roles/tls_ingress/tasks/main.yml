@@ -1,7 +1,7 @@
 ---
 # roles/tls_ingress/tasks/main.yml — the Immich Ingress object (the last one not yet in
 # gitops). Runs on the master. Needs the 'letsencrypt' ClusterIssuer, which is
-# deployed by Argo (kubernetes/bootstrap/apps/cert-manager-issuer.yaml).
+# deployed by Argo (kubernetes/apps/cert-manager/cert-manager-issuer/).
 
 - name: Copy the Ingress manifest to the master
   ansible.builtin.copy:
@@ -21,4 +21,4 @@
       - "ℹ️  SearXNG + degoog Ingresses are on GitOps (Argo) now — not managed here."
       - "⏳ watch the certs:  sudo k3s kubectl get certificate -A -w   (want READY=True)"
       - "📡 Cloudflare DNS: immich → A → the master's Tailscale IP (grey cloud)."
-      - "ℹ️  cert-manager + the letsencrypt ClusterIssuer: kubernetes/bootstrap/apps/cert-manager*.yaml (docs/platform/tls.md)"
+      - "ℹ️  cert-manager + the letsencrypt ClusterIssuer: kubernetes/apps/cert-manager/ (docs/platform/tls.md)"

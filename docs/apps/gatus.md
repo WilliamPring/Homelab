@@ -27,7 +27,7 @@ Cloudflare DNS:  status → A → <master's Tailscale IP>   (grey cloud / DNS on
 ```
 ```bash
 # the monitoring namespace used to hold Loki/Grafana — clear the orphans first (docs/runbooks/cluster-cleanup.md §1)
-sudo k3s kubectl apply -f kubernetes/bootstrap/apps/gatus.yaml       # Argo UI → gatus → SYNC
+# push → the ApplicationSet registers `gatus` within ~3 min → Argo UI → gatus → review → SYNC
 sudo k3s kubectl get pods -n monitoring -w
 ```
 Phone: ntfy app → **+** → topic `homelab-alerts` (same server as `homelab-argocd`).

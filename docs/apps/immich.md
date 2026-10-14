@@ -54,8 +54,8 @@ changes whenever the chart bumps (chart 0.13.2 → v3.2.0). ⚠️ The key is NO
 ### Deploy / sync (order matters — prereqs FIRST)
 ```bash
 # after git push, and confirming the secret + node label exist:
-sudo k3s kubectl apply -f kubernetes/bootstrap/apps/immich-prereqs.yaml    # Argo UI → review diff → SYNC
-sudo k3s kubectl apply -f kubernetes/bootstrap/apps/immich.yaml            # Argo UI → review diff → SYNC
+# push → the ApplicationSet registers `immich-prereqs` within ~3 min → Argo UI → immich-prereqs → review → SYNC
+# push → the ApplicationSet registers `immich` within ~3 min → Argo UI → immich → review → SYNC
 ```
 - Sync is **MANUAL** — Argo shows OutOfSync and waits for you to click Sync.
 - **OCI gotcha:** if the `immich` app errors that OCI isn't enabled, register it once —

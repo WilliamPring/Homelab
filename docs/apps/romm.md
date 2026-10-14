@@ -95,8 +95,8 @@ dev) app. Add them to the secret any time → `sops` edit → push → sync → 
 Cloudflare DNS:  roms → A → <master's Tailscale IP>   (grey cloud / DNS only)
 ```
 ```bash
-git add kubernetes/apps/media/romm kubernetes/bootstrap/apps/romm.yaml scripts/postgres-romm-setup.sh && git commit -m "feat: romm" && git push
-sudo k3s kubectl apply -f kubernetes/bootstrap/apps/romm.yaml       # Argo UI → romm → review → SYNC
+git add kubernetes/apps/media/romm scripts/postgres-romm-setup.sh && git commit -m "feat: romm" && git push
+# push → the ApplicationSet registers `romm` within ~3 min → Argo UI → romm → review → SYNC
 sudo k3s kubectl get pods -n media -l app=romm -w     # Running + 1/1 Ready (migrations take ~1 min)
 sudo k3s kubectl logs -n media deploy/romm --tail=50  # no DB / Redis connection errors
 ```
