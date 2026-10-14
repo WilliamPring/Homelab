@@ -88,9 +88,8 @@ Delete a directory → its Application is removed, its deployed resources stay (
 Per-app exceptions (cert-manager's ServerSideApply) live in the set's `templatePatch`.
 Hand-edits to a generated Application are reverted by the controller — change the directory instead.
 
-### First rollout / adoption check
-The 15 previously hand-applied Applications have the same names the set generates, so the
-controller adopts them in place:
+### Adoption check (done 2026-10-13; keep for a rebuild)
+Hand-applied Applications with the same names the set generates are adopted in place:
 ```bash
 sudo k3s kubectl apply -f kubernetes/bootstrap/apps.yaml
 sleep 60; sudo k3s kubectl -n argocd get applications                 # still exactly 15, all Synced
@@ -99,7 +98,7 @@ sudo k3s kubectl -n argocd describe applicationset apps | tail -20   # no errors
 ```
 If an app shows an "already exists / not managed" error in those events instead of being adopted:
 `kubectl -n argocd delete application <app>` (no finalizer → its pods stay) and the set recreates it
-within a minute. Then delete `kubernetes/bootstrap/apps/` from git.
+within a minute.
 See `kubernetes/README.md` for the full add-an-app recipe.
 
 ## Gotchas

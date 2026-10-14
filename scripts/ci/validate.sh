@@ -81,10 +81,10 @@ while IFS= read -r d; do
 done < <(find kubernetes/apps -mindepth 2 -maxdepth 2 -type d | sort)   # kubernetes/apps/<ns>/<app>
 
 # ── 4. Argo Applications + helm charts ──────────────────────────────────────────────────
-echo "== 4. argo apps: valid Applications; chart sources render with their values =="
+echo "== 4. argo: the ApplicationSet (and any leftover chart-source Application) =="
 : > "$OUT/argocd-apps.yaml"
-for f in kubernetes/bootstrap/apps.yaml kubernetes/bootstrap/apps/*.yaml; do [ -e "$f" ] || continue; case "$f" in *.md) continue;; esac; { cat "$f"; echo; echo '---'; } >> "$OUT/argocd-apps.yaml"; done
-pass "bootstrap: ApplicationSet + $(ls kubernetes/bootstrap/apps/*.yaml 2>/dev/null | wc -l | tr -d ' ') legacy Applications collected"
+{ cat kubernetes/bootstrap/apps.yaml; echo; echo '---'; } >> "$OUT/argocd-apps.yaml"
+pass "bootstrap: ApplicationSet collected ($(ls -d kubernetes/apps/*/* | wc -l | tr -d ' ') app directories it will generate)"
 # ruby prints one line per chart source: name|repoURL|chart|version|values|namespace
 # (process substitution, NOT a pipe: a pipe would run the loop in a subshell and swallow FAIL=1)
 while IFS='|' read -r app repo chart ver vals ns; do
