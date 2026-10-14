@@ -26,6 +26,18 @@ spec:
             - name: custom-tools
               mountPath: /custom-tools
 
+        - name: install-helm3
+          image: alpine/helm:3.17.3
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - cp "$(command -v helm)" /custom-tools/helm
+          volumeMounts:
+            - name: custom-tools
+              mountPath: /custom-tools
+
+
       containers:
         - name: argocd-repo-server
           env:
@@ -43,6 +55,10 @@ spec:
             - name: custom-tools
               mountPath: /usr/local/bin/kustomize
               subPath: kustomize
+
+            - name: custom-tools
+              mountPath: /usr/local/bin/helm
+              subPath: helm
 
             - name: sops-age
               mountPath: /etc/sops-age/keys.txt
