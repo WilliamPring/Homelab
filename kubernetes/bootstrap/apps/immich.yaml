@@ -1,15 +1,8 @@
-# Argo CD Application for Immich — an OCI Helm chart + values from git (multi-source).
+# Argo CD Application — Immich. The Helm chart is rendered THROUGH kustomize (helmCharts in the
+# app dir), so this is a plain path source like every other app. Chart pin + values: the app dir.
 #
 # ⚠️ SYNC 'immich-prereqs' FIRST (vector Postgres + library PVC must exist).
-#
-#   source 1  → the OCI Helm CHART (ghcr.io registry) + valueFiles pointing at $values/...
-#   source 2  → YOUR repo, ref: values  (supplies the values file; applies nothing)
-#
-# OCI NOTE: unlike an HTTP Helm repo, repoURL is the OCI registry path WITHOUT the oci://
-# scheme and WITHOUT the chart name; `chart` is the chart name. If Argo errors that OCI
-# isn't enabled, register the repo once (UI: Settings → Repositories → Connect repo, type
-#
-# Apply by hand, once:  sudo k3s kubectl apply -f kubernetes/bootstrap/apps/immich.yaml
+# ⚠️ Sync stays MANUAL: a chart/app bump runs a DB migration — snapshot + pg_dump first (docs/immich.md).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -17,21 +10,10 @@ metadata:
   namespace: argocd
 spec:
   project: default
-  sources:
-    # 1) The Immich chart from the OCI registry.
-    - repoURL: ghcr.io/immich-app/immich-charts
-      chart: immich
-      # PINNED chart version — Renovate opens a PR (label ⚠️ db-migration, never automerged).
-      # The Immich APP version is pinned separately in values.yaml (image.tag).
-      targetRevision: "0.13.4"
-      helm:
-        valueFiles:
-          - $values/kubernetes/apps/media/immich/values.yaml
-    # 2) Your repo — ONLY to provide the values file (ref, no path → applies nothing).
-    - repoURL: https://github.com/WilliamPring/Homelab.git
-      targetRevision: main
-      ref: values
-
+  source:
+    repoURL: https://github.com/WilliamPring/Homelab.git
+    targetRevision: main
+    path: kubernetes/apps/media/immich
   destination:
     server: https://kubernetes.default.svc
     namespace: media

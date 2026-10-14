@@ -8,9 +8,18 @@ service:
   type: ClusterIP
   port: 80
 
-config:
-  base-url: "https://ntfy.williampring.ca"
-  upstream-base-url: "https://ntfy.sh"
+# Server settings live under `ntfy:` in this chart (wrenix/ntfy). A `config:` key is IGNORED by the
+# chart — that is how base-url silently stayed at ntfy.example.org, which breaks iPhone delivery
+# (iOS polls <base-url>/<topic>). Keep these under `ntfy:`.
+ntfy:
+  baseURL: "https://ntfy.williampring.ca"
+  upstreamBaseURL: "https://ntfy.sh"     # iOS instant delivery relay (only a poll request goes upstream)
+  behindProxy: true                      # Traefik in front → rate-limit by X-Forwarded-For
+  cache:
+    file: /data/cache.db                 # the chart mounts the PVC at /data → messages survive restarts
+    duration: "72h"
+  attachment:
+    cacheDir: /data/attachments
 
 ingress:
   enabled: true

@@ -56,7 +56,7 @@ while IFS= read -r k; do
   tmp=$(mktemp -d); cp -R "$d"/. "$tmp"/
   # drop the generators: block (KSOPS needs the age key; CI has none)
   ruby -ryaml -e 'f=ARGV[0]; y=YAML.load_file(f); y.delete("generators"); File.write(f, y.to_yaml)' "$tmp/kustomization.yaml"
-  if kubectl kustomize "$tmp" > "$OUT/kustomize-$name.yaml" 2> "$OUT/kustomize-$name.err"; then
+  if kubectl kustomize --enable-helm "$tmp" > "$OUT/kustomize-$name.yaml" 2> "$OUT/kustomize-$name.err"; then
     pass "$d  ($(grep -c '^kind:' "$OUT/kustomize-$name.yaml") objects)"
   else
     fail "$d"; sed 's/^/    /' "$OUT/kustomize-$name.err"

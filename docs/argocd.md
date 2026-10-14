@@ -34,7 +34,8 @@ What the directory sets up:
   tag (label `argocd`); upgrading Argo = merge that PR, run the `apply -k` line once.
 - `config.yaml` → `server.insecure: true` in `argocd-cmd-params-cm` (see below).
 - `ingress.yaml` → `argocd.williampring.ca`, cert-manager TLS (`argocd-tls`), backend `argocd-server:80`.
-- `argocd-cm.yaml` → `kustomize.buildOptions: --enable-alpha-plugins --enable-exec` so KSOPS can run.
+- `argocd-cm.yaml` → `kustomize.buildOptions: --enable-alpha-plugins --enable-exec --enable-helm` — KSOPS plugins, and Helm charts
+  declared as `helmCharts:` inside app kustomizations (immich, ntfy, cert-manager).
 - `repo-server-ksops-patch.yaml` → installs ksops+kustomize into the repo-server and mounts the `sops-age` key.
 - `argocd-notifications-cm.yaml` → pushes to ntfy (`docs/updates-and-notifications.md`).
 - **DNS:** `argocd → A → <master Tailscale 100.x IP>` (grey cloud).

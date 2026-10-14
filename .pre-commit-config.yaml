@@ -25,7 +25,7 @@ repos:
   - repo: local
     hooks:
       - id: sops-encrypted
-        name: "*.enc.yaml must be SOPS-encrypted"
+        name: "*.enc.yaml should be SOPS-encrypted (warns until STRICT_SECRETS=1)"
         entry: scripts/ci/check-sops.sh
         language: script
         files: \.enc\.yaml$

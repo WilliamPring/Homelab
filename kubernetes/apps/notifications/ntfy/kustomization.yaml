@@ -1,0 +1,12 @@
+# ntfy — Helm chart rendered through kustomize (one shape for every app). Chart pin here;
+# server settings in values.yaml (under `ntfy:` — see the note there).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: ntfy
+    repo: oci://codeberg.org/wrenix/helm-charts
+    version: 0.5.22
+    releaseName: ntfy
+    namespace: notifications
+    valuesFile: values.yaml

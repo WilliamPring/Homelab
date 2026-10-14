@@ -1,0 +1,14 @@
+# cert-manager — Helm chart rendered through kustomize (one shape for every app).
+# Upstream policy: upgrade ONE minor at a time (Renovate opens one PR per minor — merge + Sync in order).
+# The Application uses ServerSideApply (CRDs exceed the client-side annotation limit).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: cert-manager
+    repo: https://charts.jetstack.io
+    version: v1.21.2
+    releaseName: cert-manager
+    namespace: cert-manager      # .Release.Namespace is baked into webhook/CA-injection references — must match
+    valuesFile: values.yaml
+    includeCRDs: true

@@ -1,0 +1,16 @@
+# Immich — Helm chart rendered THROUGH kustomize (one shape for every app).
+# The chart pin lives here (Renovate's kustomize manager tracks it); values.yaml sits beside it.
+# Argo renders this with `kustomize build --enable-helm` (flag set in bootstrap/argocd/argocd-cm.yaml).
+#
+# ⚠️ SYNC 'immich-prereqs' FIRST (vector Postgres + library PVC must exist).
+# ⚠️ Version bumps run DB migrations — snapshot the worker + pg_dump before Sync (docs/immich.md).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: immich
+    repo: oci://ghcr.io/immich-app/immich-charts
+    version: 0.13.4
+    releaseName: immich          # keeps object names (immich-server, immich-machine-learning) identical
+    namespace: media
+    valuesFile: values.yaml

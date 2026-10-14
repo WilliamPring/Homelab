@@ -8,5 +8,6 @@ metadata:
     app.kubernetes.io/part-of: argocd
 
 data:
-  kustomize.buildOptions: --enable-alpha-plugins
-  # kustomize.buildOptions: "--enable-alpha-plugins --enable-exec"
+  # --enable-alpha-plugins → KSOPS (secrets). --enable-helm → `helmCharts:` in app kustomizations
+  # (immich, ntfy, cert-manager). Change here = re-apply bootstrap/argocd + restart the repo-server.
+  kustomize.buildOptions: --enable-alpha-plugins --enable-helm

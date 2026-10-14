@@ -14,3 +14,6 @@ kubeconfig
 # Ansible
 ansible/ansible.log
 *.retry
+
+# kustomize `helmCharts:` downloads charts next to the kustomization when rendering locally
+kubernetes/**/charts/
