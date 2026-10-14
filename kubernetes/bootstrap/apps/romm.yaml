@@ -2,7 +2,7 @@
 #
 # BEFORE SYNC: (1) romm db/user on the Postgres LXC (scripts/postgres-romm-setup.sh),
 # (2) romm ACL user on Valkey, (3) NFS dirs on the file server, (4) romm-secret.enc.yaml
-# filled + encrypted. See docs/romm.md. Then Apply → SYNC.
+# filled + encrypted. See docs/apps/romm.md. Then Apply → SYNC.
 #
 # Apply by hand, once:  sudo k3s kubectl apply -f kubernetes/bootstrap/apps/romm.yaml
 apiVersion: argoproj.io/v1alpha1

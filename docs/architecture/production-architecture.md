@@ -1,3 +1,8 @@
+> **Status (Oct 2026):** this is the original target-architecture write-up. Most of it was built; some
+> choices changed along the way — Gatus (uptime) instead of a Prometheus/Grafana/Loki stack, Vaultwarden
+> removed, Argo CD with manual sync, SOPS/KSOPS for secrets. Read it as direction + history; the current
+> truth is `docs/index.md` and the app/platform docs.
+
 # How This Would Look in Production ("The Professional Way")
 
 A teaching doc: how a professional/prod Kubernetes setup differs from this homelab,

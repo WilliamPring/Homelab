@@ -2,7 +2,7 @@
 # serves files and stores saves/states). Same shape as Kavita/Calibre:
 #
 #   DB        → the EXTERNAL Postgres LXC (192.168.68.7), db/user `romm`   (scripts/postgres-romm-setup.sh)
-#   Redis     → the EXTERNAL Valkey (192.168.68.103), ACL user `romm`      (docs/redis.md pattern)
+#   Redis     → the EXTERNAL Valkey (192.168.68.103), ACL user `romm`      (docs/platform/redis.md pattern)
 #   library   → NFS /data/roms         (ROMs + BIOS — Structure A: roms/<platform>/, bios/<platform>/)
 #   assets    → NFS /data/romm-assets  (saves, states, screenshots you upload — irreplaceable)
 #   resources → local-path PVC         (covers/screenshots fetched from providers — re-fetchable)

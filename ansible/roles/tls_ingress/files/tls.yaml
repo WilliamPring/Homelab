@@ -2,7 +2,7 @@
 # object remains here until it moves into kubernetes/apps/media/immich. The 'letsencrypt' ClusterIssuer it
 # references is on Argo CD:
 #   kubernetes/apps/cert-manager/cert-manager-issuer/letsencrypt.yaml   (app: cert-manager-issuer)
-# and the cloudflare-api-token Secret it needs is hand-created (docs/secrets.md).
+# and the cloudflare-api-token Secret it needs is hand-created (docs/platform/secrets.md).
 ---
 # NOTE: SearXNG + degoog Ingresses moved to GitOps (kubernetes/apps/apps/searxng/, kubernetes/apps/apps/degoog/) —
 # Argo owns those apps end-to-end (workload + domain). The 'letsencrypt' ClusterIssuer

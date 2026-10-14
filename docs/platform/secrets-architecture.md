@@ -14,7 +14,7 @@ The plaintext secret does not need to be stored in Git.
 
 ## Table of Contents
 
-> Companion to **`docs/secrets.md`** (the day-to-day guide: what exists, decrypt/edit/reuse,
+> Companion to **`docs/platform/secrets.md`** (the day-to-day guide: what exists, decrypt/edit/reuse,
 > add a secret to an app). This file is the *why* and the full component walk-through.
 
 - [Overview](#overview)
@@ -1434,7 +1434,7 @@ the repo-server's memory during rendering — never in Git, never on disk.
 
 ## Where to go next
 
-Everything operational lives in **`docs/secrets.md`**:
+Everything operational lives in **`docs/platform/secrets.md`**:
 
 - the inventory of what is encrypted, what is still hand-managed, and known debt
 - one-time machine setup and the `sops-age` bootstrap after a cluster rebuild

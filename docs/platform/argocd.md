@@ -20,7 +20,7 @@ upstream install objects carry no namespace, hence **`-n argocd`**.
 ```bash
 sudo k3s kubectl create namespace argocd                  # first time only
 sudo k3s kubectl create secret generic sops-age -n argocd \
-  --from-file=keys.txt=$HOME/.config/sops/age/keys.txt    # first time only — the age key KSOPS decrypts with (docs/secrets.md)
+  --from-file=keys.txt=$HOME/.config/sops/age/keys.txt    # first time only — the age key KSOPS decrypts with (docs/platform/secrets.md)
 sudo k3s kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd
 sudo k3s kubectl -n argocd rollout status deploy/argocd-server
 sudo k3s kubectl -n argocd rollout status deploy/argocd-repo-server
@@ -37,7 +37,7 @@ What the directory sets up:
 - `argocd-cm.yaml` → `kustomize.buildOptions: --enable-alpha-plugins --enable-exec --enable-helm` — KSOPS plugins, and Helm charts
   declared as `helmCharts:` inside app kustomizations (immich, ntfy, cert-manager).
 - `repo-server-ksops-patch.yaml` → installs ksops+kustomize into the repo-server and mounts the `sops-age` key.
-- `argocd-notifications-cm.yaml` → pushes to ntfy (`docs/updates-and-notifications.md`).
+- `argocd-notifications-cm.yaml` → pushes to ntfy (`docs/platform/updates-and-notifications.md`).
 - **DNS:** `argocd → A → <master Tailscale 100.x IP>` (grey cloud).
 
 ### ⚠️ Why insecure mode is required
@@ -97,6 +97,6 @@ See `kubernetes/README.md` for the full add-an-app recipe.
   can't break its own bootstrap. Its config files live in `kubernetes/bootstrap/argocd/`.
 - Applications in `kubernetes/bootstrap/apps/` are also registered by hand today (`kubectl apply -f`). The
   planned next step is an **app-of-apps** root so a new app = a new file + push.
-- Secrets: `docs/secrets.md`. Updates & phone notifications: `docs/updates-and-notifications.md`.
+- Secrets: `docs/platform/secrets.md`. Updates & phone notifications: `docs/platform/updates-and-notifications.md`.
 - Everything is **manual sync** by design — Argo shows drift but waits for a click, so there
   are no surprise upgrades (important for Immich).

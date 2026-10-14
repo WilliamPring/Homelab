@@ -34,4 +34,4 @@ LAN NodePorts (plain http — fine on your LAN; the hostnames would need Tailsca
 | Progress not syncing | Progress sync server must be the Kavita URL; sync happens on open/close by default |
 | Away from home | nothing here works without Tailscale on the Kindle (a separate project); hostnames would then work with https |
 
-Related: `docs/kavita.md`, `docs/suwayomi.md`.
+Related: `docs/apps/kavita.md`, `docs/apps/suwayomi.md`.

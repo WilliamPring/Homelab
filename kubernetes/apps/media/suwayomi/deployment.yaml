@@ -7,17 +7,17 @@
 # Downloads land as CBZ in NFS /data/library/manga/<Source>/<Series>/  — which IS Kavita's
 # Manga library (shared, by decision). Kavita picks them up on scan, Komf adds metadata,
 # so the same chapters are readable in Kavita too. (A two-folder variant with a Local-source
-# mount was tried on 2026-10-13 and reverted — it caused issues; see docs/suwayomi.md.)
+# mount was tried on 2026-10-13 and reverted — it caused issues; see docs/apps/suwayomi.md.)
 #
 # Auth: basic_auth (the Paperback extension speaks Basic; Suwayomi's newer ui_login/JWT
 # mode would break it). Credentials are HARD-CODED below for now (user's choice — host is
 # Tailscale-only). ⚠️ Anything committed is in git history forever: use a password you would
-# not mind rotating, and move it to a SOPS secret later (docs/secrets.md §5).
+# not mind rotating, and move it to a SOPS secret later (docs/platform/secrets.md §5).
 # State (H2 DB, thumbnails, extensions, daily backups) → local-path PVC. Not irreplaceable:
 # the daily backup lives in the data dir and the CBZs are on NFS.
 #
 # Memory: the image embeds a Chromium (KCEF) some sources need → 1–3 GB. Pinned to the
-# 32GB worker. Docs: https://github.com/Suwayomi/Suwayomi-Server/wiki   ·   docs/suwayomi.md
+# 32GB worker. Docs: https://github.com/Suwayomi/Suwayomi-Server/wiki   ·   docs/apps/suwayomi.md
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -74,7 +74,7 @@ spec:
               value: "1"                  # days
             - name: BACKUP_TTL
               value: "14"                 # keep two weeks
-            # ── Cloudflare-protected sources: OFF. See docs/suwayomi.md to add Byparr. ─
+            # ── Cloudflare-protected sources: OFF. See docs/apps/suwayomi.md to add Byparr. ─
             - name: FLARESOLVERR_ENABLED
               value: "false"
           ports:

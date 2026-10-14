@@ -20,6 +20,6 @@ tailscale_up_args: "--accept-dns=false"
 immich_enabled: true
 
 # ─── TLS — the one Ingress Ansible still owns (Immich) ───────────────────────────
-# cert-manager + the Let's Encrypt ClusterIssuer are on Argo CD (docs/tls.md). Set true to
+# cert-manager + the Let's Encrypt ClusterIssuer are on Argo CD (docs/platform/tls.md). Set true to
 # enable Play 5, which only applies the Immich Ingress object (it moves to gitops later).
 tls_enabled: true

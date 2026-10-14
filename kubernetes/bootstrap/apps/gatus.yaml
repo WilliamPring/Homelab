@@ -1,6 +1,6 @@
 # Argo CD Application — Gatus (uptime checks → ntfy). Raw manifests via kustomize.
 # Namespace `monitoring` is (re)created here; it used to hold the old Loki/Grafana stack —
-# make sure the orphans from docs/cluster-cleanup.md §1 are gone before syncing.
+# make sure the orphans from docs/runbooks/cluster-cleanup.md §1 are gone before syncing.
 # Apply by hand, once:  sudo k3s kubectl apply -f kubernetes/bootstrap/apps/gatus.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application

@@ -102,18 +102,15 @@ Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: 
 
 ## Docs
 
-- [`docs/proxmox-install.md`](docs/proxmox-install.md) — Proxmox VE install walkthrough
-- [`docs/argocd.md`](docs/argocd.md) — Argo CD / GitOps (install, expose, login)
-- [`docs/gatus.md`](docs/gatus.md) — uptime checks → ntfy (`status.williampring.ca`), what is probed and how alerts behave
-- [`docs/tls.md`](docs/tls.md) — cert-manager + Let's Encrypt (Cloudflare DNS-01) on Argo; step-by-minor upgrades
-- [`docs/immich.md`](docs/immich.md) · [`docs/degoog.md`](docs/degoog.md) · [`docs/kavita.md`](docs/kavita.md) · [`docs/romm.md`](docs/romm.md) · [`docs/suwayomi.md`](docs/suwayomi.md) · [`docs/kindle.md`](docs/kindle.md) — per-app guides
-- [`docs/updates-and-notifications.md`](docs/updates-and-notifications.md) — Renovate rules, the CI guard (`scripts/ci/validate.sh`), Argo CD → ntfy pushes
-- [`docs/secrets.md`](docs/secrets.md) — **secrets, day-to-day**: what exists, decrypt/edit/reuse, add one to a new app
-- [`docs/secrets-architecture.md`](docs/secrets-architecture.md) — SOPS + age + KSOPS: how decryption inside Argo works (deep dive)
-- [`docs/archive/`](docs/archive/) — docs for removed/superseded setups (old logging stack, the original SOPS plan)
-- [`docs/cheatsheet.md`](docs/cheatsheet.md) — everyday kubectl / Ansible commands
-- [`docs/cluster-cleanup.md`](docs/cluster-cleanup.md) — runbook: delete the cluster orphans left by removed apps (look → delete, tick as you go)
-- [`ansible/LEARN.md`](ansible/LEARN.md) — Ansible concepts, learning notes
+Start at **[`docs/index.md`](docs/index.md)**. Grouped by purpose:
+
+- `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, degoog, Gatus)
+- `docs/platform/` — Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, Valkey
+- `docs/runbooks/` — cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
+- `docs/architecture/` — the plan docs (partly historical)
+- `docs/archive/` — removed/superseded setups
+- [`ansible/README.md`](ansible/README.md) / [`ansible/LEARN.md`](ansible/LEARN.md) — node provisioning + the Ansible teaching guide
+- [`kubernetes/README.md`](kubernetes/README.md) — the app tree and how to add an app · [`CLAUDE.md`](CLAUDE.md) — conventions
 
 ---
 

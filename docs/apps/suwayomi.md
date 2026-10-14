@@ -36,7 +36,7 @@ downloads go into the **shared** Kavita manga folder · no FlareSolverr by defau
 Edit `AUTH_USERNAME` / `AUTH_PASSWORD` in `kubernetes/apps/media/suwayomi/deployment.yaml` before pushing.
 These are the credentials for **both** the WebUI and Paperback.
 ⚠️ They end up in git history. Pick something you would not mind rotating; moving them into a
-SOPS secret later is the four-file recipe in `docs/secrets.md` §5.
+SOPS secret later is the four-file recipe in `docs/platform/secrets.md` §5.
 
 ### 2. DNS + deploy
 ```

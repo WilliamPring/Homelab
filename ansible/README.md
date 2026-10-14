@@ -49,7 +49,7 @@ cp vars/secrets.example.yaml vars/secrets.local.yaml   # *.local.yaml is gitigno
 $EDITOR vars/secrets.local.yaml                        # immich_db_password
 ```
 Play 4 reads this file and creates the `immich-db` Secret. Without it the play is skipped.
-The Cloudflare token for cert-manager is created by hand once (see `docs/tls.md`).
+The Cloudflare token for cert-manager is created by hand once (see `docs/platform/tls.md`).
 
 ---
 
@@ -90,7 +90,7 @@ sudo k3s kubectl get nodes -o wide                              # all Ready
 sudo k3s kubectl get node -l immich-node=true                   # the 32GB worker is labelled
 sudo k3s kubectl get secret immich-db -n media
 ```
-After this, follow `../docs/argocd.md` to bring up Argo CD, then `../docs/tls.md` for cert-manager.
+After this, follow `../docs/platform/argocd.md` to bring up Argo CD, then `../docs/platform/tls.md` for cert-manager.
 
 ---
 

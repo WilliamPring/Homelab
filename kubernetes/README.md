@@ -22,7 +22,7 @@ kubernetes/
 ## Shape of an app directory
 Every app has a `kustomization.yaml` (phase 3 makes this true for all of them). Raw-manifest apps:
 `deployment.yaml`, `service.yaml`, `ingress.yaml`, `storage.yaml`, optional `configmap.yaml`, and for
-secrets `<app>-secret.enc.yaml` + `<app>-secret.sops.yaml` (SOPS/KSOPS — `docs/secrets.md`).
+secrets `<app>-secret.enc.yaml` + `<app>-secret.sops.yaml` (SOPS/KSOPS — `docs/platform/secrets.md`).
 Helm apps: `values.yaml` next to the chart reference. Reference example: `apps/media/komf/`.
 
 ## Adding an app

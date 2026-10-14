@@ -1,7 +1,7 @@
 # Gatus — uptime checks + alerts to ntfy. The "is it up right now?" half of monitoring.
 # Config = the ConfigMap (configmap.yaml). History = sqlite on a small local-path PVC.
 # Dashboard: https://status.williampring.ca   Alerts: ntfy topic `homelab-alerts`.
-# Docs: docs/gatus.md   Upstream: https://github.com/TwiN/gatus
+# Docs: docs/apps/gatus.md   Upstream: https://github.com/TwiN/gatus
 apiVersion: apps/v1
 kind: Deployment
 metadata:

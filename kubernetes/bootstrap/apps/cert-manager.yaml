@@ -1,5 +1,5 @@
 # Argo CD Application — cert-manager. Helm chart rendered through kustomize (app dir).
-# ⚠️ SYNC ORDER: this FIRST, then 'cert-manager-issuer'. Upgrades one minor at a time (docs/tls.md).
+# ⚠️ SYNC ORDER: this FIRST, then 'cert-manager-issuer'. Upgrades one minor at a time (docs/platform/tls.md).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

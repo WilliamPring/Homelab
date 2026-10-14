@@ -10,7 +10,7 @@
 #
 # ⚠️ `edge` checks resolve *.williampring.ca to the master's TAILSCALE IP from inside a pod. That
 #    works when the nodes route 100.x via their own tailscale0 (they do — Ansible put Tailscale
-#    on every node). If the whole edge group is red while apps are green, see docs/gatus.md →
+#    on every node). If the whole edge group is red while apps are green, see docs/apps/gatus.md →
 #    "edge group all red".
 apiVersion: v1
 kind: ConfigMap

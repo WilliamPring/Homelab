@@ -6,7 +6,7 @@
 # Library layout RomM expects ("Structure A", mount the PARENT of roms/ as /romm/library):
 #   /data/roms/roms/<platform>/<game file or folder>     e.g. /data/roms/roms/gba/Metroid Fusion.gba
 #   /data/roms/bios/<platform>/<bios files>              e.g. /data/roms/bios/gba/gba_bios.bin
-# Platform folder names = RomM/IGDB slugs (gba, snes, n64, ps, psp, nds, …) — see docs/romm.md.
+# Platform folder names = RomM/IGDB slugs (gba, snes, n64, ps, psp, nds, …) — see docs/apps/romm.md.
 #
 # ⚠️ PREREQ on the file server (under the existing /data export):
 #     mkdir -p /data/roms/roms /data/roms/bios /data/romm-assets

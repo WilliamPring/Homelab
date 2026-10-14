@@ -26,7 +26,7 @@ Dashboard: https://status.williampring.ca   (LAN: http://192.168.68.63:30881)
 Cloudflare DNS:  status → A → <master's Tailscale IP>   (grey cloud / DNS only)
 ```
 ```bash
-# the monitoring namespace used to hold Loki/Grafana — clear the orphans first (docs/cluster-cleanup.md §1)
+# the monitoring namespace used to hold Loki/Grafana — clear the orphans first (docs/runbooks/cluster-cleanup.md §1)
 sudo k3s kubectl apply -f kubernetes/bootstrap/apps/gatus.yaml       # Argo UI → gatus → SYNC
 sudo k3s kubectl get pods -n monitoring -w
 ```

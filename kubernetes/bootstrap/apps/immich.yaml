@@ -2,7 +2,7 @@
 # app dir), so this is a plain path source like every other app. Chart pin + values: the app dir.
 #
 # ⚠️ SYNC 'immich-prereqs' FIRST (vector Postgres + library PVC must exist).
-# ⚠️ Sync stays MANUAL: a chart/app bump runs a DB migration — snapshot + pg_dump first (docs/immich.md).
+# ⚠️ Sync stays MANUAL: a chart/app bump runs a DB migration — snapshot + pg_dump first (docs/apps/immich.md).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

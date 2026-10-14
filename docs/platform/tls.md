@@ -20,7 +20,7 @@ Secret <app>-tls  (Traefik serves it)
 | `cert-manager-issuer` | `kubernetes/apps/cert-manager/cert-manager-issuer/` | the `letsencrypt` ClusterIssuer | 2nd (needs the CRDs) |
 
 Out of git, hand-created once: the **`cloudflare-api-token`** Secret in `cert-manager`
-(`docs/secrets.md`). Everything else is reproducible from the repo.
+(`docs/platform/secrets.md`). Everything else is reproducible from the repo.
 
 ---
 

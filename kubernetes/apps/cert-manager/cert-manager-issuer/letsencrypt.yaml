@@ -5,7 +5,7 @@
 # is Tailscale-only. Separate Argo app from cert-manager itself because the CRD must exist
 # before this object can be applied (sync cert-manager first).
 #
-# ⚠️ PREREQ (hand-created, out of git — docs/secrets.md): the Cloudflare "Edit zone DNS" token
+# ⚠️ PREREQ (hand-created, out of git — docs/platform/secrets.md): the Cloudflare "Edit zone DNS" token
 #      sudo k3s kubectl create secret generic cloudflare-api-token \
 #        -n cert-manager --from-literal=api-token=<YOUR_CF_TOKEN>
 #

@@ -1,7 +1,7 @@
 # Secrets — the working guide
 
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day
-reference. For the *why* and the full architecture, see `docs/secrets-architecture.md` (deep dive) and
+reference. For the *why* and the full architecture, see `docs/platform/secrets-architecture.md` (deep dive) and
 `docs/archive/sops-argocd.md` (the original learning plan, done).
 
 ```
@@ -34,10 +34,10 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 | Secret | Namespace | Holds | Where it's documented |
 |---|---|---|---|
 | `sops-age` | argocd | the age **private key** — the master key, can never be in git | this doc §2 |
-| `immich-db` | media | Postgres password for Immich's in-cluster vector DB | `docs/immich.md` |
+| `immich-db` | media | Postgres password for Immich's in-cluster vector DB | `docs/apps/immich.md` |
 | `vaultwarden-db`, `vaultwarden-admin` | apps | **orphans** — Vaultwarden was removed (Oct 2026); delete both secrets | `docs/archive/vaultwarden.md` |
 | `grafana-admin` | monitoring | Grafana admin user/password — **orphan**: the monitoring stack was removed; delete the secret (and the namespace) | `docs/archive/logging.md` |
-| `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/tls.md` |
+| `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/platform/tls.md` |
 
 Migrating these into `.enc.yaml` files is the open item from `docs/archive/sops-argocd.md` Phase 9.
 
@@ -126,7 +126,7 @@ sops -e -i kubernetes/apps/media/romm/romm-secret.enc.yaml
 ```
 Do **not** do this with the Valkey password until the debt in §1 is fixed — you would be
 spreading a password that is already public in git history. Prefer a fresh ACL user per app
-(`docs/redis.md`).
+(`docs/platform/redis.md`).
 
 Reading a value that only exists in the cluster (hand-managed ones):
 ```bash

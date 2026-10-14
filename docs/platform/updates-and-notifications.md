@@ -89,7 +89,7 @@ Each notification's tap-target opens the app in Argo (`argocd.williampring.ca`).
    sudo k3s kubectl -n argocd rollout restart deploy/argocd-notifications-controller
    sudo k3s kubectl -n argocd get cm argocd-notifications-cm -o jsonpath='{.data.subscriptions}'   # shows the 4 triggers
    ```
-   (`docs/argocd.md` still says `apply -f kubernetes/bootstrap/argocd/` — that predates the kustomization + KSOPS patch.)
+   (`docs/platform/argocd.md` still says `apply -f kubernetes/bootstrap/argocd/` — that predates the kustomization + KSOPS patch.)
 2. On your phone, ntfy app → **+** → server `https://ntfy.williampring.ca` → topic
    `homelab-argocd`.
 3. Prove the path works end-to-end without waiting for a real event:
@@ -112,7 +112,7 @@ ntfy user add argocd && ntfy access argocd homelab-argocd wo && ntfy token add a
 sudo k3s kubectl -n argocd patch secret argocd-notifications-secret -p '{"stringData":{"ntfy-token":"tk_..."}}'
 ```
 and un-comment the `Authorization` header in the ConfigMap. (Better: move that secret to SOPS
-like the others — `docs/secrets.md`.)
+like the others — `docs/platform/secrets.md`.)
 
 ### Troubleshooting
 | Symptom | Check |
@@ -148,13 +148,13 @@ It does not block merges unless you make it a required check in GitHub branch pr
 worth doing once it has been green for a while.
 
 **Secrets check is warn-only today** because `komf-secret.enc.yaml` and `romm-secret.enc.yaml`
-are still plaintext templates. Once you fill + `sops -e -i` them (`docs/secrets.md` §3), set
+are still plaintext templates. Once you fill + `sops -e -i` them (`docs/platform/secrets.md` §3), set
 `STRICT_SECRETS: "1"` in the workflow so a plaintext secret can never merge again.
 
 ---
 
 ## Uptime alerts (Gatus → ntfy)
-Argo's pushes tell you about *deploys*; **Gatus** (`docs/gatus.md`) tells you about *outages*:
+Argo's pushes tell you about *deploys*; **Gatus** (`docs/apps/gatus.md`) tells you about *outages*:
 every app's in-cluster URL, every public hostname (incl. cert expiry), the Postgres/Valkey/NFS
 boxes and the Cloudflare DNS records, on a 1–5 min cycle, to the ntfy topic **`homelab-alerts`**.
 Two topics on purpose: `homelab-argocd` = you did something; `homelab-alerts` = something broke.
