@@ -1,0 +1,3 @@
+- op: add
+  path: /data/kustomize.buildOptions
+  value: --enable-alpha-plugins --enable-helm

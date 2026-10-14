@@ -9,8 +9,12 @@ resources:
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.3/manifests/install.yaml
   - config.yaml
   - ingress.yaml
-  - argocd-cm.yaml
 
 patches:
   - path: repo-server-ksops-patch.yaml
   - path: argocd-notifications-cm.yaml   # notifications → ntfy (patches the empty CM from the install)
+  - path: argocd-cm-patch.yaml
+    target:
+      version: v1
+      kind: ConfigMap
+      name: argocd-cm
