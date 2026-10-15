@@ -6,7 +6,7 @@ resources:
   # (CRDs, RBAC, ConfigMaps, images incl. Redis/Dex) moves together when the tag moves.
   # Renovate watches this URL (renovate.json → customManagers "argo-cd install") and opens a
   # PR per Argo release. After merging: `kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd` once.
-  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.3/manifests/install.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.5/manifests/install.yaml
   - config.yaml
   - ingress.yaml
 
