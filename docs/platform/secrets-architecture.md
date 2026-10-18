@@ -918,7 +918,7 @@ KSOPS
 
 ## Argo CD Kustomize Options
 
-\`argocd-cm.yaml\` contains:
+\`argocd-cm-patch.yaml\` (a JSON patch on the install\'s \`argocd-cm\`) sets:
 
 ```yaml
 apiVersion: v1
@@ -928,7 +928,7 @@ metadata:
   namespace: argocd
 
 data:
-  kustomize.buildOptions: "--enable-alpha-plugins --enable-exec"
+  kustomize.buildOptions: "--enable-alpha-plugins --enable-helm"
 ```
 
 These options tell Argo CD's Kustomize invocation to allow the required plugin functionality.
@@ -944,7 +944,7 @@ kubectl kustomize kubernetes/bootstrap/argocd/ | grep -A2 -B2 'kustomize.buildOp
 Expected:
 
 ```text
-kustomize.buildOptions: --enable-alpha-plugins --enable-exec
+kustomize.buildOptions: --enable-alpha-plugins --enable-helm
 ```
 
 ---
@@ -1372,7 +1372,7 @@ Conceptually:
 ```bash
 kustomize build \
   --enable-alpha-plugins \
-  --enable-exec \
+  --enable-helm \
   kubernetes/apps/<namespace>/myapp
 ```
 
@@ -1441,4 +1441,4 @@ Everything operational lives in **`docs/platform/secrets.md`**:
 - the five commands (view / extract / edit / encrypt / verify) and the pre-commit check
 - reusing an existing value, adding a secret to a new app, rotation, troubleshooting
 
-The original learning plan that led here is `docs/archive/sops-argocd.md`.
+(The original learning plan that led here has since been deleted from the archive.)

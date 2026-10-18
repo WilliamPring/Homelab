@@ -21,7 +21,14 @@ render:          ## render one kustomize app dir: make render APP=kubernetes/app
 hooks:           ## install the pre-commit hooks (once per clone)
 	pre-commit install --hook-type pre-commit --hook-type pre-push
 
+diag:            ## run the read-only Argo diagnostic on the master and fetch it: make diag HOST=user@master-ip
+	@test -n "$(HOST)" || { echo "usage: make diag HOST=sysadmin@192.168.68.93"; exit 2; }
+	scp -q scripts/debug/argocd-diag.sh $(HOST):/tmp/argocd-diag.sh
+	ssh -t $(HOST) 'sudo bash /tmp/argocd-diag.sh > /tmp/argocd-diag.txt 2>&1; echo "collected $$(wc -l < /tmp/argocd-diag.txt) lines"'
+	scp -q $(HOST):/tmp/argocd-diag.txt debug/argocd-diag.txt
+	@echo "→ debug/argocd-diag.txt  (now: git add debug/argocd-diag.txt && git commit -m 'debug: argocd diag' && git push)"
+
 secrets-check:   ## list *.enc.yaml files that are NOT encrypted
 	@for f in $$(find kubernetes -name '*.enc.yaml' 2>/dev/null); do grep -q '^sops:' $$f && echo "ok   $$f" || echo "PLAIN $$f"; done
 
-.PHONY: help lint validate validate-strict render hooks secrets-check
+.PHONY: help lint validate validate-strict render hooks diag secrets-check

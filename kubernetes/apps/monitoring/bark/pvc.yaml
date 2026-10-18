@@ -1,0 +1,14 @@
+# Bark state: the device-key database. Tiny. Lose it → re-register the phone (one tap in the app).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bark-data
+  namespace: monitoring
+  labels:
+    app: bark
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

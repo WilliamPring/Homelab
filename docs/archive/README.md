@@ -1,10 +1,10 @@
 # Archived docs
 
-Guides for things that were **removed or superseded**. Kept for the learning record; nothing
-here describes the current cluster.
+Guides for things that were **removed or superseded**. The three original write-ups (old logging stack,
+Vaultwarden, the first SOPS plan) were deleted in Oct 2026; what remains of them is the summary below.
 
-| Doc | Status |
+| Was | Status |
 |---|---|
-| `logging.md` | Loki + Alloy + Grafana stack — removed from the cluster (Sept 2026). If monitoring comes back, see the "Not automated" notes in `docs/platform/updates-and-notifications.md`. |
-| `vaultwarden.md` | Vaultwarden (password manager) — **removed from the homelab (Oct 2026)**. Its Postgres database `vaultwarden` on the LXC (192.168.68.7) was left in place as a backup; drop it once you are sure the vault is exported. |
-| `sops-argocd.md` | the original plan for SOPS + age + KSOPS — done. Current docs: `docs/platform/secrets.md` (day-to-day) and `docs/platform/secrets-architecture.md` (deep dive). |
+| Loki + Alloy + Grafana logging stack | removed from the cluster (Sept 2026). Uptime/alerting is Gatus now (`docs/apps/gatus.md`); Grafana may return later for history. Cluster leftovers: `docs/runbooks/cluster-cleanup.md` §1. |
+| Vaultwarden (password manager) | removed from the homelab (Oct 2026). Its `vaultwarden` database on the Postgres LXC (`.7`) was left as a backup; drop it once the vault export is confirmed. Cleanup: `cluster-cleanup.md` §4. |
+| The original SOPS + age + KSOPS plan | done. Current docs: `docs/platform/secrets.md` (day-to-day), `docs/platform/secrets-architecture.md` (deep dive). |

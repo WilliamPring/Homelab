@@ -12,6 +12,7 @@ gatus (monitoring ns) ──probes──► apps (in-cluster Service URLs)
                       ──probes──► infra (Postgres LXC, Valkey, NFS, Proxmox)
                       ──queries─► dns (Cloudflare records)
                       ──alerts──► ntfy topic `homelab-alerts`  ──► your phone
+                      ──alerts──► Bark (iOS push, primary — docs/apps/bark.md)
 Dashboard: https://status.williampring.ca   (LAN: http://192.168.68.63:30881)
 ```
 

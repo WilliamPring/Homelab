@@ -1,4 +1,4 @@
-# Argo CD Notifications → ntfy (your phone).
+# Argo CD Notifications → Bark (iOS push) + ntfy (during the switch-over) → your phone.
 #
 # This is a kustomize PATCH on the empty argocd-notifications-cm that the upstream install.yaml
 # ships. The notifications-controller is already running; this just tells it WHAT to send
@@ -29,8 +29,16 @@ data:
   context: |
     argocdUrl: https://argocd.williampring.ca
     ntfyTopic: homelab-argocd
+    barkDeviceKey: REPLACE_ME_DEVICE_KEY     # Bark iOS app → server → device key. Inline for now (owner's choice).
 
-  # ── where: generic webhook → ntfy JSON publish endpoint ─────────────────────────────────
+  # ── where: Bark (iOS push via Apple) — primary ──────────────────────────────────────────
+  service.webhook.bark: |
+    url: http://bark.monitoring.svc.cluster.local:8080
+    headers:
+      - name: Content-Type
+        value: application/json
+
+  # ── where: generic webhook → ntfy JSON publish endpoint (kept during the switch-over) ──
   service.webhook.ntfy: |
     url: http://ntfy.notifications.svc.cluster.local:80
     headers:
@@ -54,6 +62,18 @@ data:
             "tags": ["arrows_counterclockwise","argocd"],
             "click": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
           }
+      bark:
+        method: POST
+        path: /push
+        body: |
+          {
+            "device_key": "{{.context.barkDeviceKey}}",
+            "title": "{{.app.metadata.name}}: update waiting",
+            "body": "OutOfSync — a change landed in git (Renovate merge or your push). Review the diff and Sync.\nRevision: {{if .app.status.sync.revision}}{{.app.status.sync.revision | trunc 12}}{{else}}{{.app.status.sync.revisions}}{{end}}",
+            "level": "active",
+            "group": "argocd",
+            "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
+          }
   template.app-deployed: |
     webhook:
       ntfy:
@@ -67,6 +87,18 @@ data:
             "priority": 3,
             "tags": ["white_check_mark","argocd"],
             "click": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
+          }
+      bark:
+        method: POST
+        path: /push
+        body: |
+          {
+            "device_key": "{{.context.barkDeviceKey}}",
+            "title": "{{.app.metadata.name}}: deployed",
+            "body": "Sync succeeded and the app is Healthy.\nRevision: {{if .app.status.operationState.syncResult.revision}}{{.app.status.operationState.syncResult.revision | trunc 12}}{{else}}{{.app.status.operationState.syncResult.revisions}}{{end}}",
+            "level": "active",
+            "group": "argocd",
+            "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
           }
   template.app-sync-failed: |
     webhook:
@@ -82,6 +114,18 @@ data:
             "tags": ["rotating_light","argocd"],
             "click": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
           }
+      bark:
+        method: POST
+        path: /push
+        body: |
+          {
+            "device_key": "{{.context.barkDeviceKey}}",
+            "title": "{{.app.metadata.name}}: SYNC FAILED",
+            "body": "Phase: {{.app.status.operationState.phase}}. Open Argo for the error (bad manifest, KSOPS decrypt, missing secret, image pull…).",
+            "level": "active",
+            "group": "argocd",
+            "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
+          }
   template.app-health-degraded: |
     webhook:
       ntfy:
@@ -95,6 +139,18 @@ data:
             "priority": 5,
             "tags": ["warning","argocd"],
             "click": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
+          }
+      bark:
+        method: POST
+        path: /push
+        body: |
+          {
+            "device_key": "{{.context.barkDeviceKey}}",
+            "title": "{{.app.metadata.name}}: DEGRADED",
+            "body": "Health is {{.app.status.health.status}} — pods crash-looping or probes failing. Check the pod logs.",
+            "level": "active",
+            "group": "argocd",
+            "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
           }
 
   # ── when: triggers. oncePer stops repeats while the state persists. ─────────────────────
@@ -127,6 +183,7 @@ data:
   # ── who: every Application, no annotations needed ───────────────────────────────────────
   subscriptions: |
     - recipients:
+        - bark
         - ntfy
       triggers:
         - on-out-of-sync

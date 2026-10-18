@@ -34,6 +34,8 @@ spec:
               value: /config/config.yaml
             - name: TZ
               value: America/Vancouver
+            - name: BARK_DEVICE_KEY            # from the Bark iOS app → server settings → device key. Inline for now.
+              value: "REPLACE_ME_DEVICE_KEY"   # (a key only lets someone send pushes to your phone; move to a Secret later)
           ports:
             - name: http
               containerPort: 8080

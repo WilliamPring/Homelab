@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: example
+  namespace: example-namespace
+  labels:
+    app: example
+spec:
+  type: ClusterIP            # NodePort only if LAN devices need it: type: NodePort + nodePort: 30xxx (free one from the README)
+  selector:
+    app: example
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

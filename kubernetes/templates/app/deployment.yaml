@@ -1,0 +1,58 @@
+# EXAMPLE — <what the app is, in one line>.
+#   data   → <NFS /data/... (precious) | local-path (rebuildable)>
+#   before first Sync: <DNS record, NFS folder, DB user, secret> (docs/platform/adding-an-app.md §5)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example
+  namespace: example-namespace
+  labels:
+    app: example
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO volume → never two pods at once
+  selector:
+    matchLabels:
+      app: example
+  template:
+    metadata:
+      labels:
+        app: example
+    spec:
+      # nodeSelector:
+      #   immich-node: "true"   # heavy app → the 32GB worker
+      securityContext:
+        runAsUser: 1000         # matches NFS ownership (1000:1000)
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: example
+          image: ghcr.io/example/example:1.0.0   # PINNED — never :latest (Renovate bumps it)
+          env:
+            - name: TZ
+              value: America/Vancouver
+            # - name: SOME_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef: { name: example-secret, key: SOME_PASSWORD }
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: example-data

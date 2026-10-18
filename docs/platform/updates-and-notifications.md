@@ -159,6 +159,10 @@ every app's in-cluster URL, every public hostname (incl. cert expiry), the Postg
 boxes and the Cloudflare DNS records, on a 1–5 min cycle, to the ntfy topic **`homelab-alerts`**.
 Two topics on purpose: `homelab-argocd` = you did something; `homelab-alerts` = something broke.
 
+**Oct 2026: Bark is now the primary channel** for both (iOS push through Apple — no fetch from the
+Tailscale-only server, which is what kept losing ntfy pushes). ntfy stays wired in parallel until Bark
+has proven itself; see `docs/apps/bark.md`.
+
 ---
 
 ## Not automated (on purpose, for now)

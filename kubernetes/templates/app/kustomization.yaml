@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - storage.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+# Has a secret? add:
+# generators:
+#   - example-secret.sops.yaml     # see docs/platform/secrets.md §5

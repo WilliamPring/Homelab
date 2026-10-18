@@ -3,7 +3,7 @@
 Ansible builds the **cluster and the infrastructure the apps depend on**: Tailscale, k3s,
 and the few out-of-git Secrets, node labels and Ingresses the GitOps apps still reference.
 
-**Ansible deploys no apps.** Every app lives in `../gitops/` and is deployed by Argo CD.
+**Ansible deploys no apps.** Every app lives in `../kubernetes/apps/` and is deployed by Argo CD.
 Nothing here uses Helm, and the project needs no Ansible collections.
 
 > New to Ansible? Read **[LEARN.md](LEARN.md)** first — it explains every concept used here,
@@ -22,7 +22,7 @@ Nothing here uses Helm, and the project needs no Ansible collections.
 | 5 | Ingress | master | `tls_ingress` — the Immich Ingress object (cert-manager + ClusterIssuer are on Argo) | `tls_enabled` |
 
 Plays 4–5 exist only because Argo cannot create things that must stay out of git (DB
-passwords) or that belong to the node (labels). Everything else about an app is in `gitops/`.
+passwords) or that belong to the node (labels). Everything else about an app is in `kubernetes/apps/`.
 
 ---
 

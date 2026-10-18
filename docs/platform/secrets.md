@@ -2,7 +2,7 @@
 
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day
 reference. For the *why* and the full architecture, see `docs/platform/secrets-architecture.md` (deep dive) and
-`docs/archive/sops-argocd.md` (the original learning plan, done).
+the original plan (archived, since deleted).
 
 ```
 YOU (Arch box, has the age PRIVATE key)         GIT (public key only)         ARGO CD (has the private key too)
@@ -35,11 +35,11 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 |---|---|---|---|
 | `sops-age` | argocd | the age **private key** — the master key, can never be in git | this doc §2 |
 | `immich-db` | media | Postgres password for Immich's in-cluster vector DB | `docs/apps/immich.md` |
-| `vaultwarden-db`, `vaultwarden-admin` | apps | **orphans** — Vaultwarden was removed (Oct 2026); delete both secrets | `docs/archive/vaultwarden.md` |
-| `grafana-admin` | monitoring | Grafana admin user/password — **orphan**: the monitoring stack was removed; delete the secret (and the namespace) | `docs/archive/logging.md` |
+| `vaultwarden-db`, `vaultwarden-admin` | apps | **orphans** — Vaultwarden was removed (Oct 2026); delete both secrets | `docs/runbooks/cluster-cleanup.md` §4 |
+| `grafana-admin` | monitoring | Grafana admin user/password — **orphan**: the monitoring stack was removed; delete the secret | `docs/runbooks/cluster-cleanup.md` §1 |
 | `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/platform/tls.md` |
 
-Migrating these into `.enc.yaml` files is the open item from `docs/archive/sops-argocd.md` Phase 9.
+Migrating these into `.enc.yaml` files is the open item (§5 below is the recipe).
 
 ### Known debt ⚠️
 - `kubernetes/apps/media/suwayomi/deployment.yaml` carries Suwayomi's Basic-auth username/password **inline**
@@ -48,7 +48,7 @@ Migrating these into `.enc.yaml` files is the open item from `docs/archive/sops-
 - `kubernetes/apps/apps/degoog/deployment.yaml` still has the Valkey URL **inline in plaintext**, including the
   password of the shared `redis` user. It is in git history on GitHub. Fix = rotate that password
   on the Valkey host, update `immich-secret`, move the URL into `degoog-secret`. Encrypting later
-  does not un-leak it (Phase 8 of `docs/archive/sops-argocd.md`).
+  does not un-leak it.
 
 ---
 
@@ -206,7 +206,7 @@ Copy `kubernetes/apps/media/komf/` as a template — it is the smallest complete
 | `sops: no key could be found` / `failed to decrypt` on your machine | no `~/.config/sops/age/keys.txt` here → §2 |
 | `sops: no matching creation rules` | filename doesn't end in `.enc.yaml` / `.sops.yaml` |
 | Argo: `secret "<app>-secret" not found`, pod `CreateContainerConfigError` | the `.enc.yaml` is still plaintext (KSOPS refuses it) → encrypt, push, sync |
-| Argo: `plugin ... not allowed` / `exec` error | repo-server KSOPS patch or `--enable-alpha-plugins --enable-exec` missing (`kubernetes/bootstrap/argocd/argocd-cm.yaml`) |
+| Argo: `plugin ... not allowed` / generator error | repo-server KSOPS patch not applied, or `--enable-alpha-plugins` missing from `kustomize.buildOptions` (`kubernetes/bootstrap/argocd/argocd-cm-patch.yaml`) → `apply -k` + restart the repo-server |
 | Argo: `Failed to verify data integrity` / `MAC mismatch` | an encrypted file was hand-edited → restore from git and use `sops <file>` instead |
 | Secret updated, app still uses old value | `kubectl rollout restart deploy/<app>` |
 | Everything fails after a cluster rebuild | `sops-age` Secret missing in `argocd` → §2 |

@@ -1,0 +1,60 @@
+# Bark — self-hosted push notifications for iOS (open source, MIT). Replaces ntfy for alerts.
+#
+# Why Bark here: delivery goes server → Apple (APNs) → phone. The phone never has to fetch from
+# this server, so Tailscale being asleep on the phone no longer loses notifications (ntfy's
+# failure mode). The phone contacts this server exactly once, to register its device key.
+#
+#   Gatus / Argo  ──POST /push──►  bark (in-cluster)  ──APNs──►  iPhone (Bark app)
+#
+# Exposure: NodePort only (30889). The owner fronts it with NPMplus for the hostname/TLS — so NO
+# Ingress and NO cert-manager certificate here, on purpose. State = /data (SQLite with device keys).
+# Docs: https://github.com/Finb/bark-server   API: POST /push {device_key,title,body,level,group,url}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bark
+  namespace: monitoring
+  labels:
+    app: bark
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO data volume
+  selector:
+    matchLabels:
+      app: bark
+  template:
+    metadata:
+      labels:
+        app: bark
+    spec:
+      containers:
+        - name: bark
+          image: finab/bark-server:v2.3.9   # pinned — Renovate PRs bumps (stateless group)
+          args:
+            - --addr=0.0.0.0:8080
+            - --data=/data
+          env:
+            - name: TZ
+              value: America/Vancouver
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet: { path: /ping, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /ping, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: bark-data

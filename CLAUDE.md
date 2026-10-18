@@ -36,7 +36,13 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 - Renovate able to see any new version pin (image tag / chart version).
 
 ## Notifications
-- ntfy topic `homelab-argocd` = deploy events (Argo). `homelab-alerts` = outages (Gatus). Keep them separate.
+- **Bark** (`kubernetes/apps/monitoring/bark`, iOS push via APNs) is the primary channel for both Argo deploy events and
+  Gatus outages; ntfy is kept only during the switch-over. Bark has NO Ingress/cert on purpose — the owner fronts it
+  with NPMplus. Device key is inline for now (testing stance).
+
+## Adding an app
+Follow `docs/platform/adding-an-app.md` (checklist + why). Skeleton: `kubernetes/templates/app/`. The ApplicationSet
+registers any new `kubernetes/apps/<namespace>/<app>/` directory — never hand-write Application files.
 
 ## When unsure
 Check how `kubernetes/apps/media/komf/` does it — it is the smallest complete example (manifests + SOPS secret + docs/apps/kavita.md).

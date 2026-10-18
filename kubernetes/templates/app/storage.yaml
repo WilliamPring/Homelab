@@ -1,0 +1,50 @@
+# Pick ONE pattern per volume (docs/platform/adding-an-app.md §0):
+#   NFS        → precious files (survive a cluster rebuild).   file server: mkdir + chown 1000:1000 first.
+#   local-path → rebuildable state (indexes, caches, thumbnails). Node disk; gone with the node.
+---
+# ── NFS (precious) ──
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: example-files-nfs
+  labels:
+    app: example
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain      # deleting the claim never deletes the files
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"
+    path: /data/example
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: example-files
+  namespace: example-namespace
+  labels:
+    app: example
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: example-files-nfs
+  resources:
+    requests:
+      storage: 100Gi
+---
+# ── local-path (rebuildable) ──
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: example-data
+  namespace: example-namespace
+  labels:
+    app: example
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
