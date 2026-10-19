@@ -27,7 +27,7 @@ spec:
               mountPath: /custom-tools
 
         - name: install-helm3
-          image: alpine/helm:3.17.3
+          image: alpine/helm:3.22.1
           command:
             - /bin/sh
             - -c
