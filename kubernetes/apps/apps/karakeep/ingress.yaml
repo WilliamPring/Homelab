@@ -1,6 +1,6 @@
 # https://karakeep.williampring.ca — Tailscale-only (DNS: karakeep → A → master Tailscale IP, grey cloud).
-# Prefer this over the NodePort: NEXTAUTH_URL is set to this hostname, so logging in over plain http://ip:30300
-# will bounce you back here anyway.
+# This is the address NEXTAUTH_URL names, so it is the one to prefer. The NodePort still works for login:
+# Karakeep's AUTH_TRUSTED_ORIGINS defaults to "*", so it accepts whatever address the request arrived on.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

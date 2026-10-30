@@ -83,8 +83,14 @@ The ApplicationSet (`kubernetes/bootstrap/apps.yaml`) watches `kubernetes/apps/*
 ```bash
 sudo k3s kubectl -n argocd get applications | grep <app>        # listed, OutOfSync, Missing
 ```
-No `kubectl apply` of anything. If the app needs a sync option the default lacks (e.g. `ServerSideApply`
-for huge CRDs), add a case to `templatePatch` in `bootstrap/apps.yaml`.
+No `kubectl apply` of anything. The **push** is what triggers it — the generator reads the repo, not your
+working tree — so an unpushed commit is the usual reason an app never shows up. To skip the poll:
+```bash
+sudo k3s kubectl annotate applicationset apps -n argocd \
+  argocd.argoproj.io/application-set-refresh=true --overwrite
+```
+If the app needs a sync option the default lacks (e.g. `ServerSideApply` for huge CRDs), add a case to
+`templatePatch` in `bootstrap/apps.yaml`. Details + "it didn't appear" checks: [`argocd.md`](argocd.md).
 
 ## 5. Things outside the cluster (do before Sync)
 

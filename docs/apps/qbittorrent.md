@@ -253,6 +253,7 @@ For an end-to-end check from qBittorrent itself, add a torrent IP checker such a
 | Symptom | Likely cause | Check / fix |
 |---|---|---|
 | Pod stuck at `Init:1/2` | Gluetun can't connect (wrong/revoked key, or an IPv6 address in `WIREGUARD_ADDRESSES`) | `kubectl logs -n media deploy/qbittorrent -c gluetun`. Repeated `i/o timeout` / handshake errors usually mean a bad key: generate a new one (§4.1) |
+| Pod stuck at `Init:1/2` **after a node reboot or OOM-kill**, logs say `adding IPv6 rule: ...: file exists` | a stale WireGuard `ip rule` from the previous container — ip rules are pod-scoped and outlive an abrupt exit | the `postStart` hook in `deployment.yaml` clears these on every start, so this should self-heal. If it persists, delete the pod so it gets a fresh network namespace |
 | Argo shows a render / `ComparisonError` mentioning ksops or sops | the secret is still the plaintext template | encrypt it (§4.2) → push → *Hard Refresh* |
 | Pod `CreateContainerError` / mount error on `tun` | the node has no `/dev/net/tun` | on the worker: `ls -l /dev/net/tun` (should be `crw-rw-rw- 10,200`). `sudo modprobe tun` to load it |
 | WebUI shows plain `Unauthorized` | qBittorrent's host-header check behind the proxy | confirm `WebUI\HostHeaderValidation=false` in `/config/qBittorrent/qBittorrent.conf` (it's seeded, but an older config on the PVC wins) |
@@ -260,7 +261,9 @@ For an end-to-end check from qBittorrent itself, add a torrent IP checker such a
 | Pod flips to NotReady, Gatus alerts | VPN healthcheck failing | Gluetun logs. Usually Mullvad server trouble that it fixes on its own; otherwise change `SERVER_CITIES` |
 | Torrents stuck at "Stalled" with 0 peers | tun0 binding with no tunnel, or the tracker is down | check §5 steps 1–2. If the VPN is fine, try another torrent |
 | Files appear as the wrong owner on NFS | `PUID`/`PGID` vs the folder owner | `/data/downloads` must be `1000:1000` (§4.3) |
-| Nothing resolves: every tracker is "unreachable", but the IP check passes | Gluetun's resolver isn't answering on `127.0.0.1:53`, and lock 4 means there's no fallback | `logs -c gluetun \| grep -i dns`. If Gluetun is healthy but DNS is off, it was disabled — `DOT` must stay at its default `on` |
+| Nothing resolves: every tracker is "unreachable", but the IP check passes | Gluetun's resolver isn't answering on `127.0.0.1:53`, and lock 4 means there's no fallback | `logs -c gluetun \| grep -i dns`. `DNS_SERVER` must stay at its default `on` (it is what listens on 127.0.0.1); `DNS_UPSTREAM_RESOLVER_TYPE` defaults to `DoT` |
+| **One** tracker never resolves while others are fine | Gluetun blocks known-malicious domains by default (`BLOCK_MALICIOUS=on`), and a tracker can land on that list. With no fallback resolver, the lookup just fails — it looks identical to a dead tracker | confirm with `logs -c gluetun \| grep -i blocked`. Allow it with `DNS_UNBLOCK_HOSTNAMES=tracker.example.org` in `deployment.yaml` rather than turning blocking off wholesale |
+| DNS stops working for a minute, roughly daily | `DNS_UPDATE_PERIOD` defaults to `24h`: Gluetun rebuilds its blocklist and restarts the resolver, and lock 4 means there is no second nameserver to cover the gap | harmless if torrents just pause. Set `DNS_UPDATE_PERIOD=0` to disable the periodic rebuild if it annoys you |
 | `resolv.conf` shows `10.43.0.10` | `dnsPolicy`/`dnsConfig` didn't apply (old pod, or the fields were dropped) | this is the DNS leak — `rollout restart`, then re-check §5 step 3 |
 
 ---

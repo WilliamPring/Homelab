@@ -108,8 +108,9 @@ app. That's the expected failure if you Sync too early — see §7.
 ### 3.3 Add the DNS record
 Cloudflare → `karakeep` → **A** → the master's Tailscale IP, **grey cloud** (DNS only).
 
-The hostname matters more here than for most apps: `NEXTAUTH_URL` in `deployment.yaml` is set to
-`https://karakeep.williampring.ca`, and logging in via any other address will redirect you back to it.
+`NEXTAUTH_URL` in `deployment.yaml` names this hostname, so it's the canonical address and the one the
+mobile apps and extension should use. The NodePort still works for logging in, though — Karakeep's
+`AUTH_TRUSTED_ORIGINS` defaults to `*`, meaning it accepts whatever address the request actually arrived on.
 
 ### 3.4 Sync, then create your account
 Push, Sync in Argo, open `https://karakeep.williampring.ca` and **sign up**. The first account created

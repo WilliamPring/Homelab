@@ -139,6 +139,26 @@
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)_v[\\d.]+-ls(?<build>\\d+)$"
     },
     {
+      "description": "Meilisearch is a COMPONENT OF Karakeep, not an app in its own right: its on-disk index format is tied to the engine version, and karakeep/deployment.yaml deliberately pins whatever Karakeep's own docker-compose pins. Automatic PRs here would walk it ahead of Karakeep and silently break the index, so they are off. Bump it by hand when a Karakeep release changes its compose: https://github.com/karakeep-app/karakeep/blob/main/docker/docker-compose.yml",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "getmeili/meilisearch"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "karakeep-chrome tags are <chrome-version>-r<revision> (e.g. 156.0.8078.47-r1), where -r is bumped for packaging-only rebuilds. Default docker versioning treats a changed suffix as incompatible and would silently stop offering updates the day -r2 ships, so parse it explicitly.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/karakeep-app/karakeep-chrome"
+      ],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-r(?<revision>\\d+)$"
+    },
+    {
       "description": "Argo CD: one PR per upstream release (the pinned install URL). You merge, then re-apply kubernetes/bootstrap/argocd/ by hand — never automerged",
       "addLabels": [
         "argocd"

@@ -12,8 +12,11 @@
 #   └─ meilisearch  :7700  full-text search over everything saved
 #
 # WHY ONE POD, NOT THREE DEPLOYMENTS: they are useless apart, they scale together (never), and this
-# way there are no Services, no DNS and no startup ordering to get wrong. A crash in one container
-# restarts only that container — Kubernetes does not restart the whole pod for that.
+# way there are no Services and no cluster DNS to get wrong. A crash in one container restarts only
+# that container — Kubernetes does not restart the whole pod for that.
+# Containers in a pod still start in listed order with no readiness gate between them, so karakeep
+# may briefly get connection-refused from meilisearch on a cold start. Its worker retries, and
+# upstream's compose has no depends_on either, so this is expected rather than a race to fix.
 #
 # NO AI TAGGING: Karakeep can auto-tag with an LLM. It is off (no OPENAI_API_KEY / OLLAMA_BASE_URL).
 # Everything works without it; you tag by hand. To turn it on later see docs/apps/karakeep.md §6.

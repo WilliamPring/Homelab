@@ -28,6 +28,11 @@ data:
     Session\TempPathEnabled=true
 
     [Preferences]
+    # This seed REPLACES LinuxServer's own /defaults/qBittorrent.conf, so anything their file sets
+    # and this one doesn't reverts to qBittorrent's built-in default. UPnP defaults to ON, which
+    # would have qBittorrent asking for port mappings inside the VPN namespace. Gluetun's firewall
+    # drops those, so it is noise rather than a leak — but it contradicts the design, so: off.
+    Connection\UPnP=false
     WebUI\Address=*
     WebUI\Port=8080
     WebUI\HostHeaderValidation=false

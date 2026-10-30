@@ -110,6 +110,16 @@ spec:
           volumeMounts:
             - name: tun
               mountPath: /dev/net/tun
+          # ip rules are POD-scoped and outlive the container. If gluetun dies abruptly (node reboot,
+          # OOM-kill, power cut) its WireGuard rule is left behind, and the next start dies with
+          # "adding IPv6 rule: ...: file exists" → startupProbe never passes → the pod sits at
+          # Init:1/2 forever, looking exactly like a bad Mullvad key. Clearing the stale rules on
+          # start is the other half of the fix that `strategy: Recreate` above begins.
+          # https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/kubernetes.md
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "(ip rule del table 51820; ip -6 rule del table 51820) || true"]
           startupProbe:                 # gate: qbittorrent starts only once this passes (VPN is up)
             exec:
               command: ["/gluetun-entrypoint", "healthcheck"]
