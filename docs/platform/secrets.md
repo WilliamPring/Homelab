@@ -25,6 +25,8 @@ git at all.** Plaintext never gets committed.
 | `kubernetes/apps/apps/degoog/degoog-secret.enc.yaml` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS` | degoog |
 | `kubernetes/apps/media/komf/komf-secret.enc.yaml` | `komf-secret` → media | `KAVITA_API_KEY` | Komf ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/media/romm/romm-secret.enc.yaml` | `romm-secret` → media | `ROMM_AUTH_SECRET_KEY`, `DB_PASSWD`, `REDIS_PASSWORD`, 6 optional provider keys | RomM ⚠️ **template, not yet encrypted** |
+| `kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml` | `qbittorrent-secret` → media | `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_ADDRESSES` | Gluetun (Mullvad) ⚠️ **template, not yet encrypted** |
+| `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep ⚠️ **template, not yet encrypted** |
 
 Each one has a sibling `<app>-secret.sops.yaml` (the KSOPS *generator*, not a secret — it just
 says "decrypt that file") and is listed under `generators:` in the app's `kustomization.yaml`.

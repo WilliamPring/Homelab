@@ -95,6 +95,9 @@ Verified with: `sudo ss -tlnp | grep -E "80|443"` shows the process directly.
 
 ## Subdomain Naming Convention
 
+> **Superseded.** Every app now uses a flat `<app>.williampring.ca` (e.g. `qbittorrent.williampring.ca`); see
+> `docs/platform/adding-an-app.md`. The reasoning below is kept as history.
+
 Format: `<service>.<function>.williampring.ca`
 
 **Rejected approaches:**

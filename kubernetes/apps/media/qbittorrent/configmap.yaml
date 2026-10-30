@@ -1,0 +1,35 @@
+# qBittorrent.conf — the SEED copied to /config/qBittorrent/ on first start only (see deployment.yaml).
+# After that the copy on the PVC is the live one: settings you change in the WebUI stick.
+# To re-seed from git: delete /config/qBittorrent/qBittorrent.conf (or the PVC) and restart the pod.
+#
+# The two settings that matter for the VPN:
+#   Session\Interface=tun0  → qBittorrent only uses Gluetun's tunnel interface. If tun0 is gone (VPN down),
+#                             torrents stall instead of falling back to eth0. (Gluetun's firewall blocks that
+#                             too — this is the second lock on the same door.)
+#   WebUI\HostHeaderValidation=false → the WebUI answers on qbittorrent.williampring.ca AND the NodePort.
+#                             Without it qBittorrent 5.x replies "Unauthorized" behind a reverse proxy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qbittorrent-config
+  namespace: media
+  labels:
+    app: qbittorrent
+data:
+  qBittorrent.conf: |
+    [LegalNotice]
+    Accepted=true
+
+    [BitTorrent]
+    Session\Interface=tun0
+    Session\InterfaceName=tun0
+    Session\DefaultSavePath=/downloads/complete
+    Session\TempPath=/downloads/incomplete
+    Session\TempPathEnabled=true
+
+    [Preferences]
+    WebUI\Address=*
+    WebUI\Port=8080
+    WebUI\HostHeaderValidation=false
+    WebUI\ReverseProxySupportEnabled=true
+    WebUI\TrustedReverseProxiesList=10.42.0.0/16

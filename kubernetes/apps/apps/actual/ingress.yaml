@@ -1,0 +1,28 @@
+# https://actual.williampring.ca — Tailscale-only (DNS: actual → A → master Tailscale IP, grey cloud).
+# Use the HTTPS hostname rather than the NodePort: the mobile/desktop sync clients want a real cert.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: actual
+  namespace: apps
+  labels:
+    app: actual
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - actual.williampring.ca
+      secretName: actual-tls
+  rules:
+    - host: actual.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: actual
+                port:
+                  number: 5006

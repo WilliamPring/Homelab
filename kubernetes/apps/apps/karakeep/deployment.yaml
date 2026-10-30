@@ -1,0 +1,132 @@
+# Karakeep — bookmark everything, and keep a copy that outlives the original page.
+#
+# HOW IT WORKS: one pod, THREE containers, all sharing one network namespace (the same trick as
+# qBittorrent + Gluetun — see docs/apps/qbittorrent.md §2 if that phrase is new). Because they share
+# a loopback, they talk over 127.0.0.1 and need no Services between them.
+#
+#   pod network namespace
+#   ├─ karakeep     :3000  the web app + worker. Saves a bookmark, asks chrome to archive the page,
+#   │                      pushes the text into meilisearch, writes everything under /data
+#   ├─ chrome       :9222  headless Chromium, driven over the DevTools protocol. This is what makes
+#   │                      a permanent copy of the page instead of just storing a URL that will rot
+#   └─ meilisearch  :7700  full-text search over everything saved
+#
+# WHY ONE POD, NOT THREE DEPLOYMENTS: they are useless apart, they scale together (never), and this
+# way there are no Services, no DNS and no startup ordering to get wrong. A crash in one container
+# restarts only that container — Kubernetes does not restart the whole pod for that.
+#
+# NO AI TAGGING: Karakeep can auto-tag with an LLM. It is off (no OPENAI_API_KEY / OLLAMA_BASE_URL).
+# Everything works without it; you tag by hand. To turn it on later see docs/apps/karakeep.md §6.
+#
+# NOT pinned to the 32GB node on purpose: that node already carries Immich's ~26Gi of limits. Chrome
+# is bursty, so this is left for the scheduler to place. If archiving turns out to be slow, that is
+# the first knob to revisit.
+#
+#   data → NFS /data/karakeep · search index → local-path
+#   docs: https://docs.karakeep.com/ · docs/apps/karakeep.md
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: karakeep
+  namespace: apps
+  labels:
+    app: karakeep
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO index volume + one SQLite DB → never two pods at once
+  selector:
+    matchLabels:
+      app: karakeep
+  template:
+    metadata:
+      labels:
+        app: karakeep
+    spec:
+      securityContext:
+        fsGroup: 1000         # makes the local-path index volume group-writable for every container
+      containers:
+        # ── 1. the app itself ────────────────────────────────────────────────────────────────────
+        - name: karakeep
+          image: ghcr.io/karakeep-app/karakeep:0.34.1       # pinned — Renovate PRs bumps
+          securityContext:
+            runAsUser: 1000   # /data is NFS: the uid has to match the export's owner, not just the gid
+            runAsGroup: 1000
+          env:
+            - name: TZ
+              value: "America/Vancouver"
+            - name: DATA_DIR
+              value: "/data"                      # upstream says never change this
+            - name: MEILI_ADDR
+              value: "http://127.0.0.1:7700"      # the sidecar, over the shared loopback
+            - name: BROWSER_WEB_URL
+              value: "http://127.0.0.1:9222"      # ditto
+            - name: NEXTAUTH_URL
+              value: "https://karakeep.williampring.ca"   # must match how you actually reach it, or
+                                                          # login redirects land on the wrong host
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef: { name: karakeep-secret, key: NEXTAUTH_SECRET }
+            - name: MEILI_MASTER_KEY
+              valueFrom:
+                secretKeyRef: { name: karakeep-secret, key: MEILI_MASTER_KEY }
+          ports:
+            - name: http
+              containerPort: 3000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          # /api/health is the endpoint the image's own HEALTHCHECK uses — a real check, unlike "/",
+          # which just redirects to the login page and would pass even with the app half-broken.
+          readinessProbe:
+            httpGet: { path: /api/health, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /api/health, port: http }
+            initialDelaySeconds: 90
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 1536Mi }
+
+        # ── 2. headless Chromium — the page archiver ──────────────────────────────────────────────
+        #     Karakeep publishes its own Chrome image; the flags below are upstream's compose file.
+        #     The remote-debugging listener on :9222 is already in the image's entrypoint.
+        - name: chrome
+          image: ghcr.io/karakeep-app/karakeep-chrome:156.0.8078.47-r1   # pinned — Renovate PRs bumps
+          args:
+            - --disable-gpu
+            - --disable-dev-shm-usage          # /dev/shm is tiny in a container; without this Chrome crashes
+            - --hide-scrollbars
+            - --disable-blink-features=AutomationControlled
+            - --window-size=1440,900
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 1Gi }
+
+        # ── 3. meilisearch — full-text search ─────────────────────────────────────────────────────
+        - name: meilisearch
+          # Deliberately NOT the newest Meilisearch: this is the version Karakeep's own compose
+          # pins, and the on-disk index format is tied to the engine version. Let Karakeep lead.
+          image: getmeili/meilisearch:v1.41.0               # pinned — Renovate PRs bumps
+          env:
+            - name: MEILI_NO_ANALYTICS
+              value: "true"
+            - name: MEILI_MASTER_KEY
+              valueFrom:
+                secretKeyRef: { name: karakeep-secret, key: MEILI_MASTER_KEY }
+          volumeMounts:
+            - name: meili
+              mountPath: /meili_data
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: karakeep-data
+        - name: meili
+          persistentVolumeClaim:
+            claimName: karakeep-meili

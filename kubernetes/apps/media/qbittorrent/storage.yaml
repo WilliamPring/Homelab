@@ -1,0 +1,53 @@
+# qBittorrent storage.
+#   downloads → NFS /data/downloads   — finished + in-progress torrents. Precious-ish (survives a rebuild).
+#                                       qBittorrent writes incomplete/ while downloading, complete/ when done.
+#   config    → local-path PVC        — qBittorrent.conf, the torrent list, resume data. Rebuildable: lose it
+#                                       and qBittorrent re-seeds its config from the ConfigMap; re-add torrents.
+#
+# ⚠️ PREREQ on the file server (192.168.68.50), once:
+#    mkdir -p /data/downloads/{complete,incomplete} && chown -R 1000:1000 /data/downloads && chmod -R 775 /data/downloads
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: qbittorrent-downloads-nfs
+  labels:
+    app: qbittorrent
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain      # deleting the claim never deletes the files
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"
+    path: /data/downloads
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qbittorrent-downloads
+  namespace: media
+  labels:
+    app: qbittorrent
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: qbittorrent-downloads-nfs
+  resources:
+    requests:
+      storage: 500Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qbittorrent-config
+  namespace: media
+  labels:
+    app: qbittorrent
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

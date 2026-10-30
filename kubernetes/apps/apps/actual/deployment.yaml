@@ -1,0 +1,64 @@
+# Actual Budget — local-first envelope budgeting. One container, one SQLite file, no database server.
+#
+# HOW IT WORKS: the real app runs in YOUR BROWSER. This server stores the encrypted budget file and
+# syncs it between your devices; it is not where the budgeting logic lives. That is why it needs so
+# little CPU and RAM, and why losing /data loses everything (there is no other copy on the server).
+#
+# There is NO secret in this directory on purpose: Actual has no admin password baked into config.
+# You set the server password in the browser the first time you open it — see docs/apps/actual.md §3.
+#
+#   data → NFS /data/actual (precious — your financial history)
+#   docs: https://actualbudget.org/docs/ · docs/apps/actual.md
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: actual
+  namespace: apps
+  labels:
+    app: actual
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # one SQLite file — never two writers at once
+  selector:
+    matchLabels:
+      app: actual
+  template:
+    metadata:
+      labels:
+        app: actual
+    spec:
+      securityContext:
+        runAsUser: 1000       # match the NFS export's owner (1000:1000), same as every other app here
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: actual
+          image: docker.io/actualbudget/actual-server:26.10.0   # pinned — Renovate PRs bumps
+          env:
+            - name: TZ
+              value: "America/Vancouver"
+          ports:
+            - name: http
+              containerPort: 5006
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          # Plain HTTP probe on the web root. Actual's compose uses an exec probe
+          # (`node scripts/health-check.js`) instead — equally valid, but it depends on that script's
+          # path inside the image, and a wrong path here would CrashLoop the app rather than fail open.
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: actual-data

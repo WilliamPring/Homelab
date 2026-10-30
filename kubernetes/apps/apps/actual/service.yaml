@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: actual
+  namespace: apps
+  labels:
+    app: actual
+spec:
+  type: NodePort           # keeps a ClusterIP too → Ingress/domain still works
+  selector:
+    app: actual
+  ports:
+    - name: http
+      port: 5006
+      targetPort: http
+      nodePort: 30506      # LAN access: http://<node-LAN-IP>:30506  (mnemonic: Actual's own port 5006)

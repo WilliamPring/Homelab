@@ -20,7 +20,7 @@ decide ──► write the directory ──► validate locally ──► push �
 | **Secrets** | none · SOPS-encrypted (`<app>-secret.enc.yaml`) · (while testing: inline, flagged in `secrets.md` debt) | decides whether `kustomization.yaml` has a `generators:` block |
 
 Pick a **hostname**: `<app>.williampring.ca` (existing ones: library, books, roms, suwayomi, komf, status,
-search, private, home, immich, argocd, ntfy). Pick a **NodePort** if LAN access is wanted: a free `30xxx`
+search, private, home, immich, argocd, ntfy, qbittorrent, karakeep, actual). Pick a **NodePort** if LAN access is wanted: a free `30xxx`
 from the README's Addresses table.
 
 ## 1. Create the directory

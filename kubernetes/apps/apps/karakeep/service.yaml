@@ -1,0 +1,18 @@
+# Only :3000 is exposed. chrome (:9222) and meilisearch (:7700) stay inside the pod on purpose —
+# neither has authentication worth the name, and nothing outside the pod has any business reaching them.
+apiVersion: v1
+kind: Service
+metadata:
+  name: karakeep
+  namespace: apps
+  labels:
+    app: karakeep
+spec:
+  type: NodePort           # keeps a ClusterIP too → Ingress/domain still works
+  selector:
+    app: karakeep
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      nodePort: 30300      # LAN access: http://<node-LAN-IP>:30300  (mnemonic: Karakeep's own port 3000)

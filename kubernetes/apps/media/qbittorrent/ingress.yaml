@@ -1,0 +1,28 @@
+# https://qbittorrent.williampring.ca — Tailscale-only (DNS: qbittorrent → A → master Tailscale IP, grey cloud).
+# This is only the WebUI coming IN. Torrent traffic goes OUT through the Mullvad tunnel, never through here.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qbittorrent
+  namespace: media
+  labels:
+    app: qbittorrent
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - qbittorrent.williampring.ca
+      secretName: qbittorrent-tls
+  rules:
+    - host: qbittorrent.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qbittorrent
+                port:
+                  number: 8080

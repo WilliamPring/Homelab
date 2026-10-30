@@ -1,0 +1,175 @@
+# qBittorrent + Gluetun — a torrent client whose ONLY way to the internet is a Mullvad WireGuard tunnel.
+#
+# HOW IT WORKS: one pod, two containers. Containers in a pod share ONE network namespace (same IP,
+# same interfaces, same firewall). Gluetun builds the tunnel (tun0) + a kill-switch firewall in that
+# namespace; qBittorrent just lives in it, so its traffic has nowhere to go but the tunnel.
+#
+#   pod network namespace
+#   ├─ gluetun      (native sidecar)  → creates tun0 → Mullvad; iptables: drop everything that isn't
+#   │                                   the tunnel, except replies to the WebUI port + cluster CIDRs
+#   └─ qbittorrent  (main container)  → bound to tun0 (qBittorrent.conf); WebUI on :8080
+#
+# FOUR LOCKS against leaking your real IP:
+#   1. order    — gluetun is an initContainer with restartPolicy: Always (a "native sidecar"). Kubernetes
+#                 does not start qbittorrent until gluetun's startupProbe says the tunnel is healthy.
+#   2. firewall — gluetun's iptables kill switch: if the tunnel drops, packets are dropped, not rerouted.
+#   3. binding  — qBittorrent is bound to tun0 (configmap.yaml), so it never tries eth0 at all.
+#   4. DNS      — dnsPolicy: None + 127.0.0.1 sends every lookup to gluetun's own DNS-over-TLS resolver.
+#                 Containers share a network namespace but NOT a mount namespace: without this,
+#                 qbittorrent keeps kubelet's /etc/resolv.conf and asks CoreDNS → your ISP sees every
+#                 tracker name you look up. Payload hidden, metadata leaked.
+#
+#   data   → NFS /data/downloads (complete/ + incomplete/) · config → local-path PVC
+#   before first Sync: Mullvad key in the SOPS secret, NFS folder, DNS record (docs/apps/qbittorrent.md)
+#   docs: https://github.com/qdm12/gluetun-wiki · docs/apps/qbittorrent.md
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent
+  namespace: media
+  labels:
+    app: qbittorrent
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # RWO config volume + one VPN tunnel → never two pods at once
+  selector:
+    matchLabels:
+      app: qbittorrent
+  template:
+    metadata:
+      labels:
+        app: qbittorrent
+    spec:
+      nodeSelector:
+        immich-node: "true"     # the 32GB worker — hash checks and big torrent lists want RAM
+      # ── lock 4: every container in this pod resolves names through gluetun, never CoreDNS ────────
+      dnsPolicy: None           # do not inherit the node's resolv.conf
+      dnsConfig:
+        nameservers:
+          - 127.0.0.1           # gluetun's DoT resolver, on the loopback this pod shares
+      initContainers:
+        # ── 1. seed qBittorrent.conf on first start only (same pattern as komf) ──────────────────
+        - name: seed-config
+          image: busybox:1.38
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /config/qBittorrent
+              if [ ! -f /config/qBittorrent/qBittorrent.conf ]; then
+                echo "seeding qBittorrent.conf from ConfigMap"
+                cp /seed/qBittorrent.conf /config/qBittorrent/qBittorrent.conf
+                chown -R 1000:1000 /config
+              else
+                echo "qBittorrent.conf exists — keeping it"
+              fi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: seed
+              mountPath: /seed
+
+        # ── 2. gluetun — the VPN. restartPolicy: Always makes it a native sidecar: it starts first,
+        #       keeps running alongside qbittorrent, and must pass startupProbe before qbittorrent starts.
+        - name: gluetun
+          image: qmcgaw/gluetun:v3.41.3   # pinned — Renovate PRs bumps
+          restartPolicy: Always
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]          # needed to create tun0 and write iptables rules
+          env:
+            - name: TZ
+              value: "America/Vancouver"
+            # ── which VPN ───────────────────────────────────────────────────────────────────
+            - name: VPN_SERVICE_PROVIDER
+              value: "mullvad"
+            - name: VPN_TYPE
+              value: "wireguard"
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef: { name: qbittorrent-secret, key: WIREGUARD_PRIVATE_KEY }
+            - name: WIREGUARD_ADDRESSES
+              valueFrom:
+                secretKeyRef: { name: qbittorrent-secret, key: WIREGUARD_ADDRESSES }
+            # ── which Mullvad server (any server works with the same key) ──────────────────────
+            - name: SERVER_COUNTRIES
+              value: "Canada"
+            - name: SERVER_CITIES
+              value: "Toronto"
+            # ── holes in the kill switch, and why ───────────────────────────────────────────
+            - name: FIREWALL_INPUT_PORTS
+              value: "8080"                       # let Traefik / the NodePort / kubelet probes reach the WebUI
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: "10.42.0.0/16"   # k3s POD CIDR only. This governs connections this pod STARTS over
+                                      # eth0 — replies to Traefik ride conntrack and need no hole. It is
+                                      # here so qbittorrent can reach other pods (an *arr app) later.
+                                      # The service CIDR 10.43.0.0/16 is deliberately NOT here: the only
+                                      # thing it ever reached was CoreDNS, which is exactly the leak
+                                      # dnsPolicy: None closes. Neither range can reach the internet.
+          volumeMounts:
+            - name: tun
+              mountPath: /dev/net/tun
+          startupProbe:                 # gate: qbittorrent starts only once this passes (VPN is up)
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 5
+            failureThreshold: 60        # up to 5 min to connect
+          readinessProbe:               # VPN down → pod NotReady → no Service endpoints → Gatus alerts
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+
+      containers:
+        # ── 3. qbittorrent — no VPN settings at all; it just inherits gluetun's network ─────────────
+        - name: qbittorrent
+          # immutable tag: <app>_<libtorrent>-ls<build>. Plain `5.3.0` is re-pushed on every LSIO
+          # rebuild, so the same tag can be a different image tomorrow. This one never moves.
+          image: lscr.io/linuxserver/qbittorrent:5.3.0_v2.1.2-ls485   # pinned — Renovate PRs bumps
+          env:
+            - name: TZ
+              value: "America/Vancouver"
+            - name: PUID                # linuxserver images drop to this uid → matches NFS (1000:1000)
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: WEBUI_PORT
+              value: "8080"
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: downloads
+              mountPath: /downloads
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 2Gi }
+
+      volumes:
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice            # the node's TUN device; fail fast if the node lacks it
+        - name: config
+          persistentVolumeClaim:
+            claimName: qbittorrent-config
+        - name: downloads
+          persistentVolumeClaim:
+            claimName: qbittorrent-downloads
+        - name: seed
+          configMap:
+            name: qbittorrent-config

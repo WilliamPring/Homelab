@@ -75,13 +75,13 @@ See [`kubernetes/README.md`](kubernetes/README.md) for the full workflow.
 | What | IP | Notes |
 |---|---|---|
 | k3s master | `192.168.68.93` | Argo/Traefik entry; any NodePort also answers here |
-| k3s worker (32GB) | `192.168.68.63` | Immich, RomM, Suwayomi are pinned here |
-| file server (NFS `/data`) | `192.168.68.50` | photos, manga, books, ROMs |
+| k3s worker (32GB) | `192.168.68.63` | Immich, RomM, Suwayomi, qBittorrent are pinned here |
+| file server (NFS `/data`) | `192.168.68.50` | photos, manga, books, ROMs, downloads |
 | Postgres LXC | `192.168.68.7` | RomM (and formerly Vaultwarden) |
 | Valkey / Redis | `192.168.68.103` | Immich, degoog, RomM |
 
 LAN NodePorts (plain http, same WiFi — e.g. for the Kindle): Kavita `:30500` · Calibre-Web `:30083` ·
-Suwayomi `:30456` · RomM `:30808` · Immich `:30041` · Immich share proxy `:30042` · SearXNG `:30880` · Gatus `:30881` · degoog `:30882` · Bark `:30889` (fronted by NPMplus). Hostnames (`*.williampring.ca`) resolve to the
+Suwayomi `:30456` · RomM `:30808` · Immich `:30041` · Immich share proxy `:30042` · SearXNG `:30880` · Gatus `:30881` · degoog `:30882` · Bark `:30889` (fronted by NPMplus) · qBittorrent `:30080` · Karakeep `:30300` · Actual `:30506`. Hostnames (`*.williampring.ca`) resolve to the
 master's **Tailscale** IP and need Tailscale on the device.
 
 ## Working in this repo
@@ -104,7 +104,7 @@ Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: 
 
 Start at **[`docs/index.md`](docs/index.md)**. Grouped by purpose:
 
-- `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, degoog, Gatus)
+- `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, degoog, Gatus)
 - `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, Valkey
 - `docs/runbooks/` — **rebuild from zero**, cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
 - `docs/architecture/` — the plan docs (partly historical)

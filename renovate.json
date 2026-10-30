@@ -129,6 +129,16 @@
       ]
     },
     {
+      "description": "qBittorrent is pinned to LinuxServer's IMMUTABLE tag (5.3.0_v2.1.2-ls485) rather than the moving '5.3.0', so the default docker/semver versioning can't read it. Groups: app version, then the LSIO rebuild number as 'build'. The libtorrent part (_v2.1.2) is matched but not captured — it tracks the app version anyway. Scoped to qbittorrent on purpose: Kavita's LSIO tags are a different shape (version-vX.Y.Z.W).",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "lscr.io/linuxserver/qbittorrent"
+      ],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)_v[\\d.]+-ls(?<build>\\d+)$"
+    },
+    {
       "description": "Argo CD: one PR per upstream release (the pinned install URL). You merge, then re-apply kubernetes/bootstrap/argocd/ by hand — never automerged",
       "addLabels": [
         "argocd"

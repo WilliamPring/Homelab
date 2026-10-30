@@ -66,6 +66,21 @@ data:
             description: Browse & subscribe to online manga (Suwayomi)
             icon: suwayomi.png
 
+        - Downloads:
+            href: https://qbittorrent.williampring.ca
+            description: Torrents, VPN-only via Mullvad (qBittorrent + Gluetun)
+            icon: qbittorrent.png
+
+        - Bookmarks:
+            href: https://karakeep.williampring.ca
+            description: Saved links with archived copies (Karakeep)
+            icon: karakeep.png
+
+        - Budget:
+            href: https://actual.williampring.ca
+            description: Envelope budgeting & sync (Actual)
+            icon: actual-budget.png
+
     - Monitoring:
         - Status:
             href: https://status.williampring.ca

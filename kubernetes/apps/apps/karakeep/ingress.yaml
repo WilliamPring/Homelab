@@ -1,0 +1,29 @@
+# https://karakeep.williampring.ca — Tailscale-only (DNS: karakeep → A → master Tailscale IP, grey cloud).
+# Prefer this over the NodePort: NEXTAUTH_URL is set to this hostname, so logging in over plain http://ip:30300
+# will bounce you back here anyway.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: karakeep
+  namespace: apps
+  labels:
+    app: karakeep
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - karakeep.williampring.ca
+      secretName: karakeep-tls
+  rules:
+    - host: karakeep.williampring.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: karakeep
+                port:
+                  number: 3000

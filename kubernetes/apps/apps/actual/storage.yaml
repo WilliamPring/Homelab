@@ -1,0 +1,39 @@
+# Actual Budget storage — ONE volume, and it is the precious kind.
+#
+# /data holds the SQLite budget files and the sync state. This is your financial history: it is not
+# rebuildable from anywhere else, so it lives on NFS (which is the thing that gets backed up) rather
+# than on a local-path PVC tied to one node's disk.
+#
+# ⚠️ PREREQ on the file server (192.168.68.50), once:
+#    mkdir -p /data/actual && chown -R 1000:1000 /data/actual && chmod -R 775 /data/actual
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: actual-data-nfs
+  labels:
+    app: actual
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain      # deleting the claim never deletes the budget files
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"
+    path: /data/actual
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: actual-data
+  namespace: apps
+  labels:
+    app: actual
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: actual-data-nfs
+  resources:
+    requests:
+      storage: 10Gi

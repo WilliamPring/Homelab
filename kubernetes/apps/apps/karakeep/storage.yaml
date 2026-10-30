@@ -1,0 +1,58 @@
+# Karakeep storage — two volumes, deliberately on different classes.
+#
+#   data  → NFS /data/karakeep   PRECIOUS. The SQLite DB (your bookmarks, tags, lists, highlights)
+#                                 AND the archived copies of every page you saved. Once the original
+#                                 site goes down, this is the only copy that exists. Hence NFS.
+#   meili → local-path PVC        REBUILDABLE. Meilisearch's full-text index. It is derived entirely
+#                                 from the data above — lose it and you re-index from Karakeep's
+#                                 Admin page. No reason to put it on the NFS box or back it up.
+#
+# That split is the whole "precious vs rebuildable" rule from CLAUDE.md in one file.
+#
+# ⚠️ PREREQ on the file server (192.168.68.50), once:
+#    mkdir -p /data/karakeep && chown -R 1000:1000 /data/karakeep && chmod -R 775 /data/karakeep
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: karakeep-data-nfs
+  labels:
+    app: karakeep
+spec:
+  capacity:
+    storage: 50Gi            # archived pages add up — assets are the bulk of this
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain      # deleting the claim never deletes the archive
+  storageClassName: ""
+  nfs:
+    server: "192.168.68.50"
+    path: /data/karakeep
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: karakeep-data
+  namespace: apps
+  labels:
+    app: karakeep
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: ""
+  volumeName: karakeep-data-nfs
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: karakeep-meili
+  namespace: apps
+  labels:
+    app: karakeep
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi

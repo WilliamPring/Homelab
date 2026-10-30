@@ -13,8 +13,8 @@ kubernetes/
 
 | Namespace | Apps |
 |---|---|
-| `media` | immich, immich-prereqs, immich-public-proxy, kavita, komf, calibre, suwayomi, romm |
-| `apps` | searxng, degoog, homepage |
+| `media` | immich, immich-prereqs, immich-public-proxy, kavita, komf, calibre, suwayomi, romm, qbittorrent |
+| `apps` | searxng, degoog, homepage, karakeep, actual |
 | `monitoring` | gatus, bark |
 | `notifications` | ntfy |
 | `cert-manager` | cert-manager, cert-manager-issuer |

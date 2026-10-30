@@ -102,6 +102,24 @@ data:
         interval: 1m
         conditions: ["[CONNECTED] == true"]
         alerts: [{ type: custom }, { type: ntfy }]
+      - name: qBittorrent
+        group: apps
+        url: "http://qbittorrent.media.svc.cluster.local:8080/"   # pod is NotReady while the VPN is down → this fails too
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }, { type: ntfy }]
+      - name: Karakeep
+        group: apps
+        url: "http://karakeep.apps.svc.cluster.local:3000/api/health"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }, { type: ntfy }]
+      - name: Actual Budget
+        group: apps
+        url: "http://actual.apps.svc.cluster.local:5006/"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }, { type: ntfy }]
       - name: Immich Public Proxy
         group: apps
         url: "http://immich-public-proxy.media.svc.cluster.local:3000/share/healthcheck"
@@ -163,6 +181,24 @@ data:
         url: "https://suwayomi.williampring.ca/"
         interval: 5m
         conditions: ["[STATUS] == 401", "[CERTIFICATE_EXPIRATION] > 168h"]   # Basic auth → 401 means "up"
+        alerts: [{ type: custom }, { type: ntfy }]
+      - name: qbittorrent.williampring.ca
+        group: edge
+        url: "https://qbittorrent.williampring.ca/"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: custom }, { type: ntfy }]
+      - name: karakeep.williampring.ca
+        group: edge
+        url: "https://karakeep.williampring.ca/api/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: custom }, { type: ntfy }]
+      - name: actual.williampring.ca
+        group: edge
+        url: "https://actual.williampring.ca/"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
         alerts: [{ type: custom }, { type: ntfy }]
       - name: argocd.williampring.ca
         group: edge

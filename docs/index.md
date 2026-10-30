@@ -2,7 +2,8 @@
 
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
 from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Komf, Calibre-Web), games
-(RomM), search (SearXNG, degoog), and the glue (cert-manager, Gatus, Bark/ntfy, Homepage).
+(RomM), torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
+copies (Karakeep), budgeting (Actual), and the glue (cert-manager, Gatus, Bark/ntfy, Homepage).
 
 This page is the mental model. Each section ends with where to read more.
 
@@ -14,7 +15,7 @@ This page is the mental model. Each section ends with where to read more.
 ┌─ Hardware ──────────────────────────────────────────────────────────────────────────────┐
 │ Proxmox pve-a (.96) + pve-b (.89)                                                       │
 │   ├─ VM  k3s master  192.168.68.93      ├─ LXC file server  .50   NFS /data (photos, manga, books, ROMs)
-│   ├─ VM  k3s worker  192.168.68.63 (32GB — Immich, RomM, Suwayomi pinned here)          │
+│   ├─ VM  k3s worker  192.168.68.63 (32GB — Immich, RomM, Suwayomi, qBittorrent pinned here)│
 │   ├─ LXC Postgres   .7   (RomM; was Vaultwarden)   ├─ LXC Valkey/Redis .103 (Immich, degoog, RomM)
 └──────────────────────────────────────────────────────────────────────────────────────────┘
           │  Ansible (ansible/)  — Tailscale, k3s, nfs-common, the few out-of-git secrets/labels
@@ -23,8 +24,9 @@ This page is the mental model. Each section ends with where to read more.
 │  Traefik (ingress, bundled)   cert-manager (Let's Encrypt via Cloudflare DNS-01)        │
 │  Argo CD  ◄── kubernetes/bootstrap/   (applied by hand, twice, ever)                     │
 │     └─ ApplicationSet ──► one Application per  kubernetes/apps/<namespace>/<app>/        │
-│           media: immich · immich-prereqs · immich-public-proxy · kavita · komf · calibre · suwayomi · romm
-│           apps: searxng · degoog · homepage    monitoring: gatus · bark    notifications: ntfy
+│           media: immich · immich-prereqs · immich-public-proxy · kavita · komf · calibre · suwayomi · romm · qbittorrent
+│           apps: searxng · degoog · homepage · karakeep · actual
+│           monitoring: gatus · bark    notifications: ntfy
 │           cert-manager: cert-manager · cert-manager-issuer                               │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -88,6 +90,7 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
                               ▼                                                ▼
                    Traefik :443 (TLS from cert-manager)  ──────────────►  Service  ──►  Pod
                                                                   (NodePort = same Service, other door)
+   OUT through a VPN: only qBittorrent's torrent traffic → Gluetun → Mullvad   (apps/qbittorrent.md)
    INTERNET (strangers): only  share.williampring.ca  → Cloudflare → Immich Public Proxy → Immich
 ```
 - One Ingress per app, annotated `cert-manager.io/cluster-issuer: letsencrypt`; cert-manager proves domain
@@ -100,10 +103,11 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
 
 | Kind | Where | Precious? | Backed up? |
 |---|---|---|---|
-| photos, manga, books, ROMs, saves | NFS `192.168.68.50:/data/...` | **yes** | ⚠️ not automated yet |
+| photos, manga, books, ROMs, saves, downloads | NFS `192.168.68.50:/data/...` | **yes** | ⚠️ not automated yet |
+| budget files (Actual), bookmarks + archived pages (Karakeep) | NFS `192.168.68.50:/data/{actual,karakeep}` | **yes** | ⚠️ not automated yet |
 | Immich database | in-cluster Postgres (VectorChord image), **local-path** PVC on the worker | **yes** | ⚠️ not automated yet |
 | RomM database | external Postgres LXC `.7` | yes | ⚠️ |
-| Kavita/Komf/Calibre/Suwayomi/Gatus/Bark state | local-path PVCs | rebuildable (rescan) or cheap to lose | no, by design |
+| Kavita/Komf/Calibre/Suwayomi/qBittorrent/Gatus/Bark state, Karakeep's search index | local-path PVCs | rebuildable (rescan/re-index) or cheap to lose | no, by design |
 | Redis/Valkey data | external LXC `.103` | cache | no |
 
 Rule of thumb in every `storage.yaml`: **NFS for anything you'd cry about, local-path for anything a rescan rebuilds.**
@@ -151,7 +155,8 @@ Apple — works even with Tailscale asleep) and, during the switch-over, to ntfy
 
 **Apps** — one guide per app: setup, how it fits, troubleshooting
 - [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
-- [`apps/romm.md`](apps/romm.md) · [`apps/degoog.md`](apps/degoog.md) · [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md)
+- [`apps/romm.md`](apps/romm.md) · [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/degoog.md`](apps/degoog.md) · [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md)
+- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md)
 
 **Platform** — the things apps rely on
 - [`platform/argocd.md`](platform/argocd.md) — Argo CD: install, how it renders, the ApplicationSet, gotchas
