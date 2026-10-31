@@ -19,6 +19,14 @@
       "/kubernetes/.+\\.ya?ml$/"
     ]
   },
+  "pre-commit": {
+    "enabled": true,
+    "description": "The pre-commit manager is DISABLED BY DEFAULT in Renovate. Without this block the rev: pins in .pre-commit-config.yaml were never tracked, despite the comment in that file saying they were — the hooks would have silently aged forever."
+  },
+  "ignorePaths": [
+    "kubernetes/templates/**",
+    "docs/archive/**"
+  ],
   "customManagers": [
     {
       "description": "Immich APP version pinned in the chart values (controllers.main.containers.main.image.tag)",

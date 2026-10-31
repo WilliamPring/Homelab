@@ -14,6 +14,12 @@ validate:        ## render + schema-check every app (what CI runs)
 validate-strict: ## same, but a plaintext *.enc.yaml fails
 	STRICT_SECRETS=1 ./scripts/ci/validate.sh
 
+conventions:     ## check THIS repo's rules (appset depth, nodeports, secretrefs, pinning)
+	./scripts/ci/check-conventions.sh
+
+check:           ## everything CI runs: lint + validate + conventions
+	$(MAKE) lint && $(MAKE) validate && $(MAKE) conventions
+
 render:          ## render one kustomize app dir: make render APP=kubernetes/apps/media/komf
 	@test -n "$(APP)" || { echo "usage: make render APP=<dir with kustomization.yaml>"; exit 2; }
 	kubectl kustomize $(APP)
@@ -28,7 +34,13 @@ diag:            ## run the read-only Argo diagnostic on the master and fetch it
 	scp -q $(HOST):/tmp/argocd-diag.txt debug/argocd-diag.txt
 	@echo "→ debug/argocd-diag.txt  (now: git add debug/argocd-diag.txt && git commit -m 'debug: argocd diag' && git push)"
 
+secrets:         ## every secret: encrypted?, which keys, how it is wired (no age key needed)
+	./scripts/secrets.sh status
+
+secrets-help:    ## all the SOPS commands: new / set / encrypt / view / get / rotate
+	./scripts/secrets.sh help
+
 secrets-check:   ## list *.enc.yaml files that are NOT encrypted
 	@for f in $$(find kubernetes -name '*.enc.yaml' 2>/dev/null); do grep -q '^sops:' $$f && echo "ok   $$f" || echo "PLAIN $$f"; done
 
-.PHONY: help lint validate validate-strict render hooks diag secrets-check
+.PHONY: help lint validate validate-strict conventions check render hooks diag secrets secrets-help secrets-check

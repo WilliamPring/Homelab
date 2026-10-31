@@ -114,30 +114,22 @@ Each notification's tap-target opens the app in Argo (`argocd.williampring.ca`).
 
 ---
 
-## CI guard (`.github/workflows/validate.yaml` → `scripts/ci/validate.sh`)
+## CI guard
 
-Runs on every pull request (Renovate's too) and on pushes to `main`. It is a gate, not a
-deploy — nothing touches the cluster. Same script runs locally:
+Every PR (Renovate's too) and every push to `main` runs the gate: manifests render and
+schema-check, this repo's own conventions hold, yamllint passes, `renovate.json` parses — plus a
+`render-diff` comment showing what the change does to the *cluster* rather than to the files.
+
+Locally it is one command:
 ```bash
-./scripts/ci/validate.sh          # needs kubectl, helm, ruby, kubeconform on PATH
+make check          # lint + validate + conventions
 ```
 
-| # | Check | Catches |
-|---|---|---|
-| 1 | every `*.enc.yaml` has a `sops:` block, all values `ENC[…]`, no `REPLACE_ME` — **WARN-only for now** (`STRICT_SECRETS: "0"` in the workflow) | a plaintext secret template reaching `main` |
-| 2 | every directory with a `kustomization.yaml` renders (KSOPS generator stripped) | bad patch targets, typos, missing resources — the Argo "manifest generation error" class |
-| 3 | every plain manifest directory is valid YAML with k8s objects | broken indentation |
-| 4 | every Argo Application with a chart source renders via `helm template` with its values | chart values-schema errors (immich enforces one), wrong chart version |
-| 5 | kubeconform over everything rendered, with the CRD catalog for Argo / cert-manager | wrong field names that render fine but the API server rejects |
+**Full details, including the conventions check and why `main` is not yet protected:
+[`ci.md`](ci.md).**
 
-A second job validates `renovate.json` itself with Renovate's own config validator.
-
-What it cannot do: decrypt anything (no age key in CI), or prove a secret's *value* is right.
-It does not block merges unless you make it a required check in GitHub branch protection —
-worth doing once it has been green for a while.
-
-**Secrets check is warn-only today** because `komf-secret.enc.yaml` and `romm-secret.enc.yaml`
-are still plaintext templates. Once you fill + `sops -e -i` them (`docs/platform/secrets.md` §3), set
+**Secrets check is warn-only today** because the komf / romm / qbittorrent templates are still
+plaintext. Once you fill + `sops -e -i` them (`docs/platform/secrets.md` §3), set
 `STRICT_SECRETS: "1"` in the workflow so a plaintext secret can never merge again.
 
 ---
@@ -152,6 +144,124 @@ groups them: `argocd` = you did something; `homelab` = something broke.
 Tailscale-only server, so pushes were lost whenever Tailscale slept. Bark goes through Apple's APNs
 instead. See `docs/apps/bark.md`, including the one gap this leaves: nothing can page you about
 Bark itself being down.
+
+---
+
+## Proxmox → Bark (the layer below the cluster)
+
+Argo and Gatus both run *inside* k3s, so neither can tell you the cluster itself is gone — the
+night the master VM died, nothing pushed, because everything that could push died with it.
+Proxmox sits underneath and is the only thing positioned to report that class of failure.
+
+Proxmox VE has a built-in notification system with a **webhook** target type, so it talks to Bark
+directly — no extra software on the host.
+
+### What Proxmox will and won't tell you
+
+Its built-in events are a fixed list:
+
+| Event | `fields.type` | Severity |
+|---|---|---|
+| Backup failed | `vzdump` | error |
+| Backup succeeded | `vzdump` | info |
+| Cluster node fenced | `fencing` | error |
+| Storage replication job failed | `replication` | error |
+| System updates available | `package-updates` | info |
+| Mail for root (smartd, mdadm, cron…) | `system-mail` | unknown |
+
+⚠️ **"A VM stopped" is not on that list.** Proxmox does not emit a notification when a guest dies,
+so this configuration alone would *not* have caught the master going down. That needs the cron
+check at the end of this section. Set up the webhook first — it's the foundation both parts use.
+
+### 1. Create two targets (Datacenter → Notifications → Add → Webhook)
+
+Two targets, not one, for the same reason Argo has two levels: a failed backup should feel
+different from "updates available".
+
+| Field | `bark-proxmox` | `bark-proxmox-urgent` |
+|---|---|---|
+| Method | `POST` | `POST` |
+| URL | `http://192.168.68.63:30889/push` | same |
+| Header | `Content-Type` = `application/json` | same |
+| Secret | name `device_key`, value = your Bark key | same |
+
+Body (the only difference is `level`):
+
+```json
+{
+  "device_key": "{{ secrets.device_key }}",
+  "title": "Proxmox: {{ escape title }}",
+  "body": "{{ escape message }}",
+  "level": "active",
+  "group": "proxmox"
+}
+```
+
+…and `"level": "timeSensitive"` in the urgent one.
+
+Templating is Handlebars. `{{ escape … }}` is required on anything free-form — Proxmox messages
+contain newlines and quotes, and an unescaped backup log breaks the JSON so Bark rejects the whole
+push. Available: `title`, `message`, `severity`, `timestamp`, `fields.<name>`, `secrets.<name>`;
+helpers `escape`, `url-encode`, `json`.
+
+**The device key belongs in `Secret`, not pasted into the body.** Proxmox stores secrets in a
+root-only file and masks them in the UI and API; the body is world-readable config. This is the one
+place the key gets better handling than it does in this repo (still inline — see `docs/apps/bark.md`).
+
+### 2. Route them (Notifications → Matchers → Add)
+
+| Matcher | Rule | Target |
+|---|---|---|
+| `bark-urgent` | Match Severity: `warning`, `error` | `bark-proxmox-urgent` |
+| `bark-normal` | Match Severity: `info`, `notice` | `bark-proxmox` |
+
+Leave the shipped `default-matcher` (→ `mail-to-root`) alone at first, so you keep the old path
+while you confirm pushes arrive. Disable it once you trust Bark. Each target fires at most once per
+notification even when several matchers select it.
+
+### 3. Test
+
+```bash
+# On the Proxmox host — the test button in the GUI does the same thing
+pvesh create /cluster/notifications/endpoints/webhook/bark-proxmox/test
+```
+Phone buzzes. If it doesn't, `journalctl -u pvescheduler -n 50` on the host shows the HTTP result.
+
+### ⚠️ Bark lives in the cluster
+
+The circular bit: Bark is a pod in k3s, so Proxmox can only reach it while k3s is serving. If the
+**master** dies, a push from Proxmox still works *provided the Bark pod is on a worker* — kube-proxy
+and the running pod survive the control plane. If Bark happened to be scheduled on the master, it
+dies too and you get nothing.
+
+Worth pinning it so that is not left to chance:
+```yaml
+# kubernetes/apps/monitoring/bark/deployment.yaml → under spec.template.spec
+nodeSelector:
+  immich-node: "true"      # the worker, so Bark outlives a master failure
+```
+
+### 4. The master-down check (what the webhook can't do)
+
+A cron on the Proxmox host, since nothing inside the cluster can report the cluster being gone:
+
+```bash
+# /usr/local/bin/check-k3s-master.sh   (chmod +x; crontab: */5 * * * *)
+#!/bin/bash
+KEY=$(cat /root/.bark-key)             # chmod 600
+STAMP=/run/k3s-master-alerted
+if ping -c2 -W3 192.168.68.93 >/dev/null 2>&1; then
+  [ -f "$STAMP" ] && rm -f "$STAMP"    # recovered — reset so the next outage alerts
+  exit 0
+fi
+[ -f "$STAMP" ] && exit 0              # already alerted; don't repeat every 5 min
+touch "$STAMP"
+curl -s -X POST http://192.168.68.63:30889/push -H 'Content-Type: application/json' \
+  -d "{\"device_key\":\"$KEY\",\"title\":\"k3s master DOWN\",\"body\":\"192.168.68.93 not responding to ping from Proxmox.\",\"level\":\"timeSensitive\",\"group\":\"homelab\"}"
+```
+
+The stamp file is the whole point — without it a weekend outage sends ~576 notifications and you
+learn to ignore the group. Same idea as Argo's `oncePer`.
 
 ---
 

@@ -44,6 +44,18 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 Migrating these into `.enc.yaml` files is the open item (§5 below is the recipe).
 
 ### Known debt ⚠️
+- **`kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` is cleartext in a PUBLIC repo.**
+  `NEXTAUTH_SECRET` signs Karakeep's login cookies, so anyone holding it can forge a session —
+  gated only by Karakeep being reachable on Tailscale/LAN and not the internet. Accepted for now,
+  deliberately. **Fix when ready — two commands, on the Arch box:**
+  ```bash
+  ./scripts/secrets.sh rotate karakeep NEXTAUTH_SECRET MEILI_MASTER_KEY
+  ./scripts/secrets.sh encrypt karakeep
+  # then in karakeep/kustomization.yaml: move the file out of `resources:` and
+  # uncomment the `generators:` block (both lines are already there, ready to swap)
+  ```
+  Then Sync + `kubectl rollout restart deploy/karakeep -n apps`. You get logged out of Karakeep
+  once. Rotating is the fix, not deleting: the old values are in git history permanently.
 - `kubernetes/apps/media/suwayomi/deployment.yaml` carries Suwayomi's Basic-auth username/password **inline**
   (chosen for now; host is Tailscale-only). Move to a SOPS secret with the §5 recipe when ready,
   then rotate the password since the old one stays in git history.
@@ -85,7 +97,45 @@ sudo k3s kubectl create secret generic sops-age -n argocd --from-file=keys.txt=$
 
 ---
 
-## 3. The five commands
+## 3. The script (`scripts/secrets.sh`) — start here
+
+Everything in §3–§6 below is wrapped by one script, so the flags below are reference rather than
+something to memorise. It works on Arch and macOS, and the first two commands need **no age key**:
+
+```bash
+./scripts/secrets.sh status      # every secret: encrypted?, which keys, how it is wired
+./scripts/secrets.sh setup       # is THIS machine able to encrypt/decrypt? what's missing?
+./scripts/secrets.sh help        # all commands
+```
+
+| Command | Does |
+|---|---|
+| `status` | per file: encrypted or plaintext, its key names, and whether it is wired as a **KSOPS generator**, as a **plain resource** (= cleartext in git), or not at all |
+| `setup` | checks `sops`, `age`, the key file and its permissions; prints the install/copy commands |
+| `new <ns>/<app> KEY...` | creates `<app>-secret.enc.yaml` **and** `<app>-secret.sops.yaml` **and** adds the generator to `kustomization.yaml` — the three-file step where forgetting one surfaces much later as "secret not found" |
+| `set <app> KEY=value` | change a value with no editor. `KEY=-` generates a strong random one. Works on encrypted files (`sops --set`) and plaintext templates alike |
+| `encrypt <app>` | `sops -e -i`, then **proves it decrypts** before saying it worked |
+| `view` / `get <app> KEY` | whole file, or one value to pipe |
+| `edit <app>` | `$EDITOR`, re-encrypts on save |
+| `rotate <app> KEY...` | new random values + the follow-up steps, with a warning about credentials that also live elsewhere |
+| `verify` | round-trips every file — the pre-commit check |
+| `gen [len]` | just print a random secret |
+
+`<app>` is a substring: `karakeep` finds `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml`.
+
+```bash
+# add a secret to a new app, end to end
+./scripts/secrets.sh new media/myapp API_KEY DB_PASSWORD
+./scripts/secrets.sh set myapp API_KEY=abc123 DB_PASSWORD=-     # '-' = generate
+./scripts/secrets.sh encrypt myapp
+./scripts/ci/check-conventions.sh                                # secretKeyRef matches a real key
+```
+
+Also `make secrets` (status) and `make secrets-help`.
+
+---
+
+## 3b. The five raw commands
 
 ```bash
 # VIEW — whole file decrypted to the terminal, file untouched
@@ -193,11 +243,27 @@ Copy `kubernetes/apps/media/komf/` as a template — it is the smallest complete
 
 ## 6. Rotating a secret
 
-1. Change the real credential at its source (DB `ALTER ROLE`, Valkey `ACL SETUSER`, regenerate
-   the API key in the app's UI).
-2. `sops kubernetes/apps/<namespace>/<app>/<app>-secret.enc.yaml` → paste the new value → save.
-3. Push → Sync → `rollout restart` the deployment.
-4. If the old value was ever committed in plaintext, rotating is **mandatory**, not optional.
+```bash
+./scripts/secrets.sh rotate <app> KEY [KEY ...]      # new random values + the follow-up steps
+```
+
+⚠️ **The script only changes the value in git.** That is the whole job for a *self-contained*
+value — one the app invents for itself, like `NEXTAUTH_SECRET`, `ROMM_AUTH_SECRET_KEY` or
+`MEILI_MASTER_KEY`. For anything that also exists somewhere else, change it **there first**, or
+you have broken the app rather than rotated it:
+
+| Value | Change it at the source first |
+|---|---|
+| `DB_PASSWD` | Postgres LXC `.7` → `ALTER ROLE … PASSWORD …` |
+| `REDIS_PASSWORD` | Valkey `.103` → `ACL SETUSER …` |
+| `KAVITA_API_KEY`, provider keys | the app's / provider's own UI |
+| `WIREGUARD_PRIVATE_KEY` | Mullvad account page — a new key, not a random string |
+
+Then: push → Sync → `kubectl rollout restart deploy/<app> -n <ns>` (**pods do not restart on a
+Secret change**).
+
+**If the old value was ever committed in plaintext, rotating is mandatory, not optional** — git
+history keeps it forever, and on a public repo so does everyone who cloned it.
 
 ---
 

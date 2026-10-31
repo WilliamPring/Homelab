@@ -1,50 +1,100 @@
-# CI guard — runs scripts/ci/validate.sh on every pull request (Renovate's included) and on
-# pushes to main. It is a GATE, not a deploy: nothing here touches the cluster.
-#   1 secrets encrypted · 2 kustomize renders · 3 plain manifests parse · 4 helm charts render
-#   with their values · 5 kubeconform schema check · (separate job) renovate.json is valid
+# CI guard — runs on every pull request (Renovate's included) and on pushes to main.
+# It is a GATE, not a deploy: nothing here touches the cluster. Argo pulls from git; CI only
+# decides whether what you pushed is worth Argo reading.
+#
+#   manifests    1 secrets encrypted · 2 kustomize renders · 3 plain manifests parse
+#                4 helm charts render with their values · 5 kubeconform schema check
+#   conventions  the rules kubeconform cannot see: ApplicationSet directory depth, NodePort
+#                collisions, image pinning, secretKeyRef ↔ Secret keys, ingress hosts
+#   lint         yamllint
+#   renovate     renovate.json is valid
+#
+# ⚠️ None of this BLOCKS a merge until `main` has branch protection with these as required
+# checks. Until then CI is advice: a red run still merges. See docs/platform/ci.md.
 name: validate
+
 on:
   pull_request:
   push:
     branches: [main]
   workflow_dispatch:
 
+# Least privilege: these jobs only read the tree. Nothing needs to write to the repo, open a
+# PR, or touch packages — so nothing is granted it.
 permissions:
   contents: read
+
+# A second push to the same branch cancels the first. Without this, pushing three times in a
+# minute runs three full matrices and you wait for results you no longer care about.
+# Never cancel on main: those runs are the record of what landed.
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   # renovate: datasource=github-releases depName=yannh/kubeconform
   KUBECONFORM_VERSION: v0.8.0
-  # Secrets check: "0" = warn only (current — komf/romm templates not yet encrypted),
-  # "1" = a plaintext *.enc.yaml FAILS the run. Flip to "1" once those two are encrypted.
+  # sha256 of kubeconform-linux-amd64.tar.gz for the version above, from the release's CHECKSUMS.
+  # Update BOTH lines together — Renovate bumps the version, you paste the new hash:
+  #   curl -sSL https://github.com/yannh/kubeconform/releases/download/<ver>/CHECKSUMS | grep linux-amd64
+  KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+  # renovate: datasource=pypi depName=yamllint
+  YAMLLINT_VERSION: 1.37.1
+  # Secrets check: "0" = warn only (current — komf/romm/qbittorrent templates not yet encrypted),
+  # "1" = a plaintext *.enc.yaml FAILS the run. Flip to "1" once those are encrypted.
   STRICT_SECRETS: "0"
 
 jobs:
   manifests:
     name: manifests (kustomize · helm · kubeconform · secrets)
     runs-on: ubuntu-latest
-    steps:
+    timeout-minutes: 10        # it takes ~40s; 10 min means a hung helm pull dies instead of
+    steps:                     # burning six hours of the free Actions allowance
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # don't leave a push-capable token in .git/config
       - name: Install kubeconform
         run: |
-          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
-            | sudo tar -xz -C /usr/local/bin kubeconform
+          set -euo pipefail
+          curl -sSL -o kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum -c -
+          sudo tar -xzf kubeconform.tar.gz -C /usr/local/bin kubeconform
+          rm kubeconform.tar.gz
           kubeconform -v; kubectl version --client; helm version --short; ruby -v
       - name: Validate
         run: ./scripts/ci/validate.sh
 
+  conventions:
+    name: conventions (applicationset · nodeports · secretrefs · pinning)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: ./scripts/ci/check-conventions.sh
+
   lint:
     name: yamllint
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - run: pipx install yamllint && yamllint -c .yamllint.yaml .
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # Pinned: an unpinned `pipx install yamllint` means a new yamllint release can turn CI red
+      # on a commit that changed nothing. Renovate bumps the pin above like any other dependency.
+      - run: pipx install "yamllint==${YAMLLINT_VERSION}" && yamllint -c .yamllint.yaml .
 
   renovate-config:
     name: renovate.json is valid
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 24

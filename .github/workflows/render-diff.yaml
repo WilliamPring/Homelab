@@ -1,0 +1,111 @@
+# render-diff — show, on the PR, what this change does to the CLUSTER, not to the files.
+#
+# The gap this fills: Argo applies rendered OBJECTS; a PR shows you SOURCE. Renovate's
+# "version: 1.2.3 → 1.3.0" is one line, and the chart behind it can add a container, drop a
+# volume, rename every object, or change a securityContext. You cannot review what you cannot
+# see, and "Sync and find out" is how a homelab eats an afternoon.
+#
+# So: render every app at the PR's base, render it at the head, and post the diff as a comment
+# that updates in place on each push.
+#
+# ⚠️ Secrets are absent from both sides — KSOPS generators are stripped (CI has no age key), so
+# this diff can never leak a secret value, and equally can never show you one changing.
+name: render-diff
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write      # the ONLY job in this repo with a write scope, and only this one
+
+concurrency:
+  group: render-diff-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diff:
+    name: rendered manifest diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Skip PRs from forks: they get a read-only token, so the comment step would fail anyway.
+    # (Using pull_request, not pull_request_target — a fork's code must never run with write.)
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Check out base (what is on main today)
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+
+      - name: Check out head (what this PR proposes)
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          persist-credentials: false
+
+      - name: Render both sides
+        run: |
+          # Rendering failures are expected input here (a PR may break a chart), so don't abort.
+          bash head/scripts/ci/render-all.sh base out/base || true
+          bash head/scripts/ci/render-all.sh head out/head || true
+
+      - name: Diff
+        id: diff
+        run: |
+          set -uo pipefail
+          diff -ruN out/base out/head > out/diff.txt || true
+          lines=$(wc -l < out/diff.txt | tr -d ' ')
+          echo "lines=$lines" >> "$GITHUB_OUTPUT"
+          # GitHub caps a comment at 65536 chars; leave room for the wrapper.
+          head -c 60000 out/diff.txt > out/diff.trunc
+          [ "$(wc -c < out/diff.txt)" -gt 60000 ] && echo "truncated=1" >> "$GITHUB_OUTPUT" || true
+
+      - name: Comment on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          LINES: ${{ steps.diff.outputs.lines }}
+          TRUNC: ${{ steps.diff.outputs.truncated }}
+        run: |
+          set -euo pipefail
+          MARKER="<!-- render-diff -->"
+          {
+            echo "$MARKER"
+            if [ "$LINES" -eq 0 ]; then
+              echo "### Rendered manifests: no change"
+              echo
+              echo "This PR changes no Kubernetes object. (Docs, CI, comments, or a pin that"
+              echo "renders identically.) Nothing for Argo to sync."
+            else
+              echo "### Rendered manifests: $LINES changed lines"
+              echo
+              echo "What Argo will actually apply once this is merged and you click Sync."
+              [ -n "${TRUNC:-}" ] && echo "> ⚠️ Truncated — download the \`diff\` from the run's logs for the rest."
+              echo
+              echo '```diff'
+              cat out/diff.trunc
+              echo '```'
+            fi
+          } > out/comment.md
+
+          # Update the existing comment instead of adding one per push, so the PR stays readable.
+          id=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
+                 --jq "[.[] | select(.body | startswith(\"$MARKER\"))] | first | .id // empty")
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${id}" -F body=@out/comment.md >/dev/null
+            echo "updated comment $id"
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -F body=@out/comment.md >/dev/null
+            echo "created comment"
+          fi
+
+      - name: Upload the full diff
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rendered-diff
+          path: out/
+          retention-days: 14

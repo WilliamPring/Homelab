@@ -39,8 +39,18 @@ Bark app (App Store, "Bark – Custom notifications") → **Servers** (top-right
 
 ### 4. Put the device key where the senders read it
 Inline for now (your testing stance — a device key only allows sending pushes *to your phone*):
-- `kubernetes/apps/monitoring/gatus/deployment.yaml` → env `BARK_DEVICE_KEY`
-- `kubernetes/bootstrap/argocd/argocd-notifications-cm.yaml` → `context: barkDeviceKey`
+
+| Sender | Where the key goes | In git? |
+|---|---|---|
+| Gatus | `kubernetes/apps/monitoring/gatus/deployment.yaml` → env `BARK_DEVICE_KEY` | yes |
+| Argo CD | `kubernetes/bootstrap/argocd/argocd-notifications-cm.yaml` → `context: barkDeviceKey` | yes |
+| Proxmox | Datacenter → Notifications → the webhook target's **Secret** `device_key` | no — on the host |
+| Proxmox cron | `/root/.bark-key` (the master-down check) | no — on the host |
+
+⚠️ **Reinstalling the Bark app issues a NEW key and invalidates the old one.** That silently breaks
+every row above, with no error anywhere — pushes just stop. This table is the rotation checklist;
+the two outside git are the ones that get forgotten. See `platform/updates-and-notifications.md`
+for the Proxmox setup.
 
 Then push → Sync `gatus` → `sudo k3s kubectl -n monitoring rollout restart deploy/gatus`, and
 `sudo k3s kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd`.
@@ -59,7 +69,8 @@ Phone buzzes within a second, Tailscale on or off. Then lock the phone and send 
 |---|---|---|---|
 | Gatus down | 🔴 DOWN *endpoint* | timeSensitive (breaks through Focus briefly) | homelab |
 | Gatus resolved | 🟢 UP *endpoint* | timeSensitive | homelab |
-| Argo | *app*: update waiting / deployed / SYNC FAILED / DEGRADED | active | argocd |
+| Argo routine | *app*: update waiting / deployed | active (normal buzz) | argocd |
+| Argo failure | *app*: SYNC FAILED / DEGRADED | timeSensitive (breaks through Focus) | argocd |
 
 Levels: `passive` (silent), `active` (normal), `timeSensitive`, `critical` (overrides Do Not Disturb;
 needs the app's critical-alert permission). Change per sender in the Gatus ConfigMap / Argo templates.

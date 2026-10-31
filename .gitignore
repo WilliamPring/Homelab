@@ -3,9 +3,20 @@
 *.secret
 acme.json
 kubeconfig
+k3s.yaml            # the k3s admin kubeconfig — cluster-admin in a single file
+*.agekey
+keys.txt            # sops/age private key file (`age-keygen -o keys.txt`)
 *.pem
 *.key
 *.crt
+
+# SOPS leaves these behind if an edit session is interrupted — they hold DECRYPTED content
+.decrypted~*
+*.decrypted.yaml
+
+# `make diag` writes a cluster dump here and tells you to commit it. Review it first: it is a
+# paste of live cluster state, and this repo is PUBLIC. Un-ignore deliberately, per file.
+debug/*.txt
 
 # Local overrides
 *.local.yaml

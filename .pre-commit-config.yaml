@@ -1,6 +1,11 @@
 # pre-commit hooks — the cheap checks run on every commit; the slow full validation on push.
 #   one-time:  pip install pre-commit  (or pipx) → pre-commit install --hook-type pre-commit --hook-type pre-push
-# Renovate tracks the `rev:` pins below.
+#              (or `make hooks`)
+# Renovate tracks the `rev:` pins below — but ONLY because renovate.json enables the `pre-commit`
+# manager explicitly. It is disabled by default; without that block these pins never move.
+#
+# ⚠️ These hooks run on YOUR machine and only if you installed them. They are not a gate — CI is.
+# Anything that must never reach main belongs in .github/workflows/validate.yaml as well.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -14,7 +19,10 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=512]
       - id: check-merge-conflict
-      - id: detect-private-key          # an age/SSH private key must never land in git
+      # Catches PEM-headed keys (SSH/RSA/EC). ⚠️ It does NOT catch an age private key —
+      # AGE-SECRET-KEY-1... has no PEM header — which is the key this repo actually depends on.
+      # The local `age-private-key` hook below closes that gap.
+      - id: detect-private-key
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.37.1
@@ -24,6 +32,20 @@ repos:
 
   - repo: local
     hooks:
+      # The SOPS age private key decrypts every secret in this repo. detect-private-key cannot
+      # see it (no PEM header), and the repo is public — so block the literal prefix outright.
+      # A real key is AGE-SECRET-KEY-1 + 58 chars; the docs' "AGE-SECRET-KEY-1..." is left alone.
+      - id: age-private-key
+        name: "no age private key in a commit"
+        entry: '(?i)AGE-SECRET-KEY-1[A-Z0-9]{10,}'
+        language: pygrep
+        types: [text]
+      - id: conventions
+        name: "repo conventions (appset depth, nodeports, secretrefs, pinning)"
+        entry: scripts/ci/check-conventions.sh
+        language: script
+        pass_filenames: false
+        stages: [pre-push]
       - id: sops-encrypted
         name: "*.enc.yaml should be SOPS-encrypted (warns until STRICT_SECRETS=1)"
         entry: scripts/ci/check-sops.sh

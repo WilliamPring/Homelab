@@ -5,11 +5,16 @@
 # and WHERE. No per-app annotations needed: `subscriptions:` below subscribes EVERY
 # Application in the argocd namespace.
 #
-#   Trigger             When                                             Bark level
-#   on-out-of-sync      git moved (Renovate merge / your push) → waiting for your Sync click     3
-#   on-deployed         a Sync finished and the app is Healthy                                   3
-#   on-sync-failed      a Sync errored (bad manifest, KSOPS decrypt, missing secret…)            5
-#   on-health-degraded  pods crash-looping / probes failing                                      5
+#   Trigger             When                                                          Bark level
+#   on-out-of-sync      git moved (Renovate merge / your push) → waiting for your Sync click   active
+#   on-deployed         a Sync finished and the app is Healthy                                 active
+#   on-sync-failed      a Sync errored (bad manifest, KSOPS decrypt, missing secret…)   timeSensitive
+#   on-health-degraded  pods crash-looping / probes failing                            timeSensitive
+#
+# Bark levels are NAMES, not numbers: passive (silent) · active (normal) · timeSensitive (breaks
+# through Focus for ~an hour) · critical (overrides Do Not Disturb; needs the app's permission).
+# The two FAILURE events are timeSensitive so they stand out from routine deploy chatter — if
+# everything is `active`, a crash-loop looks exactly like a successful sync on the lock screen.
 #
 # Delivery: POST JSON to the in-cluster Bark Service (no TLS/Ingress dependency) → Apple APNs →
 # the Bark app on your phone. Bark is now the ONLY channel; ntfy was retired.
@@ -72,7 +77,7 @@ data:
             "device_key": "{{.context.barkDeviceKey}}",
             "title": "{{.app.metadata.name}}: SYNC FAILED",
             "body": "Phase: {{.app.status.operationState.phase}}. Open Argo for the error (bad manifest, KSOPS decrypt, missing secret, image pull…).",
-            "level": "active",
+            "level": "timeSensitive",
             "group": "argocd",
             "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
           }
@@ -86,7 +91,7 @@ data:
             "device_key": "{{.context.barkDeviceKey}}",
             "title": "{{.app.metadata.name}}: DEGRADED",
             "body": "Health is {{.app.status.health.status}} — pods crash-looping or probes failing. Check the pod logs.",
-            "level": "active",
+            "level": "timeSensitive",
             "group": "argocd",
             "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"
           }

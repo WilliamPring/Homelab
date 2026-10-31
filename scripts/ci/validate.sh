@@ -81,13 +81,22 @@ while IFS= read -r d; do
 done < <(find kubernetes/apps -mindepth 2 -maxdepth 2 -type d | sort)   # kubernetes/apps/<ns>/<app>
 
 # ── 4. Argo Applications + helm charts ──────────────────────────────────────────────────
+# ⚠️ HISTORY: this used to glob kubernetes/bootstrap/apps/*.yaml — a directory of hand-written
+# Application files that the kubernetes/apps/<ns>/<app> + ApplicationSet refactor deleted. The
+# glob then matched nothing, so this section silently rendered ZERO charts while still printing
+# a PASS. Chart coverage was never actually lost (immich and cert-manager carry `helmCharts:` in
+# their kustomization.yaml, so section 2's `kubectl kustomize --enable-helm` renders them), but
+# the PASS was a lie. The glob below now matches whatever chart-source Applications actually
+# exist; if none do, the section says so instead of claiming a pass.
 echo "== 4. argo: the ApplicationSet (and any leftover chart-source Application) =="
 : > "$OUT/argocd-apps.yaml"
 { cat kubernetes/bootstrap/apps.yaml; echo; echo '---'; } >> "$OUT/argocd-apps.yaml"
 pass "bootstrap: ApplicationSet collected ($(ls -d kubernetes/apps/*/* | wc -l | tr -d ' ') app directories it will generate)"
+charts_seen=0
 # ruby prints one line per chart source: name|repoURL|chart|version|values|namespace
 # (process substitution, NOT a pipe: a pipe would run the loop in a subshell and swallow FAIL=1)
 while IFS='|' read -r app repo chart ver vals ns; do
+  charts_seen=$((charts_seen+1))
   args=(); IFS=',' read -ra vf <<< "$vals"; for v in "${vf[@]}"; do [ -n "$v" ] && args+=(-f "$v"); done
   case "$repo" in
     oci://*) ref="$repo"; [[ "$repo" == */"$chart" ]] || ref="$repo/$chart"
@@ -101,7 +110,8 @@ while IFS='|' read -r app repo chart ver vals ns; do
     fail "$app  ← $chart $ver"; sed 's/^/    /' "$OUT/helm-$app.err" | head -20
   fi
 done < <(ruby -ryaml -e '
-Dir["kubernetes/bootstrap/apps/*.yaml"].sort.each do |f|
+Dir["kubernetes/**/*.yaml"].sort.each do |f|
+  next if f =~ %r{/charts/}
   a=YAML.load_file(f) rescue next; next unless a.is_a?(Hash) && a["kind"]=="Application"
   srcs=(a.dig("spec","sources")||[a.dig("spec","source")]).compact
   srcs.each do |s|
@@ -110,6 +120,7 @@ Dir["kubernetes/bootstrap/apps/*.yaml"].sort.each do |f|
     puts [a.dig("metadata","name"), s["repoURL"], s["chart"], s["targetRevision"], vals, a.dig("spec","destination","namespace")].join("|")
   end
 end')
+[ "$charts_seen" -eq 0 ] && echo "       (no chart-source Application files — charts live in kustomization.yaml \`helmCharts:\` and are rendered by section 2)"
 
 # ── 5. kubeconform ──────────────────────────────────────────────────────────────────────
 echo "== 5. schema: kubeconform over everything rendered =="
