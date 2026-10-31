@@ -77,7 +77,41 @@ Gatus ConfigMap, the `ntfy` service/recipient from the Argo ConfigMap, and the n
 ## Troubleshooting
 | Symptom | Fix |
 |---|---|
+| CrashLoop, logs say **"invalid option"** mentioning `entrypoint.sh` | `args:` lost the command name — see the box below. `bark-server` must be the first entry |
 | `/ping` works, no push | wrong/missing device key (`REPLACE_ME` still in place?); check `kubectl -n monitoring logs deploy/gatus` and `deploy/bark` for the POST result |
 | Push arrives with Tailscale on but not off | that would be ntfy behaviour, not Bark's — make sure the Bark subscription is the one you are testing |
 | App can't register | NPMplus host not resolving / not forwarding to `:30889`; try the LAN URL first |
 | Bark server down | Gatus still pages via ntfy for that one endpoint; dashboard shows it red |
+
+### ⚠️ `args:` replaces the image's command — it does not append to it
+
+The Bark image is built as:
+
+```
+ENTRYPOINT ["/entrypoint.sh"]
+CMD        ["bark-server"]
+```
+
+Kubernetes maps `command:` → ENTRYPOINT and `args:` → CMD, and setting either one **replaces** the
+image's value. So listing only the flags:
+
+```yaml
+args: [--addr=0.0.0.0:8080, --data=/data]     # ✗ wrong
+```
+
+runs `/entrypoint.sh --addr=0.0.0.0:8080 --data=/data` — the script receives a flag where it expects
+a command name and exits with *"invalid option"*. The command has to be restated:
+
+```yaml
+args: [bark-server, --addr=0.0.0.0:8080, --data=/data]    # ✓
+```
+
+**How to check any image before overriding its args** — read what it actually declares, rather than
+guessing (`docker inspect` locally, or the registry API without pulling):
+
+```bash
+docker inspect finab/bark-server:v2.3.9 --format '{{.Config.Entrypoint}} {{.Config.Cmd}}'
+```
+
+If `Cmd` is non-empty, your `args:` must reproduce it. If `Cmd` is empty — as in Karakeep's Chrome
+image — the entrypoint takes the flags directly and there is nothing to restate.

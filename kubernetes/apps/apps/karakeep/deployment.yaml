@@ -89,9 +89,13 @@ spec:
             httpGet: { path: /api/health, port: http }
             initialDelaySeconds: 90
             periodSeconds: 30
+          # Requests are what the scheduler reserves — kept low because this sits idle most of the
+          # time. The limit stays roomy: it only matters when actually hit, and hitting it is an
+          # OOM-kill, not throttling. No CPU limit anywhere here on purpose — CPU is compressible,
+          # so a limit just throttles archiving for no benefit on a single-tenant box.
           resources:
-            requests: { cpu: 100m, memory: 512Mi }
-            limits: { memory: 1536Mi }
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 1Gi }
 
         # ── 2. headless Chromium — the page archiver ──────────────────────────────────────────────
         #     Karakeep publishes its own Chrome image; the flags below are upstream's compose file.
@@ -104,8 +108,12 @@ spec:
             - --hide-scrollbars
             - --disable-blink-features=AutomationControlled
             - --window-size=1440,900
+          # Request is small (Chrome idles cheaply) but the LIMIT is deliberately NOT cut: a page
+          # with heavy JS can spike to several hundred MB for a few seconds, and an OOM-kill mid-
+          # archive is silent — the bookmark saves, the snapshot never appears. This is the one
+          # container where a tight limit costs you data rather than just performance.
           resources:
-            requests: { cpu: 100m, memory: 512Mi }
+            requests: { cpu: 50m, memory: 192Mi }
             limits: { memory: 1Gi }
 
         # ── 3. meilisearch — full-text search ─────────────────────────────────────────────────────
@@ -122,9 +130,12 @@ spec:
           volumeMounts:
             - name: meili
               mountPath: /meili_data
+          # Meilisearch memory-maps its index, so RSS tracks index size rather than a fixed need.
+          # A few thousand bookmarks is comfortably inside this; raise the limit if search gets
+          # OOM-killed once the archive is large.
           resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits: { memory: 1Gi }
+            requests: { cpu: 25m, memory: 128Mi }
+            limits: { memory: 512Mi }
 
       volumes:
         - name: data

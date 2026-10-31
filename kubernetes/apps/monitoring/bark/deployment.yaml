@@ -31,7 +31,12 @@ spec:
       containers:
         - name: bark
           image: finab/bark-server:v2.3.9   # pinned — Renovate PRs bumps (stateless group)
+          # ⚠️ `bark-server` MUST be the first entry. The image is ENTRYPOINT ["/entrypoint.sh"] +
+          # CMD ["bark-server"], and a Kubernetes `args:` REPLACES Cmd rather than appending to it.
+          # Listing only the flags runs `/entrypoint.sh --addr=...`, so the script gets a flag where
+          # it expects a command name and dies with "invalid option". Re-state the command, then flags.
           args:
+            - bark-server
             - --addr=0.0.0.0:8080
             - --data=/data
           env:
