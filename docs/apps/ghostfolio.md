@@ -52,6 +52,10 @@ Its contents are a quote cache and a BullMQ job queue, both rebuilt on demand, s
 
 ## Setup
 
+👉 **First time? Use the walkthrough instead:**
+[`../runbooks/deploy-ghostfolio.md`](../runbooks/deploy-ghostfolio.md) — the same steps with the
+*why* at each one, expected output, and a checklist. What follows here is the short reference.
+
 ### 1. Postgres role (on the LXC, once)
 ```bash
 # copy scripts/postgres-ghostfolio-setup.sh to 192.168.68.7, then as root:

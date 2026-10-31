@@ -169,6 +169,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 
 **Runbooks** — do-this-when
 - [`runbooks/rebuild-from-zero.md`](runbooks/rebuild-from-zero.md) — the whole stack from a blank cluster, in order
+- [`runbooks/deploy-ghostfolio.md`](runbooks/deploy-ghostfolio.md) — **step-by-step walkthrough of an app that needs a DB, secrets and DNS** (the pattern for any future one)
 - [`runbooks/cheatsheet.md`](runbooks/cheatsheet.md) · [`runbooks/cluster-cleanup.md`](runbooks/cluster-cleanup.md)
 - [`runbooks/proxmox-install.md`](runbooks/proxmox-install.md) · [`runbooks/couchdb-lxc-setup.md`](runbooks/couchdb-lxc-setup.md) · [`runbooks/tailscale-mullvad-exit-node.md`](runbooks/tailscale-mullvad-exit-node.md)
 
