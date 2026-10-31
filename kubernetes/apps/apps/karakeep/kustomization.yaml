@@ -6,6 +6,12 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  # ⚠️ TEMPORARY (testing stance): karakeep-secret.enc.yaml is applied as a PLAIN resource, so its
+  # values are cleartext in git. KSOPS cannot be used here — `sops -d` errors on a file that was
+  # never encrypted, which is what produced "secret karakeep-secret not found".
+  # TO GO BACK TO SOPS: fill in real values, `sops --encrypt --in-place` the file, then delete the
+  # line below and restore the `generators:` block at the bottom. Nothing else changes.
+  - karakeep-secret.enc.yaml
 
-generators:
-  - karakeep-secret.sops.yaml    # KSOPS → karakeep-secret (NEXTAUTH_SECRET + MEILI_MASTER_KEY)
+# generators:
+#   - karakeep-secret.sops.yaml  # KSOPS → karakeep-secret (NEXTAUTH_SECRET + MEILI_MASTER_KEY)
