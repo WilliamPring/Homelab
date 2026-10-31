@@ -28,6 +28,14 @@ spec:
       labels:
         app: actual
     spec:
+      # ⚠️ REQUIRED HERE — without it the container will not start.
+      # Kubernetes injects Docker-link-style env vars for every Service in the namespace:
+      # a Service named `actual` produces ACTUAL_PORT=tcp://10.43.x.x:5006. Actual reads
+      # ACTUAL_PORT as its own listen port, gets a URL instead of a number, and Node dies with
+      # "port should be >= 0 and < 65536". The Service name collided with the app's own config var.
+      # Turning the injection off kills the whole class of collision; nothing here needs those vars
+      # (apps find each other via DNS, not link vars).
+      enableServiceLinks: false
       securityContext:
         runAsUser: 1000       # match the NFS export's owner (1000:1000), same as every other app here
         runAsGroup: 1000
@@ -38,6 +46,11 @@ spec:
           env:
             - name: TZ
               value: "America/Vancouver"
+            # Belt and braces: an explicit env entry also beats an injected link var, so this keeps
+            # the app on the right port even if the flag above is ever removed. It is the image's
+            # own default — stated here only to make the collision above impossible to re-introduce.
+            - name: ACTUAL_PORT
+              value: "5006"
           ports:
             - name: http
               containerPort: 5006

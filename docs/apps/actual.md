@@ -122,11 +122,35 @@ Two things to do:
 
 | Symptom | Likely cause | Check / fix |
 |---|---|---|
+| CrashLoop, logs say **"port should be >= 0 and < 65536"** | `enableServiceLinks` got removed — see the box below | it must stay `false` in `deployment.yaml` |
 | Pod `ContainerCreating`, mount errors | `/data/actual` doesn't exist on the NFS box | §3.1 |
 | Pod Running but Actual errors on first load | the directory exists but isn't owned by `1000:1000` | `ls -ln /data/actual` on the file server |
 | Browser says "server is not running" | DNS record missing, or Tailscale off on the device | `nslookup actual.williampring.ca` → should be the `100.x` address |
 | Forgot the server password | it's hashed inside `/data` | stop the pod, move `/data/actual/account.sqlite` aside, restart → first-run screen again. **You keep your budget**, you just re-pair devices |
 | Sync conflicts between devices | two devices edited offline | Actual resolves most automatically; check Settings → Repair if a budget looks wrong |
+
+### ⚠️ Why `enableServiceLinks: false` is not optional here
+
+Kubernetes injects Docker-link-style environment variables into every pod — one set for each Service
+in the namespace, named after the Service in upper case:
+
+```
+Service "actual"  ──►  ACTUAL_PORT=tcp://10.43.x.x:5006
+                       ACTUAL_SERVICE_HOST=10.43.x.x
+                       ACTUAL_SERVICE_PORT=5006
+```
+
+Actual's own config variable for its listen port is **`ACTUAL_PORT`** (default `5006`). So the
+injected variable overwrites the app's own setting with a URL, Actual tries to listen on
+`tcp://10.43.x.x:5006`, and Node refuses: *"port should be >= 0 and < 65536"*. The app never starts.
+
+Nothing in this cluster needs those link variables — apps find each other through DNS — so the fix is
+to switch the injection off for this pod. `ACTUAL_PORT: "5006"` is also set explicitly as a second
+line of defence, since an explicit `env:` entry beats an injected one.
+
+**The general lesson:** this bites whenever a Service name, upper-cased, matches a prefix the app
+itself uses for config. Worth remembering when naming a Service after an app whose variables start
+with the same word.
 
 ---
 
