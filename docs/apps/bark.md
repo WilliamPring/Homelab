@@ -1,7 +1,7 @@
-# Bark — push notifications to the iPhone (replaces ntfy for alerts)
+# Bark — push notifications to the iPhone (the only alert channel)
 
-**Why:** ntfy's iOS app must *fetch* each message from your server, and your server is Tailscale-only,
-so pushes were lost whenever Tailscale was asleep on the phone. Bark delivers server → **Apple push
+**Why:** the previous channel (ntfy, now retired) had an iOS app that must *fetch* each message from
+your server, and your server is Tailscale-only, so pushes were lost whenever Tailscale was asleep. Bark delivers server → **Apple push
 (APNs)** → phone; the phone never has to reach your server after a one-time registration. Open
 source (MIT), tiny Go server, free iOS app.
 
@@ -69,19 +69,23 @@ Tap a notification → opens the status page (Gatus) or the app in Argo.
 app → server → Encryption → set a key; senders then post `ciphertext` instead of `body`. Gatus's
 custom provider cannot encrypt, so leave this off unless you move to a small relay.
 
-## Switch-over from ntfy
-Both channels fire during the transition (Gatus `alerts: [custom, ntfy]`, Argo subscribes `bark, ntfy`).
-After a week of Bark arriving reliably: remove the `ntfy:` provider and `type: ntfy` entries from the
-Gatus ConfigMap, the `ntfy` service/recipient from the Argo ConfigMap, and the ntfy app directory.
+## ⚠️ Bark is the only channel
+ntfy has been removed. That means **nothing can page you about Bark itself being down** — a push
+server cannot report its own outage. The Gatus endpoint "Bark (push server)" is therefore
+`alerts: []`, dashboard-only, at <https://status.williampring.ca>.
+
+If you want that covered, the options are a second channel (a free Healthchecks.io or Uptime Robot
+check hitting `/ping` from outside), or an occasional glance at the dashboard. For a homelab the
+dashboard is usually enough — but it is a deliberate gap, not an oversight.
 
 ## Troubleshooting
 | Symptom | Fix |
 |---|---|
 | CrashLoop, logs say **"invalid option"** mentioning `entrypoint.sh` | `args:` lost the command name — see the box below. `bark-server` must be the first entry |
 | `/ping` works, no push | wrong/missing device key (`REPLACE_ME` still in place?); check `kubectl -n monitoring logs deploy/gatus` and `deploy/bark` for the POST result |
-| Push arrives with Tailscale on but not off | that would be ntfy behaviour, not Bark's — make sure the Bark subscription is the one you are testing |
+| Push arrives with Tailscale on but not off | that was the OLD channel's behaviour, not Bark's — make sure you are testing the Bark app |
 | App can't register | NPMplus host not resolving / not forwarding to `:30889`; try the LAN URL first |
-| Bark server down | Gatus still pages via ntfy for that one endpoint; dashboard shows it red |
+| Bark server down | nothing can page you (Bark is the only channel) — the dashboard shows it red |
 
 ### ⚠️ `args:` replaces the image's command — it does not append to it
 

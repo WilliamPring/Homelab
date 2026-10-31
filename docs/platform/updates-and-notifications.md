@@ -10,10 +10,10 @@ upstream release ──► Renovate (Monday 9am, or any time for security)
                     main branch moved
                         │
                         ▼
-                    Argo CD sees OutOfSync ──► ntfy: "<app>: update waiting"   ◄── you click Sync when ready
+                    Argo CD sees OutOfSync ──► Bark: "<app>: update waiting"   ◄── you click Sync when ready
                         │
                         ▼  (after Sync)
-                    ntfy: "deployed"  |  "SYNC FAILED"  |  "DEGRADED"
+                    Bark: "deployed"  |  "SYNC FAILED"  |  "DEGRADED"
 ```
 
 **Nothing merges or deploys by itself.** Renovate never automerges here — every change to `main`
@@ -38,7 +38,7 @@ Only **pinned** versions. Everything is now pinned:
 | Where | How Renovate tracks it |
 |---|---|
 | `image:` tags in `kubernetes/**` Deployments | `kubernetes` manager |
-| `targetRevision` of the Helm charts (`immich`, `ntfy`, `cert-manager`) | `argocd` manager — cert-manager gets one PR per minor (`step-by-minor`), merge in order |
+| `targetRevision` of the Helm charts (`immich`, `cert-manager`) | `argocd` manager — cert-manager gets one PR per minor (`step-by-minor`), merge in order |
 | Immich **app** version in `kubernetes/apps/media/immich/values.yaml` (`image.tag`) | custom regex manager → `ghcr.io/immich-app/immich-server` |
 | SearXNG (date-stamped tags, no semver) | pinned to `latest@sha256:…` → **digest** updates |
 
@@ -48,7 +48,7 @@ it. Pin it.
 ### How PRs are shaped (no automerge, by decision)
 | Group | Behaviour | Label |
 |---|---|---|
-| homepage, searxng, degoog, komf, ntfy chart, busybox — **patch + digest** | **one grouped PR** "stateless patch updates" — a single thing to read on Monday | `low-risk` |
+| homepage, searxng, degoog, komf, busybox — **patch + digest** | **one grouped PR** "stateless patch updates" — a single thing to read on Monday | `low-risk` |
 | the same apps — minor/major | own PR | |
 | immich (chart, app, postgres), romm, kavita, calibre | own PR — read the release notes, back up, then merge | `⚠️ db-migration` |
 | anything in `kubernetes/bootstrap/argocd/**` | own PR — merge, then re-apply `kubernetes/bootstrap/argocd/` by hand | `argocd` |
@@ -62,17 +62,15 @@ grouped PR keeps review cheap instead.
 - Version is not pinned (see above).
 - Release is younger than 3 days.
 - The dashboard issue shows it under "Pending" / "Rate-limited" / "Errored" — open it.
-- Chart lookup error for ntfy → the `overridePackageName` rule in `renovate.json` must still
-  match the depName Renovate computes (`codeberg.org/wrenix/helm-charts/ntfy/ntfy`).
 
 ---
 
-## Argo CD → ntfy (`kubernetes/bootstrap/argocd/argocd-notifications-cm.yaml`)
+## Argo CD → Bark (`kubernetes/bootstrap/argocd/argocd-notifications-cm.yaml`)
 
 The notifications-controller ships with Argo; the ConfigMap patch tells it what to send.
 Every Application is subscribed by default — no annotations to maintain.
 
-| Event | Trigger | Priority | Means |
+| Event | Trigger | Bark level | Means |
 |---|---|---|---|
 | `on-out-of-sync` | sync status OutOfSync, once per git revision | 3 | **an update is waiting for your click** |
 | `on-deployed` | sync Succeeded + Healthy, once per synced revision | 3 | the Sync you clicked worked |
@@ -90,35 +88,26 @@ Each notification's tap-target opens the app in Argo (`argocd.williampring.ca`).
    sudo k3s kubectl -n argocd get cm argocd-notifications-cm -o jsonpath='{.data.subscriptions}'   # shows the 4 triggers
    ```
    (`docs/platform/argocd.md` still says `apply -f kubernetes/bootstrap/argocd/` — that predates the kustomization + KSOPS patch.)
-2. On your phone, ntfy app → **+** → server `https://ntfy.williampring.ca` → topic
-   `homelab-argocd`.
+2. On your phone, make sure the Bark app is registered against this server and that
+   `barkDeviceKey` in the ConfigMap matches its device key (`docs/apps/bark.md` §3).
 3. Prove the path works end-to-end without waiting for a real event:
    ```bash
-   # 1) can the cluster reach ntfy? (plain publish)
+   # 1) can the cluster reach Bark? (direct push)
    sudo k3s kubectl -n argocd exec deploy/argocd-notifications-controller -- \
-     wget -qO- --post-data='{"topic":"homelab-argocd","title":"test","message":"hello from the cluster"}' \
-     http://ntfy.notifications.svc.cluster.local:80/
+     wget -qO- --post-data='{"device_key":"<KEY>","title":"test","body":"hello from the cluster"}' \
+     --header='Content-Type: application/json' \
+     http://bark.monitoring.svc.cluster.local:8080/push
    # 2) render + send a real template for an app
    sudo k3s kubectl -n argocd exec deploy/argocd-notifications-controller -- \
-     argocd-notifications template notify app-deployed kavita --recipient ntfy
+     argocd-notifications template notify app-deployed kavita --recipient bark
    ```
 4. Then merge any Renovate PR → within ~3 min your phone should say "<app>: update waiting".
-
-### Adding a token later (when ntfy gets locked down)
-```bash
-# on the ntfy pod / host:
-ntfy user add argocd && ntfy access argocd homelab-argocd wo && ntfy token add argocd
-# put it in the controller's secret:
-sudo k3s kubectl -n argocd patch secret argocd-notifications-secret -p '{"stringData":{"ntfy-token":"tk_..."}}'
-```
-and un-comment the `Authorization` header in the ConfigMap. (Better: move that secret to SOPS
-like the others — `docs/platform/secrets.md`.)
 
 ### Troubleshooting
 | Symptom | Check |
 |---|---|
 | Nothing ever arrives | `kubectl -n argocd logs deploy/argocd-notifications-controller` — template parse errors show here on start |
-| `failed to send ... connection refused` | ntfy Service name/namespace: `kubectl get svc -n notifications` |
+| `failed to send ... connection refused` | Bark Service name/namespace: `kubectl get svc -n monitoring bark` |
 | Arrives once, never again for the same app | that's `oncePer` working — the state didn't change |
 | Too chatty on `on-deployed` | remove it from `subscriptions:` in the ConfigMap |
 | Template error about `trunc` | Sprig funcs are built in; check the quote/brace balance in the JSON body |
@@ -153,22 +142,23 @@ are still plaintext templates. Once you fill + `sops -e -i` them (`docs/platform
 
 ---
 
-## Uptime alerts (Gatus → ntfy)
+## Uptime alerts (Gatus → Bark)
 Argo's pushes tell you about *deploys*; **Gatus** (`docs/apps/gatus.md`) tells you about *outages*:
 every app's in-cluster URL, every public hostname (incl. cert expiry), the Postgres/Valkey/NFS
-boxes and the Cloudflare DNS records, on a 1–5 min cycle, to the ntfy topic **`homelab-alerts`**.
-Two topics on purpose: `homelab-argocd` = you did something; `homelab-alerts` = something broke.
+boxes and the Cloudflare DNS records, on a 1–5 min cycle. Both senders push to **Bark**, which
+groups them: `argocd` = you did something; `homelab` = something broke.
 
-**Oct 2026: Bark is now the primary channel** for both (iOS push through Apple — no fetch from the
-Tailscale-only server, which is what kept losing ntfy pushes). ntfy stays wired in parallel until Bark
-has proven itself; see `docs/apps/bark.md`.
+**Oct 2026: Bark is the only channel.** ntfy was retired — its iOS app had to *fetch* from the
+Tailscale-only server, so pushes were lost whenever Tailscale slept. Bark goes through Apple's APNs
+instead. See `docs/apps/bark.md`, including the one gap this leaves: nothing can page you about
+Bark itself being down.
 
 ---
 
 ## Not automated (on purpose, for now)
 - **k3s upgrades** — needs system-upgrade-controller; declined for now.
-- **ntfy access control** — still open to anyone on the tailnet; also the `base-url` in
-  `kubernetes/apps/notifications/ntfy/values.yaml` sits under the wrong key (`config:` instead of `ntfy:`), so the
-  server still thinks it is `ntfy.example.org`. Declined for now; one-line fix when you want it.
+- **A second alert channel** — Bark cannot report its own outage, so that one endpoint is
+  dashboard-only. An external check (Healthchecks.io / Uptime Robot hitting `/ping`) would close
+  the gap. Declined for now; the Gatus dashboard covers it in practice.
 - **Metrics/history (Prometheus + Grafana)** — removed. Gatus covers "is it up"; bring Grafana
-  back only when a question needs history. ntfy has a built-in Alertmanager template if so.
+  back only when a question needs history.

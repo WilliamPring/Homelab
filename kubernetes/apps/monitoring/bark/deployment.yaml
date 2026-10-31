@@ -1,7 +1,7 @@
-# Bark — self-hosted push notifications for iOS (open source, MIT). Replaces ntfy for alerts.
+# Bark — self-hosted push notifications for iOS (open source, MIT). The only alert channel.
 #
 # Why Bark here: delivery goes server → Apple (APNs) → phone. The phone never has to fetch from
-# this server, so Tailscale being asleep on the phone no longer loses notifications (ntfy's
+# this server, so Tailscale being asleep on the phone no longer loses notifications (the old
 # failure mode). The phone contacts this server exactly once, to register its device key.
 #
 #   Gatus / Argo  ──POST /push──►  bark (in-cluster)  ──APNs──►  iPhone (Bark app)

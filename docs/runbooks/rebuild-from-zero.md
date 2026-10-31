@@ -48,7 +48,7 @@ sudo k3s kubectl -n argocd get applications          # all listed, OutOfSync —
 Sync in this order, waiting for Healthy each time:
 1. `cert-manager` (CRDs + controller) → 2. **`cloudflare-api-token` Secret** in `cert-manager`
    (`platform/tls.md`) → 3. `cert-manager-issuer` → `kubectl get clusterissuer letsencrypt` READY.
-4. `ntfy` / `bark` (so step 7 can page you) → 5. `gatus` (watches everything that follows).
+4. `bark` (so step 7 can page you) → 5. `gatus` (watches everything that follows).
 
 ## 6. Out-of-git things the apps reference (check they exist)
 | Thing | Where | Recreate |

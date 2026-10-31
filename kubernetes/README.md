@@ -16,7 +16,6 @@ kubernetes/
 | `media` | immich, immich-prereqs, immich-public-proxy, kavita, komf, calibre, suwayomi, romm, qbittorrent |
 | `apps` | searxng, degoog, homepage, karakeep, actual |
 | `monitoring` | gatus, bark |
-| `notifications` | ntfy |
 | `cert-manager` | cert-manager, cert-manager-issuer |
 
 Every app directory has a `kustomization.yaml` — raw manifests and Helm charts (`helmCharts:`) alike. Sync is

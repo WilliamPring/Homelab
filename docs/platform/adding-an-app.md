@@ -20,7 +20,7 @@ decide ──► write the directory ──► validate locally ──► push �
 | **Secrets** | none · SOPS-encrypted (`<app>-secret.enc.yaml`) · (while testing: inline, flagged in `secrets.md` debt) | decides whether `kustomization.yaml` has a `generators:` block |
 
 Pick a **hostname**: `<app>.williampring.ca` (existing ones: library, books, roms, suwayomi, komf, status,
-search, private, home, immich, argocd, ntfy, qbittorrent, karakeep, actual). Pick a **NodePort** if LAN access is wanted: a free `30xxx`
+search, private, home, immich, argocd, qbittorrent, karakeep, actual). Pick a **NodePort** if LAN access is wanted: a free `30xxx`
 from the README's Addresses table.
 
 ## 1. Create the directory
@@ -111,7 +111,7 @@ sudo k3s kubectl get certificate -n <namespace> <app>-tls           # READY True
 sudo k3s kubectl logs -n <namespace> deploy/<app> --tail=50
 curl -sI https://<app>.williampring.ca | head -1                    # from a Tailscale device
 ```
-Your phone gets "<app>: deployed" (Argo → Bark/ntfy).
+Your phone gets "<app>: deployed" (Argo → Bark).
 
 ## 7. Wire it into the rest (same push or the next)
 

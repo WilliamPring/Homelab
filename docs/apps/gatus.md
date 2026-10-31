@@ -1,6 +1,6 @@
-# Gatus — uptime checks → ntfy ("is it up right now?")
+# Gatus — uptime checks → Bark ("is it up right now?")
 
-Gatus probes every service on a schedule and pages your phone through ntfy when something
+Gatus probes every service on a schedule and pages your phone through Bark when something
 fails three times in a row, then again when it recovers. Config is one YAML file in git;
 history is a small sqlite file. It is the alerting half of monitoring; Grafana/Prometheus (if
 they ever return) are the history half — they coexist (see the FAQ at the bottom).
@@ -11,8 +11,7 @@ gatus (monitoring ns) ──probes──► apps (in-cluster Service URLs)
                       ──probes──► public (share.williampring.ca through Cloudflare)
                       ──probes──► infra (Postgres LXC, Valkey, NFS, Proxmox)
                       ──queries─► dns (Cloudflare records)
-                      ──alerts──► ntfy topic `homelab-alerts`  ──► your phone
-                      ──alerts──► Bark (iOS push, primary — docs/apps/bark.md)
+                      ──alerts──► Bark ──► APNs ──► your phone  (docs/apps/bark.md)
 Dashboard: https://status.williampring.ca   (LAN: http://192.168.68.63:30881)
 ```
 
@@ -31,7 +30,7 @@ Cloudflare DNS:  status → A → <master's Tailscale IP>   (grey cloud / DNS on
 # push → the ApplicationSet registers `gatus` within ~3 min → Argo UI → gatus → review → SYNC
 sudo k3s kubectl get pods -n monitoring -w
 ```
-Phone: ntfy app → **+** → topic `homelab-alerts` (same server as `homelab-argocd`).
+Phone: nothing to subscribe to — Bark pushes to the device key in `gatus/deployment.yaml`.
 
 Open https://status.williampring.ca. Within ~5 minutes every endpoint has run at least once.
 Expected on day one: everything green except things that genuinely are not there yet (e.g.
@@ -41,9 +40,10 @@ RomM/Komf if not synced). Fix or delete those entries rather than living with re
 - `failure-threshold: 3` → an endpoint must fail 3 checks in a row before you are paged
   (1-minute checks ⇒ ~3 min; 5-minute checks ⇒ ~15 min). No flapping noise.
 - `send-on-resolved: true` → one more message when it is back.
-- Priority 4 (high) on ntfy — vibrates, no override of Do Not Disturb. Raise to 5 for specific
-  endpoints if you want them to break through.
-- If **ntfy itself** is down nothing can page you; the dashboard still shows it red.
+- `level: timeSensitive` on Bark — breaks through Focus modes but not Do Not Disturb. Use
+  `critical` on specific endpoints if you want them to override DND.
+- ⚠️ **Bark is the only channel.** If Bark is down nothing can page you — including the "Bark
+  (push server)" endpoint itself, which is deliberately dashboard-only. Check the dashboard.
 
 ## Editing checks
 Everything is in `kubernetes/apps/monitoring/gatus/configmap.yaml`. Add an endpoint = copy a block, change name/url/
@@ -61,7 +61,7 @@ When you add an app to the cluster: add its in-cluster URL to `apps` and its hos
 | **edge group all red, apps green** | pods can't reach the master's Tailscale IP. Check from a pod: `kubectl run -n monitoring t --rm -it --image=busybox:1.38 -- wget -qO- --no-check-certificate https://library.williampring.ca/api/health`. If that fails, switch edge checks to go via Traefik with a Host header: `url: https://traefik.kube-system.svc.cluster.local`, `headers: {Host: library.williampring.ca}`, `client: {insecure: true}` (you lose the cert-expiry check; keep the `dns` group for the DNS side) |
 | one edge check red, its app green | DNS record missing, cert not issued (`kubectl get certificate -A`), or the Ingress host typo'd |
 | `suwayomi.williampring.ca` red | its condition is `[STATUS] == 401` on purpose (Basic auth). If you ever turn auth off, change to 200 |
-| no pushes arriving | ntfy URL/topic in the ConfigMap; phone subscribed to `homelab-alerts`; `kubectl -n monitoring logs deploy/gatus` shows alert attempts |
+| no pushes arriving | `BARK_DEVICE_KEY` in `gatus/deployment.yaml` still `REPLACE_ME`? `curl bark:8080/info` → `devices` > 0? `kubectl -n monitoring logs deploy/gatus` shows alert attempts |
 | config change not applied | Gatus only reads config at start → `rollout restart` after Sync |
 | pod CrashLoop with a YAML error in logs | the ConfigMap failed to parse — `ruby -ryaml -e 'YAML.load(...)'` or just run `./scripts/ci/validate.sh` locally |
 

@@ -12,7 +12,7 @@ the per-app workflow.)
 | **Installed by** | `kubectl apply -k kubernetes/bootstrap/argocd/` (by hand — NOT Ansible, NOT self-managed). The directory is a **kustomization**: the upstream install manifest (fetched from GitHub, pinned to a tag) + your patches |
 | **Sync mode** | Manual per app (`syncPolicy` has `CreateNamespace=true`, no `automated:`) |
 | **Apps** | `kubernetes/bootstrap/apps.yaml` — ApplicationSet over `kubernetes/apps/<namespace>/<app>/` |
-| **Own config** | `kubernetes/bootstrap/argocd/` — `kustomization.yaml` (pinned upstream `install.yaml` URL + the patches below), `config.yaml` (insecure mode), `ingress.yaml`, `argocd-cm-patch.yaml` (kustomize build flags), `repo-server-ksops-patch.yaml` (KSOPS + tool overrides), `argocd-notifications-cm.yaml` (→ Bark/ntfy) |
+| **Own config** | `kubernetes/bootstrap/argocd/` — `kustomization.yaml` (pinned upstream `install.yaml` URL + the patches below), `config.yaml` (insecure mode), `ingress.yaml`, `argocd-cm-patch.yaml` (kustomize build flags), `repo-server-ksops-patch.yaml` (KSOPS + tool overrides), `argocd-notifications-cm.yaml` (→ Bark) |
 
 ## Install / update (by hand, always the same command)
 `kubernetes/bootstrap/argocd/` is a kustomization, so it MUST be applied with **`-k`** (not `-f`: that would
@@ -36,21 +36,21 @@ What the directory sets up:
 - `config.yaml` → `server.insecure: true` in `argocd-cmd-params-cm` (see below).
 - `ingress.yaml` → `argocd.williampring.ca`, cert-manager TLS (`argocd-tls`), backend `argocd-server:80`.
 - `argocd-cm-patch.yaml` → a JSON patch on the install's `argocd-cm`: `kustomize.buildOptions: --enable-alpha-plugins --enable-helm`.
-  `--enable-alpha-plugins` lets kustomize run the KSOPS generator; `--enable-helm` lets it inflate `helmCharts:` (immich, ntfy, cert-manager).
+  `--enable-alpha-plugins` lets kustomize run the KSOPS generator; `--enable-helm` lets it inflate `helmCharts:` (immich, cert-manager).
   (`argocd-cm.yaml` in the same folder is the older whole-ConfigMap version, no longer in the kustomization.)
 - `repo-server-ksops-patch.yaml` → two init containers copy tools into the repo-server, and mounts the `sops-age` key:
   **ksops + its bundled kustomize** (from `viaductoss/ksops`) and **Helm 3.17** (from `alpine/helm`), both mounted over
   Argo's own binaries. Why: Argo 3.5 ships Helm 4, and ksops' kustomize is older than Argo's; the mismatch broke
   `helmCharts` rendering, so the repo-server now runs a known-good kustomize + Helm 3 pair. A future Argo upgrade does
   NOT change what renders your apps — bump those two images deliberately.
-- `argocd-notifications-cm.yaml` → pushes to Bark and ntfy (`docs/platform/updates-and-notifications.md`).
+- `argocd-notifications-cm.yaml` → pushes to Bark (`docs/platform/updates-and-notifications.md`).
 - **DNS:** `argocd → A → <master Tailscale 100.x IP>` (grey cloud).
 
 ## How Argo turns a directory into running objects
 ```
 git push ──► repo-server clones main ──► kustomize build --enable-alpha-plugins --enable-helm kubernetes/apps/<ns>/<app>
                                              ├─ resources: *.yaml                      (raw manifests)
-                                             ├─ helmCharts: → helm pull + helm template  (immich, ntfy, cert-manager)
+                                             ├─ helmCharts: → helm pull + helm template  (immich, cert-manager)
                                              └─ generators: → ksops → sops -d (age key)  (secrets)
              ──► rendered manifests ──► application-controller diffs them against the cluster ──► OutOfSync / Synced
              ──► you click Sync ──► kubectl apply (server-side for cert-manager) ──► health checks ──► Healthy

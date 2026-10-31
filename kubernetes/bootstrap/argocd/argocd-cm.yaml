@@ -9,5 +9,5 @@ metadata:
 
 data:
   # --enable-alpha-plugins → KSOPS (secrets). --enable-helm → `helmCharts:` in app kustomizations
-  # (immich, ntfy, cert-manager). Change here = re-apply bootstrap/argocd + restart the repo-server.
+  # (immich, cert-manager). Change here = re-apply bootstrap/argocd + restart the repo-server.
   kustomize.buildOptions: --enable-alpha-plugins --enable-helm

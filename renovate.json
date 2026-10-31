@@ -13,7 +13,7 @@
   "prHourlyLimit": 0,
   "minimumReleaseAge": "3 days",
   "osvVulnerabilityAlerts": true,
-  "dependencyDashboardTitle": "🤖 Renovate Dependency Dashboard",
+  "dependencyDashboardTitle": "\ud83e\udd16 Renovate Dependency Dashboard",
   "kubernetes": {
     "managerFilePatterns": [
       "/kubernetes/.+\\.ya?ml$/"
@@ -45,7 +45,7 @@
       "datasourceTemplate": "github-releases"
     },
     {
-      "description": "Generic '# renovate: datasource=… depName=…' comments above a version line (e.g. KUBECONFORM_VERSION in the CI workflow)",
+      "description": "Generic '# renovate: datasource=\u2026 depName=\u2026' comments above a version line (e.g. KUBECONFORM_VERSION in the CI workflow)",
       "customType": "regex",
       "managerFilePatterns": [
         "/^\\.github/workflows/.+\\.ya?ml$/",
@@ -86,15 +86,8 @@
         "major"
       ],
       "addLabels": [
-        "⚠️ major"
+        "\u26a0\ufe0f major"
       ]
-    },
-    {
-      "description": "ntfy chart: Argo's repoURL carries the chart name, so the argocd manager computes '<path>/ntfy/ntfy' — point the lookup at the real OCI path",
-      "matchDepNames": [
-        "codeberg.org/wrenix/helm-charts/ntfy/ntfy"
-      ],
-      "overridePackageName": "codeberg.org/wrenix/helm-charts/ntfy"
     },
     {
       "description": "DB-migration-sensitive apps: never automerge, flag clearly (Immich chart+image+postgres, RomM, Kavita, Calibre)",
@@ -105,17 +98,16 @@
         "/calibre-web-automated/"
       ],
       "addLabels": [
-        "⚠️ db-migration"
+        "\u26a0\ufe0f db-migration"
       ]
     },
     {
-      "description": "Stateless apps: PATCH + DIGEST bumps land in ONE weekly PR so there is a single thing to read on Monday. Never automerged — you review, you merge, you Sync.",
+      "description": "Stateless apps: PATCH + DIGEST bumps land in ONE weekly PR so there is a single thing to read on Monday. Never automerged \u2014 you review, you merge, you Sync.",
       "matchPackageNames": [
         "ghcr.io/gethomepage/homepage",
         "searxng/searxng",
         "ghcr.io/degoog-org/degoog",
         "sndxr/komf",
-        "codeberg.org/wrenix/helm-charts/ntfy",
         "busybox",
         "ghcr.io/twin/gatus"
       ],
@@ -129,7 +121,7 @@
       ]
     },
     {
-      "description": "qBittorrent is pinned to LinuxServer's IMMUTABLE tag (5.3.0_v2.1.2-ls485) rather than the moving '5.3.0', so the default docker/semver versioning can't read it. Groups: app version, then the LSIO rebuild number as 'build'. The libtorrent part (_v2.1.2) is matched but not captured — it tracks the app version anyway. Scoped to qbittorrent on purpose: Kavita's LSIO tags are a different shape (version-vX.Y.Z.W).",
+      "description": "qBittorrent is pinned to LinuxServer's IMMUTABLE tag (5.3.0_v2.1.2-ls485) rather than the moving '5.3.0', so the default docker/semver versioning can't read it. Groups: app version, then the LSIO rebuild number as 'build'. The libtorrent part (_v2.1.2) is matched but not captured \u2014 it tracks the app version anyway. Scoped to qbittorrent on purpose: Kavita's LSIO tags are a different shape (version-vX.Y.Z.W).",
       "matchDatasources": [
         "docker"
       ],
@@ -159,7 +151,7 @@
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-r(?<revision>\\d+)$"
     },
     {
-      "description": "Argo CD: one PR per upstream release (the pinned install URL). You merge, then re-apply kubernetes/bootstrap/argocd/ by hand — never automerged",
+      "description": "Argo CD: one PR per upstream release (the pinned install URL). You merge, then re-apply kubernetes/bootstrap/argocd/ by hand \u2014 never automerged",
       "addLabels": [
         "argocd"
       ],
@@ -168,7 +160,7 @@
       ]
     },
     {
-      "description": "cert-manager: upstream says upgrade ONE minor at a time → one PR per minor stream (merge + Sync in order, read each release's upgrade notes)",
+      "description": "cert-manager: upstream says upgrade ONE minor at a time \u2192 one PR per minor stream (merge + Sync in order, read each release's upgrade notes)",
       "matchDepNames": [
         "cert-manager"
       ],

@@ -3,7 +3,7 @@
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
 from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Komf, Calibre-Web), games
 (RomM), torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
-copies (Karakeep), budgeting (Actual), and the glue (cert-manager, Gatus, Bark/ntfy, Homepage).
+copies (Karakeep), budgeting (Actual), and the glue (cert-manager, Gatus, Bark, Homepage).
 
 This page is the mental model. Each section ends with where to read more.
 
@@ -26,7 +26,7 @@ This page is the mental model. Each section ends with where to read more.
 │     └─ ApplicationSet ──► one Application per  kubernetes/apps/<namespace>/<app>/        │
 │           media: immich · immich-prereqs · immich-public-proxy · kavita · komf · calibre · suwayomi · romm · qbittorrent
 │           apps: searxng · degoog · homepage · karakeep · actual
-│           monitoring: gatus · bark    notifications: ntfy
+│           monitoring: gatus · bark
 │           cert-manager: cert-manager · cert-manager-issuer                               │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -52,15 +52,15 @@ Argo shows diffs, the phone tells you something is waiting — and a human click
                                   Argo polls main (~3 min) ──► renders the app ──► compares with the cluster
                                              │                                          │
                                              ▼                                          ▼
-                                       "OutOfSync"  ──► Bark/ntfy: "<app>: update waiting"
+                                       "OutOfSync"  ──► Bark: "<app>: update waiting"
                                              │
                              you open Argo → read the diff → Sync ──► kubectl apply (by Argo)
                                              │
-                                       pods roll ──► Bark/ntfy: "<app>: deployed"  (or SYNC FAILED / DEGRADED)
+                                       pods roll ──► Bark: "<app>: deployed"  (or SYNC FAILED / DEGRADED)
 ```
 
 - **Rendering** happens in Argo's *repo-server*: `kustomize build --enable-alpha-plugins --enable-helm`.
-  That one command handles raw manifests, `helmCharts:` (immich, ntfy, cert-manager) and the KSOPS
+  That one command handles raw manifests, `helmCharts:` (immich, cert-manager) and the KSOPS
   generator that decrypts secrets. The same command is what `scripts/ci/validate.sh` runs locally.
 - **"Hard Refresh"** in Argo re-renders ignoring its cache — needed after fixing a render error.
 - **Argo's own config** (`bootstrap/argocd/`) is NOT synced by Argo. Change it → re-apply by hand.
@@ -131,7 +131,7 @@ Suwayomi's login is inline; the checks WARN until `STRICT_SECRETS=1`.
 
 Two channels, two meanings: **Argo** ("you did something": update waiting / deployed / failed) and
 **Gatus** ("something broke": a probe failed 3× in a row / recovered). Both go to **Bark** (iOS push through
-Apple — works even with Tailscale asleep) and, during the switch-over, to ntfy.
+Apple — works even with Tailscale asleep). It is the only alert channel; ntfy was retired.
 → `apps/bark.md`, `apps/gatus.md`, `platform/updates-and-notifications.md`
 
 ## 8. Adding, changing, removing an app
@@ -147,7 +147,7 @@ Apple — works even with Tailscale asleep) and, during the switch-over, to ntfy
 1. **Backups** — nothing automated for NFS data or the Immich database.
 2. **Secrets strict mode** — parked while testing (§6).
 3. **The Immich Ingress** still lives in Ansible's `tls_ingress` role (last non-Argo object).
-4. **ntfy** stays until Bark has proven itself; then it goes.
+4. **Bark is the only channel** — if Bark itself is down, nothing can page you. Watch the Gatus dashboard.
 
 ---
 

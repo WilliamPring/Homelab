@@ -58,18 +58,8 @@ data:
           failure-threshold: 3
           success-threshold: 2
           send-on-resolved: true
-      # ntfy — kept during the switch-over; remove this block + the `type: ntfy` entries once Bark is proven.
-      ntfy:
-        url: "http://ntfy.notifications.svc.cluster.local:80"
-        topic: "homelab-alerts"          # subscribe to this in the ntfy app (separate from homelab-argocd)
-        priority: 4                      # high
-        default-alert:
-          enabled: true
-          failure-threshold: 3           # 3 consecutive failures before alerting (no flapping pages)
-          success-threshold: 2           # 2 consecutive successes before "resolved"
-          send-on-resolved: true
 
-    # every endpoint below alerts to Bark (custom) AND ntfy during the switch-over
+    # every endpoint below alerts to Bark via the `custom` provider above
     endpoints:
       # ── apps (inside the cluster) ─────────────────────────────────────────────────
       - name: Immich
@@ -77,91 +67,87 @@ data:
         url: "http://immich-server.media.svc.cluster.local:2283/api/server/ping"
         interval: 1m
         conditions: ["[STATUS] == 200", "[BODY].res == pong"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Immich Postgres
         group: apps
         url: "tcp://immich-postgres.media.svc.cluster.local:5432"
         interval: 1m
         conditions: ["[CONNECTED] == true"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Kavita
         group: apps
         url: "http://kavita.media.svc.cluster.local:5000/api/health"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Calibre-Web
         group: apps
         url: "http://calibre.media.svc.cluster.local:8083/"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Suwayomi
         group: apps
         url: "tcp://suwayomi.media.svc.cluster.local:4567"     # HTTP would need Basic auth
         interval: 1m
         conditions: ["[CONNECTED] == true"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: qBittorrent
         group: apps
         url: "http://qbittorrent.media.svc.cluster.local:8080/"   # pod is NotReady while the VPN is down → this fails too
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Karakeep
         group: apps
         url: "http://karakeep.apps.svc.cluster.local:3000/api/health"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Actual Budget
         group: apps
         url: "http://actual.apps.svc.cluster.local:5006/"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Immich Public Proxy
         group: apps
         url: "http://immich-public-proxy.media.svc.cluster.local:3000/share/healthcheck"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: SearXNG
         group: apps
         url: "http://searxng.apps.svc.cluster.local:8080/healthz"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: degoog
         group: apps
         url: "http://degoog.apps.svc.cluster.local:4444/"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Homepage
         group: apps
         url: "http://homepage.apps.svc.cluster.local:3000/"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
-      - name: ntfy
-        group: apps
-        url: "http://ntfy.notifications.svc.cluster.local:80/v1/health"
-        interval: 1m
-        conditions: ["[STATUS] == 200", "[BODY].healthy == true"]
-        alerts: [{ type: custom }, { type: ntfy }]       # (if ntfy itself is down this can't page — the dashboard still shows it)
+        alerts: [{ type: custom }]
       - name: Bark (push server)
         group: apps
         url: "http://bark.monitoring.svc.cluster.local:8080/ping"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: ntfy }]       # if Bark is down, Bark can't tell you — ntfy/dashboard cover this one
+        alerts: []       # ⚠️ deliberately NO alert: Bark cannot page you about Bark being down, and it
+                         # is now the only channel. This endpoint is dashboard-only — watch it at
+                         # https://status.williampring.ca, or add a second channel (see docs/apps/bark.md).
       - name: Argo CD
         group: apps
         url: "http://argocd-server.argocd.svc.cluster.local:80/healthz?full=true"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
 
       # ── edge (DNS → Tailscale IP → Traefik → cert) ─────────────────────────────────
       - name: library.williampring.ca
@@ -169,49 +155,43 @@ data:
         url: "https://library.williampring.ca/api/health"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h", "[RESPONSE_TIME] < 3000"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: immich.williampring.ca
         group: edge
         url: "https://immich.williampring.ca/api/server/ping"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: suwayomi.williampring.ca
         group: edge
         url: "https://suwayomi.williampring.ca/"
         interval: 5m
         conditions: ["[STATUS] == 401", "[CERTIFICATE_EXPIRATION] > 168h"]   # Basic auth → 401 means "up"
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: qbittorrent.williampring.ca
         group: edge
         url: "https://qbittorrent.williampring.ca/"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: karakeep.williampring.ca
         group: edge
         url: "https://karakeep.williampring.ca/api/health"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: actual.williampring.ca
         group: edge
         url: "https://actual.williampring.ca/"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: argocd.williampring.ca
         group: edge
         url: "https://argocd.williampring.ca/healthz"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: custom }, { type: ntfy }]
-      - name: ntfy.williampring.ca
-        group: edge
-        url: "https://ntfy.williampring.ca/v1/health"
-        interval: 5m
-        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
 
       # ── infra (LXCs / hosts the apps depend on) ────────────────────────────────────
       - name: Postgres LXC
@@ -219,33 +199,33 @@ data:
         url: "tcp://192.168.68.7:5432"
         interval: 1m
         conditions: ["[CONNECTED] == true"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Valkey
         group: infra
         url: "tcp://192.168.68.103:6379"
         interval: 1m
         conditions: ["[CONNECTED] == true"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: NFS file server
         group: infra
         url: "tcp://192.168.68.50:2049"
         interval: 1m
         conditions: ["[CONNECTED] == true"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Proxmox pve (.96)
         group: infra
         url: "https://192.168.68.96:8006/"
         interval: 5m
         client: { insecure: true }     # self-signed
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: Proxmox pve (.89)
         group: infra
         url: "https://192.168.68.89:8006/"
         interval: 5m
         client: { insecure: true }
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
 
       # ── dns (Cloudflare records still there) ───────────────────────────────────────
       - name: DNS library.williampring.ca
@@ -256,7 +236,7 @@ data:
           query-name: "library.williampring.ca"
           query-type: "A"
         conditions: ["[DNS_RCODE] == NOERROR"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
       - name: DNS share.williampring.ca
         group: dns
         url: "1.1.1.1"
@@ -265,4 +245,4 @@ data:
           query-name: "share.williampring.ca"
           query-type: "CNAME"
         conditions: ["[DNS_RCODE] == NOERROR"]
-        alerts: [{ type: custom }, { type: ntfy }]
+        alerts: [{ type: custom }]
