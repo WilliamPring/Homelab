@@ -1,0 +1,21 @@
+# ClusterIP only — NO NodePort, deliberately.
+#
+# Every other LAN-exposed app here serves media to a device that cannot run Tailscale (a Kindle,
+# a console). Nothing reads a portfolio off a Kindle. A NodePort would put account balances on
+# plain http on the LAN for no gain, so this one is reachable only through the Ingress, over TLS,
+# on the tailnet. If you ever do want it on the LAN, take a free port from the README table.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghostfolio
+  namespace: apps
+  labels:
+    app: ghostfolio
+spec:
+  type: ClusterIP
+  selector:
+    app: ghostfolio
+  ports:
+    - name: http
+      port: 3333
+      targetPort: http

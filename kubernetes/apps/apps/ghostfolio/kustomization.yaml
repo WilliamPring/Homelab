@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - valkey.yaml        # dedicated cache — see the header there for why it is not the shared .103
+  - service.yaml
+  - ingress.yaml
+
+generators:
+  - ghostfolio-secret.sops.yaml   # KSOPS → ghostfolio-secret (DATABASE_URL, REDIS_PASSWORD, salts)

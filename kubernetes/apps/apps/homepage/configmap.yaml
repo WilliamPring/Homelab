@@ -81,6 +81,11 @@ data:
             description: Envelope budgeting & sync (Actual)
             icon: actual-budget.png
 
+        - Portfolio:
+            href: https://ghostfolio.williampring.ca
+            description: Stocks, ETFs & crypto (Ghostfolio)
+            icon: ghostfolio.png
+
     - Monitoring:
         - Status:
             href: https://status.williampring.ca

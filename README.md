@@ -77,8 +77,8 @@ See [`kubernetes/README.md`](kubernetes/README.md) for the full workflow.
 | k3s master | `192.168.68.93` | Argo/Traefik entry; any NodePort also answers here |
 | k3s worker (32GB) | `192.168.68.63` | Immich, RomM, Suwayomi, qBittorrent are pinned here |
 | file server (NFS `/data`) | `192.168.68.50` | photos, manga, books, ROMs, downloads |
-| Postgres LXC | `192.168.68.7` | RomM (and formerly Vaultwarden) |
-| Valkey / Redis | `192.168.68.103` | Immich, degoog, RomM |
+| Postgres LXC | `192.168.68.7` | RomM, Ghostfolio (and formerly Vaultwarden) |
+| Valkey / Redis | `192.168.68.103` | Immich, degoog, RomM (Ghostfolio runs its own — see its doc) |
 
 LAN NodePorts (plain http, same WiFi — e.g. for the Kindle): Kavita `:30500` · Calibre-Web `:30083` ·
 Suwayomi `:30456` · RomM `:30808` · Immich `:30041` · Immich share proxy `:30042` · SearXNG `:30880` · Gatus `:30881` · degoog `:30882` · Bark `:30889` (fronted by NPMplus) · qBittorrent `:30080` · Karakeep `:30300` · Actual `:30506`. Hostnames (`*.williampring.ca`) resolve to the

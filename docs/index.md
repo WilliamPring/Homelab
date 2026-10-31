@@ -156,7 +156,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 **Apps** — one guide per app: setup, how it fits, troubleshooting
 - [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
 - [`apps/romm.md`](apps/romm.md) · [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/degoog.md`](apps/degoog.md) · [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md)
-- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md)
+- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/ghostfolio.md`](apps/ghostfolio.md)
 
 **Platform** — the things apps rely on
 - [`platform/argocd.md`](platform/argocd.md) — Argo CD: install, how it renders, the ApplicationSet, gotchas

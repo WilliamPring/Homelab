@@ -1,0 +1,100 @@
+# Ghostfolio — open-source portfolio tracker (stocks, ETFs, crypto). Manual entry + CSV import.
+#
+# ⚠️ It has NO bank/brokerage sync — no Plaid, no Flinks, no account linking. That is a property
+# of the software, not a setting: you enter transactions yourself or import a broker CSV.
+#
+#   DB     → the EXTERNAL Postgres LXC (192.168.68.7), db/user `ghostfolio`
+#            (scripts/postgres-ghostfolio-setup.sh, same shape as RomM's)
+#   Cache  → a DEDICATED Valkey in this pod's namespace — see valkey.yaml for WHY it is not the
+#            shared one at .103. Short version: Ghostfolio cannot send a Redis ACL username.
+#   State  → all of it is in Postgres. This container is stateless; no PVC, no NFS.
+#
+# Quotes come from Yahoo Finance, fetched by the SERVER. Canadian tickers need the suffix:
+#   TSX  VFV.TO / XEQT.TO / T.TO      TSXV  .V      CSE  .CN      crypto via CoinGecko
+# That means Yahoo sees this node's IP and your ticker list. Accepted: it is not tied to your
+# identity, balances or account numbers. If that ever changes, the Gluetun pattern in
+# kubernetes/apps/media/qbittorrent/ is how you'd route it out over Mullvad.
+#
+# Docs: https://github.com/ghostfolio/ghostfolio   Releases: .../releases
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ghostfolio
+  namespace: apps
+  labels:
+    app: ghostfolio
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ghostfolio
+  template:
+    metadata:
+      labels:
+        app: ghostfolio
+    spec:
+      # Every Service in this namespace injects Docker-link env vars; a Service named `ghostfolio`
+      # produces GHOSTFOLIO_PORT=tcp://10.43.x.x:3333. Ghostfolio does not read that name today,
+      # but Actual did exactly this and died on it (docs/apps/actual.md). Off by default here.
+      enableServiceLinks: false
+      containers:
+        - name: ghostfolio
+          image: ghostfolio/ghostfolio:3.95.0   # pinned — Renovate PRs bumps
+          # ⚠️ 3.96.0 exists but shipped the same day this was written. renovate.json sets
+          # minimumReleaseAge: 3 days for exactly this reason, so the initial pin respects it —
+          # Renovate will offer 3.96.0 once it has aged, and you merge it like any other bump.
+          env:
+            # ── database: external Postgres LXC ─────────────────────────────────────────
+            # Ghostfolio wants ONE connection URL, and it contains the password — so the whole
+            # string lives in the secret rather than being assembled from parts here.
+            # connect_timeout is in the URL because the first boot runs Prisma migrations.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ghostfolio-secret
+                  key: DATABASE_URL
+            # ── cache: the dedicated Valkey beside this pod (valkey.yaml) ───────────────
+            - name: REDIS_HOST
+              value: "ghostfolio-valkey"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ghostfolio-secret
+                  key: REDIS_PASSWORD
+            # ── app secrets ─────────────────────────────────────────────────────────────
+            # ACCESS_TOKEN_SALT hashes the security token you log in with. Changing it
+            # INVALIDATES every existing token — you would have to re-create your user.
+            - name: ACCESS_TOKEN_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: ghostfolio-secret
+                  key: ACCESS_TOKEN_SALT
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ghostfolio-secret
+                  key: JWT_SECRET_KEY
+            - name: TZ
+              value: "America/Vancouver"
+          ports:
+            - name: http
+              containerPort: 3333
+          # First boot runs database migrations, so readiness has to tolerate a slow start:
+          # failureThreshold × periodSeconds = 5 minutes before Kubernetes gives up.
+          startupProbe:
+            httpGet: { path: /api/v1/health, port: http }
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /api/v1/health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/v1/health, port: http }
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 50m, memory: 384Mi }
+            limits: { memory: 1Gi }     # Node app; the data-gathering jobs are the hungry part

@@ -98,12 +98,13 @@
       ]
     },
     {
-      "description": "DB-migration-sensitive apps: never automerge, flag clearly (Immich chart+image+postgres, RomM, Kavita, Calibre)",
+      "description": "DB-migration-sensitive apps: never automerge, flag clearly (Immich chart+image+postgres, RomM, Kavita, Calibre, Ghostfolio). Ghostfolio runs Prisma migrations against the shared Postgres LXC on every start — a bad bump touches the database, so it never rides in a group.",
       "matchPackageNames": [
         "/immich/",
         "/rommapp/",
         "/kavita/",
-        "/calibre-web-automated/"
+        "/calibre-web-automated/",
+        "/ghostfolio/"
       ],
       "addLabels": [
         "\u26a0\ufe0f db-migration"
@@ -117,7 +118,8 @@
         "ghcr.io/degoog-org/degoog",
         "sndxr/komf",
         "busybox",
-        "ghcr.io/twin/gatus"
+        "ghcr.io/twin/gatus",
+        "valkey/valkey"
       ],
       "matchUpdateTypes": [
         "patch",

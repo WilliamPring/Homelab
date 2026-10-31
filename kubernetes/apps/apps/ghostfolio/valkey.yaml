@@ -1,0 +1,96 @@
+# A Valkey JUST for Ghostfolio. This breaks the usual "use the shared Valkey at .103" rule, and
+# the reason is worth writing down so nobody 'fixes' it later.
+#
+# ⚠️ WHY NOT THE SHARED VALKEY
+# Ghostfolio builds its connection string in apps/api/src/helper/redis.helper.ts as:
+#
+#     redis://:password@host:port/db          ← note the EMPTY username
+#
+# There is no REDIS_USERNAME anywhere in its source. An empty username authenticates as Redis's
+# built-in `default` user — and docs/platform/redis.md deliberately turns that user OFF
+# (`ACL SETUSER default off`) because every other app here uses a named ACL user.
+#
+# So the options were:
+#   a) re-enable `default` on the shared Valkey  → one leaked password would reach EVERY app's
+#      keys, undoing the per-app isolation on purpose built there. Rejected.
+#   b) give Ghostfolio its own.  ← this.
+#
+# The cost is ~30MB of RAM. The contents are a quote cache and a BullMQ job queue: both are
+# rebuilt on demand, which is why there is no PVC — `emptyDir` is the honest storage class for
+# something that may be thrown away at any moment. Losing it costs one re-fetch of quotes.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ghostfolio-valkey
+  namespace: apps
+  labels:
+    app: ghostfolio
+    component: valkey
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ghostfolio
+      component: valkey
+  template:
+    metadata:
+      labels:
+        app: ghostfolio
+        component: valkey
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: valkey
+          image: valkey/valkey:9.1.3-alpine   # pinned — Renovate PRs bumps (stateless group)
+          # --requirepass sets the password for the `default` user, which is the only user
+          # Ghostfolio can authenticate as. Safe HERE because this instance serves exactly one
+          # app and is not reachable outside the cluster (ClusterIP, no NodePort).
+          # --save "" disables RDB snapshots: this is a cache, persisting it to an emptyDir that
+          # vanishes with the pod would be pure write amplification.
+          command:
+            - sh
+            - -c
+            - exec valkey-server --requirepass "$REDIS_PASSWORD" --save "" --appendonly no
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ghostfolio-secret
+                  key: REDIS_PASSWORD
+          ports:
+            - name: valkey
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", 'valkey-cli -a "$REDIS_PASSWORD" ping | grep -q PONG']
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 192Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghostfolio-valkey
+  namespace: apps
+  labels:
+    app: ghostfolio
+    component: valkey
+spec:
+  type: ClusterIP          # in-cluster only, on purpose — nothing outside needs this cache
+  selector:
+    app: ghostfolio
+    component: valkey
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey
