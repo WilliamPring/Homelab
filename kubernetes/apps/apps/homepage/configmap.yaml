@@ -55,11 +55,7 @@ data:
 
       Monitoring:
         style: row
-        columns: 3
-
-      Infrastructure:
-        style: row
-        columns: 1
+        columns: 4
 
   services.yaml: |
     - Media:
@@ -210,19 +206,17 @@ data:
             namespace: monitoring
             podSelector: app=bark
 
-    - Infrastructure:
         - Pulse:
+            # The ONLY tile that is not in this cluster — Pulse runs on Proxmox. So there is no
+            # *.svc.cluster.local to probe and no podSelector; a siteMonitor here would measure
+            # the edge path rather than the service, and would go red on an auth prompt.
+            # Gatus already watches both Proxmox hosts directly (its `infra` group).
+            #
+            # Was an embedded iframe until Nov 2026 — removed: it loaded a whole second app on
+            # every page view, and a dashboard should tell you where to go, not be the thing.
             href: https://pulse.williampring.ca/
-            description: Proxmox management
-            widget:
-              type: iframe
-              name: Pulse
-              src: https://pulse.williampring.ca/
-              referrerPolicy: same-origin # optional, no default
-              allowPolicy: autoplay; fullscreen; gamepad # optional, no default
-              allowFullscreen: true # optional, default: true
-              loadingStrategy: eager # optional, default: eager
-              allowScrolling: yes # optional, default: yes
+            description: Proxmox VMs, LXCs & backups (Pulse)
+            icon: mdi-server-network
 
   kubernetes.yaml: |
     # `cluster` = read the API with the projected ServiceAccount token mounted in this pod

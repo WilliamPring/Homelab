@@ -52,6 +52,7 @@ create `/app/config/logs`):
 | `settings.yaml` | title, theme, layout, `statusStyle`, quicklaunch |
 | `services.yaml` | the tiles |
 | `widgets.yaml` | the top bar — cluster stats, search, weather |
+
 | `bookmarks.yaml` | repo, Proxmox, and the **LAN fallback** list |
 | `kubernetes.yaml` | how to talk to the cluster API |
 
@@ -61,8 +62,17 @@ Every app also listens on a NodePort. Those links need **no DNS, no Cloudflare, 
 and no cert** — they are what you use when every tile is dead but `kubectl get pods` looks
 fine, i.e. the apps are up and the edge is not.
 
-They all point at **`192.168.68.93`** (the master). NodePorts answer on *every* node, so the
-worker's IP works too — `.93` is used because it is the address that is never in doubt.
+They all point at **`192.168.68.93`** — `k3s-master-01`.
+
+ℹ️ A NodePort answers on **every** node, so `k3s-worker-01` (`192.168.68.62`) serves every one of
+these too. The master is used here only because it is the node you are most likely to have
+already confirmed is up.
+
+> ⚠️ **Node IPs have moved before** (one changed on its own — DHCP). If the whole fallback list
+> dies at once while `kubectl get pods` is healthy, re-check the IPs and set DHCP reservations:
+> ```bash
+> sudo k3s kubectl get nodes -o wide     # INTERNAL-IP column
+> ```
 
 Two fixed LAN addresses worth memorising, because they are the ones you need when the edge
 is down and they are **not** reachable by hostname at all:
@@ -80,7 +90,7 @@ cert-manager cert exists for any of them in this repo:
 |---|---|---|
 | Argo CD | `https://deploy.williampring.ca` | `http://<node>:30443` |
 | Bark | `https://bark.williampring.ca` | `http://<node>:30889` |
-| Pulse | `https://pulse.williampring.ca` | — (outside the cluster) |
+| Pulse | `https://pulse.williampring.ca` | — (runs on Proxmox, not in this cluster) |
 
 Argo's NodePort is first in the bookmark list on purpose: that hostname depends on Cloudflare +
 the tunnel + NPMplus, and Argo is the tool you need in order to repair exactly those things.
@@ -162,7 +172,9 @@ sudo k3s kubectl top nodes            # must work before the widget can
   variable before wiring several credentials through it, and set `hideErrors: true` so a
   broken widget does not paint the dashboard with API errors.
 - **Actual Budget and SearXNG have no widget** — a dot is all they will ever get.
-- **Pulse is an iframe**, not the real `pulse` widget.
+- **Pulse has no widget yet.** Its embedded iframe was removed in Nov 2026 (it loaded a whole
+  second app on every page view). Homepage has a real `pulse` widget that would show VM/LXC and
+  backup state as data — it needs an API token, so it is blocked on the same secret path.
 - **The Immich Public Proxy has no tile**, because its `PUBLIC_BASE_URL`
   (`public-immich.williampring.ca`) disagrees with CLAUDE.md, `docs/index.md` and Gatus
   (`share.williampring.ca`). Resolve which hostname is live before adding one.

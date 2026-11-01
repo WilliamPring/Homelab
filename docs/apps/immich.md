@@ -113,7 +113,7 @@ Reach it by hostname on the LAN (real HTTPS) without any Cloudflare DNS. Traefik
 node's `:443` routes by hostname:
 ```bash
 # /etc/hosts on your Mac/Arch:
-192.168.68.93   immich.williampring.ca      # any node's LAN IP (master shown; the worker .63 works too)
+192.168.68.93   immich.williampring.ca      # any node's LAN IP (master shown; worker .62 works too)
 ```
 ```
 https://immich.williampring.ca   🔒
