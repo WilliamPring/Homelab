@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,6 +16,7 @@ spec:
             secretName: sops-age
 
       initContainers:
+        # Install KSOPS and its bundled Kustomize binary
         - name: install-ksops
           image: viaductoss/ksops:v4.5.1
           command:
@@ -26,6 +28,22 @@ spec:
             - name: custom-tools
               mountPath: /custom-tools
 
+        # Install KSOPS as a Kustomize exec plugin
+        - name: install-ksops-plugin
+          image: alpine:3.22
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              mkdir -p /custom-tools/viaduct.ai/v1/ksops
+              cp /custom-tools/ksops /custom-tools/viaduct.ai/v1/ksops/ksops
+              chmod +x /custom-tools/viaduct.ai/v1/ksops/ksops
+          volumeMounts:
+            - name: custom-tools
+              mountPath: /custom-tools
+
+        # Install Helm
         - name: install-helm3
           image: alpine/helm:3.22.1
           command:
@@ -37,7 +55,6 @@ spec:
             - name: custom-tools
               mountPath: /custom-tools
 
-
       containers:
         - name: argocd-repo-server
           env:
@@ -48,10 +65,11 @@ spec:
               value: /custom-tools
 
           volumeMounts:
-            # Expose the shared tools directory to the main container
+            # Shared tools directory
             - name: custom-tools
               mountPath: /custom-tools
 
+            # Executables
             - name: custom-tools
               mountPath: /usr/local/bin/ksops
               subPath: ksops
@@ -64,6 +82,7 @@ spec:
               mountPath: /usr/local/bin/helm
               subPath: helm
 
+            # SOPS age key
             - name: sops-age
               mountPath: /etc/sops-age/keys.txt
               subPath: keys.txt
