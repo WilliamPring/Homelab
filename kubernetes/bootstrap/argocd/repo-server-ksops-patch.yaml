@@ -48,6 +48,10 @@ spec:
               value: /custom-tools
 
           volumeMounts:
+            # Expose the shared tools directory to the main container
+            - name: custom-tools
+              mountPath: /custom-tools
+
             - name: custom-tools
               mountPath: /usr/local/bin/ksops
               subPath: ksops
