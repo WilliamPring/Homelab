@@ -29,8 +29,23 @@ Expect: a `monitoring` namespace with Loki PVC(s), the `grafana-admin` secret, m
 `grafana-tls` cert, plus `*.monitoring.coreos.com` CRDs and some cluster-scoped RBAC.
 
 **DELETE**
+
+> 🛑 **DO NOT `k delete ns monitoring`.** This step used to say exactly that, and it was correct
+> when written — the namespace held only the old stack. **Gatus and Bark now live there**
+> (`kubernetes/apps/monitoring/gatus`, `.../bark`). Deleting the namespace takes your entire
+> alerting setup, Gatus's SQLite PVC, and the only channel that can page you — and nothing would
+> tell you, because a dead alert channel looks exactly like a quiet week.
+>
+> Delete the old stack **by name**, from the LOOK output above. Anything named `gatus` or `bark`
+> stays. Done ~Nov 2026; this note is kept as the reason the obvious command is wrong.
+
 ```bash
-k delete ns monitoring                                          # takes the PVCs + grafana-admin with it
+# confirm gatus/bark are NOT in the list before dropping --dry-run=client
+k delete deploy,sts,ds,svc,pvc,cm,secret,ingress -n monitoring \
+  -l 'app.kubernetes.io/part-of=kube-prometheus-stack' --dry-run=client
+
+# cluster-scoped leftovers — these survive a namespace delete anyway, which is why
+# they are the ones people forget. Read each grep's output BEFORE piping to delete.
 k get crd -o name | grep monitoring.coreos.com | xargs -r sudo k3s kubectl delete
 k get clusterrole,clusterrolebinding -o name | grep -iE 'prometheus|grafana|loki|alloy|kube-state|node-exporter' | xargs -r sudo k3s kubectl delete
 k get mutatingwebhookconfiguration,validatingwebhookconfiguration -o name | grep -i prometheus | xargs -r sudo k3s kubectl delete

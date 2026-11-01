@@ -1,6 +1,22 @@
 # ============================================================
-# Homepage ConfigMap
+# Homepage ConfigMap  —  https://home.williampring.ca
 # ============================================================
+# This is the index of the homelab. Every app that has a UI gets a tile here, and
+# every tile carries a `siteMonitor` so the page shows whether the thing is actually
+# alive, not just that a link exists.
+#
+# ⚠️ siteMonitor URLs are IN-CLUSTER (*.svc.cluster.local), not the public hostname.
+#    The probe runs from the homepage POD, not your browser. Probing in-cluster answers
+#    "is the app running?" — independent of Cloudflare DNS, Tailscale and the cert.
+#    The edge (DNS + cert + Traefik) is Gatus's job; its endpoint list is the source
+#    these URLs were copied from (kubernetes/apps/monitoring/gatus/configmap.yaml).
+#    Keep the two lists in step when you add an app.
+#
+# A red tile with a working link therefore means "the app is down".
+# A green tile with a dead link means "DNS/Tailscale/cert is down" → check Gatus.
+#
+# ⚠️ Adding a tile is not enough. A new app needs: a tile here, a Gatus endpoint,
+#    and its doc in docs/apps/. See docs/platform/adding-an-app.md.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -17,85 +33,122 @@ data:
     headerStyle: clean
 
     layout:
+      Media:
+        style: row
+        columns: 4
+
       Apps:
         style: row
         columns: 4
 
       Monitoring:
         style: row
-        columns: 2
+        columns: 3
 
       Infrastructure:
         style: row
         columns: 1
 
   services.yaml: |
-    - Apps:
+    - Media:
         - Immich:
             href: https://immich.williampring.ca
-            description: Photo backup
+            description: Photo & video backup, iPhone sync
             icon: immich.png
-
-        - SearXNG:
-            href: https://private.williampring.ca
-            description: Private metasearch
-            icon: searxng.png
-
-        - degoog:
-            href: https://search.williampring.ca
-            description: Search aggregator
-            icon: si-google
+            siteMonitor: http://immich-server.media.svc.cluster.local:2283/api/server/ping
 
         - Library:
             href: https://library.williampring.ca
-            description: Manga & books (Kavita)
+            description: Manga & books reader (Kavita)
             icon: kavita.png
+            siteMonitor: http://kavita.media.svc.cluster.local:5000/api/health
 
         - Books:
             href: https://books.williampring.ca
             description: Ebook ingest & metadata (Calibre-Web)
             icon: calibre-web.png
-
-        - Games:
-            href: https://roms.williampring.ca
-            description: ROM library & in-browser play (RomM)
-            icon: romm.png
+            siteMonitor: http://calibre.media.svc.cluster.local:8083/
 
         - Manga sources:
             href: https://suwayomi.williampring.ca
             description: Browse & subscribe to online manga (Suwayomi)
             icon: suwayomi.png
+            siteMonitor: http://suwayomi.media.svc.cluster.local:4567/
+
+        - Games:
+            href: https://roms.williampring.ca
+            description: ROM library & in-browser play (RomM)
+            icon: romm.png
+            siteMonitor: http://romm.media.svc.cluster.local:8080/
 
         - Downloads:
             href: https://qbittorrent.williampring.ca
             description: Torrents, VPN-only via Mullvad (qBittorrent + Gluetun)
             icon: qbittorrent.png
+            # Red whenever the VPN is down — Gluetun's kill switch makes the pod NotReady
+            # on purpose, so "unreachable" here is the kill switch working, not a bug.
+            siteMonitor: http://qbittorrent.media.svc.cluster.local:8080/
+
+        - Metadata:
+            href: https://komf.williampring.ca
+            description: Fetches manga/book metadata for Kavita (Komf)
+            icon: mdi-tag-text-outline
+            siteMonitor: http://komf.media.svc.cluster.local:8085/
+
+    - Apps:
+        - SearXNG:
+            href: https://private.williampring.ca
+            description: Private metasearch
+            icon: searxng.png
+            siteMonitor: http://searxng.apps.svc.cluster.local:8080/healthz
+
+        - degoog:
+            href: https://search.williampring.ca
+            description: Search aggregator (Valkey-backed)
+            icon: si-google
+            siteMonitor: http://degoog.apps.svc.cluster.local:4444/
 
         - Bookmarks:
             href: https://karakeep.williampring.ca
             description: Saved links with archived copies (Karakeep)
             icon: karakeep.png
+            siteMonitor: http://karakeep.apps.svc.cluster.local:3000/api/health
 
         - Budget:
             href: https://actual.williampring.ca
             description: Envelope budgeting & sync (Actual)
             icon: actual-budget.png
+            siteMonitor: http://actual.apps.svc.cluster.local:5006/
 
         - Portfolio:
             href: https://portfolio.williampring.ca
             description: Stocks, ETFs & crypto (Ghostfolio)
             icon: ghostfolio.png
+            siteMonitor: http://ghostfolio.apps.svc.cluster.local:3333/api/v1/health
 
     - Monitoring:
         - Status:
             href: https://status.williampring.ca
             description: Uptime checks & alerts (Gatus)
             icon: gatus.png
+            siteMonitor: http://gatus.monitoring.svc.cluster.local:8080/
 
         - Argo CD:
             href: http://192.168.68.93:30443
-            description: GitOps deployments
+            # LAN ONLY, plain HTTP, no DNS and no cert — deliberately. When Argo is the
+            # tool you need IN ORDER TO FIX a broken edge, depending on the edge is
+            # backwards. See kubernetes/bootstrap/argocd/argocd-server-nodeport-patch.yaml.
+            description: GitOps deployments (LAN only, http)
             icon: si-argo
+            siteMonitor: http://argocd-server.argocd.svc.cluster.local:80/healthz?full=true
+
+        - Bark:
+            # No Ingress by design — NPMplus owns this hostname. It is the ONLY alert
+            # channel, so a dead Bark looks exactly like a quiet week. Watch this tile.
+            href: http://192.168.68.93:30889
+            description: iOS push — the only alert channel (LAN only)
+            icon: mdi-bell-ring-outline
+            siteMonitor: http://bark.monitoring.svc.cluster.local:8080/ping
 
     - Infrastructure:
         - Pulse:
@@ -135,10 +188,63 @@ data:
             - abbr: GH
               href: https://github.com/WilliamPring/Homelab
 
-        - Sub Proxmox (masterk3s-worker):
+        - Proxmox 192.168.68.96:
             - abbr: PVE
               href: https://192.168.68.96:8006
 
-        - Main Proxmox (worker):
+        - Proxmox 192.168.68.89:
             - abbr: PVE
               href: https://192.168.68.89:8006
+
+    # LAN fallback — every app also listens on a NodePort, reachable by raw IP with no
+    # DNS, no Cloudflare, no Tailscale and no cert. This is what you use when the tiles
+    # above are all dead but `kubectl get pods` looks fine: the apps are up, the edge is
+    # not. Ports come from the README port table; keep them in step.
+    #
+    # ⚠️ .93 is the MASTER. NodePorts answer on EVERY node, so the worker's IP works too —
+    #    .93 is used here only because it is the one address that is never in doubt.
+    # ⚠️ Plain http, LAN only. Not reachable over Tailscale (192.168.68.x is not routed).
+    - LAN fallback (no DNS needed):
+        - Immich shares:
+            - abbr: "42"
+              href: http://192.168.68.93:30042
+
+        - qBittorrent:
+            - abbr: "80"
+              href: http://192.168.68.93:30080
+
+        - Calibre-Web:
+            - abbr: "83"
+              href: http://192.168.68.93:30083
+
+        - Karakeep:
+            - abbr: "00"
+              href: http://192.168.68.93:30300
+
+        - Suwayomi:
+            - abbr: "56"
+              href: http://192.168.68.93:30456
+
+        - Kavita:
+            - abbr: "00"
+              href: http://192.168.68.93:30500
+
+        - Actual:
+            - abbr: "06"
+              href: http://192.168.68.93:30506
+
+        - RomM:
+            - abbr: "08"
+              href: http://192.168.68.93:30808
+
+        - SearXNG:
+            - abbr: "80"
+              href: http://192.168.68.93:30880
+
+        - Gatus:
+            - abbr: "81"
+              href: http://192.168.68.93:30881
+
+        - Bark:
+            - abbr: "89"
+              href: http://192.168.68.93:30889

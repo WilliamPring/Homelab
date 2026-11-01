@@ -1,17 +1,29 @@
-# Argo CD server config — makes 'insecure mode' declarative instead of a manual patch.
-# argocd-server serves plain HTTP so Traefik/Ingress can terminate TLS (no redirect loop).
+# argocd-server config — `server.insecure: true` makes argocd-server serve plain HTTP so whatever
+# fronts it (Traefik, NPMplus, a Cloudflare tunnel) terminates TLS. Without it the server redirects
+# HTTP→HTTPS and anything in front loops: ERR_TOO_MANY_REDIRECTS.
 #
-# Apply the whole folder at once:  sudo k3s kubectl apply -f kubernetes/bootstrap/argocd/
-# Then restart the server:          sudo k3s kubectl rollout restart deploy/argocd-server -n argocd
+# 🛑 THIS IS A PATCH, NOT A RESOURCE. It used to be listed under `resources:`, and that silently
+#    broke Argo every single time the folder was applied:
 #
-# NOTE: `kubectl apply` MERGES this key into the ConfigMap — it won't wipe other keys.
+#      the upstream install.yaml ALSO ships an argocd-cmd-params-cm — with NO data and NO
+#      namespace. This file carried `namespace: argocd`, so kustomize saw two DIFFERENT resource
+#      IDs and merged nothing. `kubectl apply -k … -n argocd` then sent both to the same
+#      namespace, the EMPTY one landed last, and server.insecure was wiped.
+#
+#    The symptom was a redirect loop that appeared hours later (the running pod keeps its old
+#    args until it restarts) and followed Argo across completely different front ends — which is
+#    what made it look like a Cloudflare or NPMplus problem. Diagnosed 2026-11-01.
+#
+# As a patch it MERGES into the upstream ConfigMap, so there is only ever one.
+#
+# ⚠️ No `namespace:` — the upstream manifest's resources carry none, and a namespaced patch would
+#    match nothing. Same reason repo-server-ksops-patch.yaml omits it.
+#
+# ⚠️ argocd-server reads this AT STARTUP. After applying, restart it or nothing changes:
+#      sudo k3s kubectl rollout restart deploy/argocd-server -n argocd
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: argocd-cmd-params-cm
-  namespace: argocd
-  labels:
-    app.kubernetes.io/name: argocd-cmd-params-cm
-    app.kubernetes.io/part-of: argocd
 data:
   server.insecure: "true"

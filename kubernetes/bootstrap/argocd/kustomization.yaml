@@ -7,9 +7,12 @@ resources:
   # Renovate watches this URL (renovate.json → customManagers "argo-cd install") and opens a
   # PR per Argo release. After merging: `kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd` once.
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.6/manifests/install.yaml
-  - config.yaml
 
 patches:
+  # ⚠️ config.yaml MUST be a patch, not a resource — as a resource it collided with the
+  #    upstream install's empty argocd-cmd-params-cm and server.insecure got wiped on every
+  #    apply, causing ERR_TOO_MANY_REDIRECTS behind any proxy. See the header in that file.
+  - path: config.yaml
   - path: repo-server-ksops-patch.yaml
   - path: argocd-notifications-cm.yaml   # notifications → Bark (patches the empty CM from the install)
   - path: argocd-cm-patch.yaml
