@@ -102,7 +102,7 @@ sudo k3s kubectl get svc immich-server -n media    # TYPE=NodePort, 2283:30041
 Then, on the **same LAN**:
 ```
 http://192.168.68.62:30041      (worker — where Immich runs)
-http://192.168.68.93:30041      (master — also works; k8s routes it)
+http://192.168.68.63:30041      (master — also works; k8s routes it)
 ```
 - Browser: create the admin account here on first run.
 - iPhone app (same WiFi): Server URL = `http://192.168.68.62:30041`.
@@ -113,7 +113,7 @@ Reach it by hostname on the LAN (real HTTPS) without any Cloudflare DNS. Traefik
 node's `:443` routes by hostname:
 ```bash
 # /etc/hosts on your Mac/Arch:
-192.168.68.93   immich.williampring.ca      # any node's LAN IP (master shown; worker .62 works too)
+192.168.68.63   immich.williampring.ca      # any node's LAN IP (master shown; worker .62 works too)
 ```
 ```
 https://immich.williampring.ca   🔒

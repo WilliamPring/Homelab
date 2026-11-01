@@ -62,11 +62,20 @@ Every app also listens on a NodePort. Those links need **no DNS, no Cloudflare, 
 and no cert** — they are what you use when every tile is dead but `kubectl get pods` looks
 fine, i.e. the apps are up and the edge is not.
 
-They all point at **`192.168.68.93`** — `k3s-master-01`.
+They all point at **`192.168.68.63`** — `k3s-master-01`.
 
 ℹ️ A NodePort answers on **every** node, so `k3s-worker-01` (`192.168.68.62`) serves every one of
-these too. The master is used here only because it is the node you are most likely to have
-already confirmed is up.
+these too. If `.63` is down, swap the IP and the links still work.
+
+> 🛑 **These IPs have moved before.** The master lived on `192.168.68.93` until a DHCP lease
+> change moved it to `.63`, and the repo went on saying `.93` — including `ansible/inventory.ini`,
+> which is Ansible's SSH target. The symptom is distinctive: **every** link in this list dies at
+> once while `kubectl get pods` is completely healthy.
+>
+> Set **DHCP reservations for both nodes** on the router so this stops recurring, then verify:
+> ```bash
+> sudo k3s kubectl get nodes -o wide     # INTERNAL-IP must match .63 / .62
+> ```
 
 > ⚠️ **Node IPs have moved before** (one changed on its own — DHCP). If the whole fallback list
 > dies at once while `kubectl get pods` is healthy, re-check the IPs and set DHCP reservations:
@@ -78,9 +87,9 @@ Two fixed LAN addresses worth memorising, because they are the ones you need whe
 is down and they are **not** reachable by hostname at all:
 
 ```
-Argo CD   http://192.168.68.93:30443      (LAN only, plain HTTP, no cert — on purpose)
-Gatus     http://192.168.68.93:30881
-Bark      http://192.168.68.93:30889
+Argo CD   http://192.168.68.63:30443      (LAN only, plain HTTP, no cert — on purpose)
+Gatus     http://192.168.68.63:30881
+Bark      http://192.168.68.63:30889
 ```
 
 Three hostnames are fronted by **NPMplus + Cloudflare**, not Traefik — no Ingress and no

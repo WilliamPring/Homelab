@@ -254,14 +254,14 @@ A cron on the Proxmox host, since nothing inside the cluster can report the clus
 #!/bin/bash
 KEY=$(cat /root/.bark-key)             # chmod 600
 STAMP=/run/k3s-master-alerted
-if ping -c2 -W3 192.168.68.93 >/dev/null 2>&1; then
+if ping -c2 -W3 192.168.68.63 >/dev/null 2>&1; then
   [ -f "$STAMP" ] && rm -f "$STAMP"    # recovered — reset so the next outage alerts
   exit 0
 fi
 [ -f "$STAMP" ] && exit 0              # already alerted; don't repeat every 5 min
 touch "$STAMP"
 curl -s -X POST http://192.168.68.62:30889/push -H 'Content-Type: application/json' \
-  -d "{\"device_key\":\"$KEY\",\"title\":\"k3s master DOWN\",\"body\":\"192.168.68.93 not responding to ping from Proxmox.\",\"level\":\"timeSensitive\",\"group\":\"homelab\"}"
+  -d "{\"device_key\":\"$KEY\",\"title\":\"k3s master DOWN\",\"body\":\"192.168.68.63 not responding to ping from Proxmox.\",\"level\":\"timeSensitive\",\"group\":\"homelab\"}"
 ```
 
 The stamp file is the whole point — without it a weekend outage sends ~576 notifications and you

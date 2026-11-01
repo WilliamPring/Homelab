@@ -1,4 +1,4 @@
-# The Argo CD UI's LAN FALLBACK door:   http://192.168.68.93:30443
+# The Argo CD UI's LAN FALLBACK door:   http://192.168.68.63:30443
 #
 # Everyday access is https://deploy.williampring.ca — NPMplus + a Cloudflare tunnel pointed at
 # this NodePort. That hostname is NOT an Ingress and has no cert-manager cert (same arrangement

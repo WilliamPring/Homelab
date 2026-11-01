@@ -9,7 +9,7 @@ each other*. Everything in **bold** is a thing that is NOT in git and must be re
 ```
 
 ## 0. Hosts
-Proxmox on both boxes (`proxmox-install.md`). VMs: `k3s-master-01` `.93`, `k3s-worker-01` `.62` (Debian, SSH key for `sysadmin`).
+Proxmox on both boxes (`proxmox-install.md`). VMs: `k3s-master-01` `.63`, `k3s-worker-01` `.62` (Debian, SSH key for `sysadmin`).
 LXCs that must exist with their data: **file server `.50`** (NFS export of `/data`), **Postgres `.7`**,
 **Valkey `.103`**. These hold the precious data — restore them from backups first if they were lost.
 

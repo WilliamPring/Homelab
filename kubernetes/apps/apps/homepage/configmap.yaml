@@ -65,13 +65,10 @@ data:
             icon: immich.png
             siteMonitor: http://immich-server.media.svc.cluster.local:2283/api/server/ping
             namespace: media
-            # ⚠️ UNVERIFIED — every other tile's selector was read straight out of this repo's
-            #    manifests, but Immich is rendered by the upstream Helm chart, so its labels are
-            #    the chart's, not ours. Confirm before trusting a red dot here:
-            #      sudo k3s kubectl get pod -n media -l app.kubernetes.io/instance=immich
-            #    If that returns the server pod, uncomment. If not, take the labels from:
-            #      sudo k3s kubectl get pod -n media --show-labels | grep immich-server
-            # podSelector: app.kubernetes.io/instance=immich
+            # Chart-rendered, so NOT this repo's `app: <name>` convention. These labels are
+            # copied from immich-prereqs/services.yaml, whose `immich-server-local` NodePort
+            # Service selects exactly them and works today — so they are verified, not guessed.
+            podSelector: app.kubernetes.io/name=server,app.kubernetes.io/instance=immich
 
         - Library:
             href: https://library.williampring.ca
@@ -280,56 +277,79 @@ data:
     # above are all dead but `kubectl get pods` looks fine: the apps are up, the edge is
     # not. Ports come from the README port table; keep them in step.
     #
-    # ⚠️ .93 is the MASTER. NodePorts answer on EVERY node, so the worker's IP works too —
-    #    .93 is used here only because it is the one address that is never in doubt.
+    # ⚠️ .63 = k3s-master-01, .62 = k3s-worker-01. Use http://192.168.68.62:<port> if .63 is down.
+    #
+    # ℹ️ WHY THE MASTER IP WORKS EVEN FOR APPS PINNED TO THE WORKER. Immich, RomM, Suwayomi and
+    #    qBittorrent all carry `nodeSelector: immich-node: "true"`, so their pods only ever run
+    #    on .62 — yet .63:<port> still reaches them. That is because NO Service in this repo sets
+    #    `externalTrafficPolicy: Local`; the default is `Cluster`, so kube-proxy on ANY node
+    #    forwards a NodePort to wherever the pod actually is.
+    #    🛑 If you ever add `externalTrafficPolicy: Local` to a Service (people do, to preserve
+    #       the client source IP), that app's NodePort STOPS answering on .63 and these links
+    #       break for that app only. Point it at .62 if you do.
+    #
+    # 🛑 THESE IPs HAVE MOVED BEFORE. The master was .93 until a DHCP lease change put it on
+    #    .63, and the repo kept saying .93 — including ansible/inventory.ini, which is what
+    #    Ansible SSHes to. Symptom: every link here dies at once while `kubectl get pods` is
+    #    perfectly healthy. Set DHCP RESERVATIONS for both nodes, then re-check with:
+    #      sudo k3s kubectl get nodes -o wide
+    #
     # ⚠️ Plain http, LAN only. Not reachable over Tailscale (192.168.68.x is not routed).
     - LAN fallback (no DNS needed):
         # 🛑 Argo CD first, because it is the one you need when everything else is broken.
         #    deploy.williampring.ca runs through Cloudflare + a tunnel + NPMplus; this does not.
         - Argo CD:
             - abbr: "ACD"
-              href: http://192.168.68.93:30443
+              href: http://192.168.68.63:30443
+
+        - Immich:
+            - abbr: "IMM"
+              href: http://192.168.68.63:30041
 
         - Immich shares:
             - abbr: "IPP"
-              href: http://192.168.68.93:30042
+              href: http://192.168.68.63:30042
+
+        - degoog:
+            - abbr: "DEG"
+              href: http://192.168.68.63:30882
 
         - qBittorrent:
             - abbr: "QBT"
-              href: http://192.168.68.93:30080
+              href: http://192.168.68.63:30080
 
         - Calibre-Web:
             - abbr: "CAL"
-              href: http://192.168.68.93:30083
+              href: http://192.168.68.63:30083
 
         - Karakeep:
             - abbr: "KRK"
-              href: http://192.168.68.93:30300
+              href: http://192.168.68.63:30300
 
         - Suwayomi:
             - abbr: "SUW"
-              href: http://192.168.68.93:30456
+              href: http://192.168.68.63:30456
 
         - Kavita:
             - abbr: "KAV"
-              href: http://192.168.68.93:30500
+              href: http://192.168.68.63:30500
 
         - Actual:
             - abbr: "ACT"
-              href: http://192.168.68.93:30506
+              href: http://192.168.68.63:30506
 
         - RomM:
             - abbr: "ROM"
-              href: http://192.168.68.93:30808
+              href: http://192.168.68.63:30808
 
         - SearXNG:
             - abbr: "SRX"
-              href: http://192.168.68.93:30880
+              href: http://192.168.68.63:30880
 
         - Gatus:
             - abbr: "GTS"
-              href: http://192.168.68.93:30881
+              href: http://192.168.68.63:30881
 
         - Bark:
             - abbr: "BRK"
-              href: http://192.168.68.93:30889
+              href: http://192.168.68.63:30889

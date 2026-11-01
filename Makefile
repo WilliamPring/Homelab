@@ -28,7 +28,7 @@ hooks:           ## install the pre-commit hooks (once per clone)
 	pre-commit install --hook-type pre-commit --hook-type pre-push
 
 diag:            ## run the read-only Argo diagnostic on the master and fetch it: make diag HOST=user@master-ip
-	@test -n "$(HOST)" || { echo "usage: make diag HOST=sysadmin@192.168.68.93"; exit 2; }
+	@test -n "$(HOST)" || { echo "usage: make diag HOST=sysadmin@192.168.68.63"; exit 2; }
 	scp -q scripts/debug/argocd-diag.sh $(HOST):/tmp/argocd-diag.sh
 	ssh -t $(HOST) 'sudo bash /tmp/argocd-diag.sh > /tmp/argocd-diag.txt 2>&1; echo "collected $$(wc -l < /tmp/argocd-diag.txt) lines"'
 	scp -q $(HOST):/tmp/argocd-diag.txt debug/argocd-diag.txt

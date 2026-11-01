@@ -7,7 +7,7 @@ the per-app workflow.)
 ## At a glance
 | | |
 |---|---|
-| **URL** | `https://deploy.williampring.ca` (NPMplus + Cloudflare tunnel). Fallback: `http://192.168.68.93:30443` — **LAN only, plain HTTP** |
+| **URL** | `https://deploy.williampring.ca` (NPMplus + Cloudflare tunnel). Fallback: `http://192.168.68.63:30443` — **LAN only, plain HTTP** |
 | **Namespace** | `argocd` |
 | **Installed by** | `kubectl apply -k kubernetes/bootstrap/argocd/` (by hand — NOT Ansible, NOT self-managed). The directory is a **kustomization**: the upstream install manifest (fetched from GitHub, pinned to a tag) + your patches |
 | **Sync mode** | Manual per app (`syncPolicy` has `CreateNamespace=true`, no `automated:`) |
@@ -77,7 +77,7 @@ This is why the Ingress backend is port **80**, not 443.
 ## Access
 ```
 https://deploy.williampring.ca        anywhere                — NPMplus + Cloudflare tunnel
-http://192.168.68.93:30443            same LAN                — HTTP, NodePort  (FALLBACK)
+http://192.168.68.63:30443            same LAN                — HTTP, NodePort  (FALLBACK)
 http://<master-ip>:8080               port-forward (below)    — HTTP, insecure mode
 ```
 
@@ -215,7 +215,7 @@ Full onboarding checklist: `docs/platform/adding-an-app.md`.
 | `failed to load generator plugin ... ksops` | the repo-server lacks KSOPS → `kubernetes/bootstrap/argocd/` was applied with `-f` or never re-applied; run the `apply -k` above, then **Hard Refresh** the app (the error is cached) |
 | `must specify --enable-helm` / chart apps fail, raw apps fine | `argocd-cm` lacks the flag OR the repo-server was not restarted after the apply (ConfigMap read at startup). Check: `kubectl -n argocd get cm argocd-cm -o jsonpath='{.data.kustomize\.buildOptions}'`; pods' AGE must be recent |
 | chart apps fail with a helm/kustomize version error | the tool overrides in `repo-server-ksops-patch.yaml` (kustomize from ksops, Helm 3.17) must both be mounted; `kubectl -n argocd exec deploy/argocd-repo-server -c argocd-repo-server -- sh -c 'kustomize version; helm version --short'` |
-| Need the full error text (UI truncates) | `make diag HOST=sysadmin@192.168.68.93` → `debug/argocd-diag.txt` (read-only snapshot: conditions, versions, logs) |
+| Need the full error text (UI truncates) | `make diag HOST=sysadmin@192.168.68.63` → `debug/argocd-diag.txt` (read-only snapshot: conditions, versions, logs) |
 | `Deployment "argocd-repo-server" is invalid` on apply | live repo-server was edited by hand and conflicts with the patch → `kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd --server-side --force-conflicts` once |
 | Helm-chart app won't pull (OCI) | Settings → Repositories → Connect repo (type Helm, Enable OCI) — e.g. the Immich chart |
 | Namespace shows OutOfSync and won't clear | leftover tracking label from an app that once declared the ns — strip it (`kubectl label ns <ns> app.kubernetes.io/instance-`); NEVER Sync-with-Prune a shared namespace |

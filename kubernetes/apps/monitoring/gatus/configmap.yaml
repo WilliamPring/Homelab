@@ -20,9 +20,9 @@
 #
 # ⚠️ Gatus cannot watch itself. If Gatus is down, nothing alerts and it looks like a quiet week.
 #    Same for Bark, the only channel. LAN fallbacks, which need no DNS/cert/Traefik/tunnel:
-#      Gatus   http://192.168.68.93:30881
-#      Bark    http://192.168.68.93:30889
-#      Argo    http://192.168.68.93:30443
+#      Gatus   http://192.168.68.63:30881
+#      Bark    http://192.168.68.63:30889
+#      Argo    http://192.168.68.63:30443
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -53,7 +53,7 @@ data:
           Content-Type: application/json
         # ⚠️ `body` is a JSON literal block — a `#` inside it is NOT a comment, it is invalid
         # JSON and Gatus would fail to send every alert. Keep notes out here.
-        # The "url" below is each push's tap-target. LAN fallback: http://192.168.68.93:30881
+        # The "url" below is each push's tap-target. LAN fallback: http://192.168.68.63:30881
         body: |
           {
             "device_key": "${BARK_DEVICE_KEY}",
