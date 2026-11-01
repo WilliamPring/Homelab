@@ -28,7 +28,9 @@ metadata:
   name: argocd-notifications-cm   # no namespace on purpose: must match the install's object id (ns is set at apply time)
 data:
   context: |
-    argocdUrl: https://argocd.williampring.ca
+    # LAN-only: the Ingress was removed, so this must be the NodePort or every
+    # notification's tap-target 404s. Needs to be on the LAN (not Tailscale) to open.
+    argocdUrl: http://192.168.68.93:30443
     barkDeviceKey: REPLACE_ME_DEVICE_KEY     # Bark iOS app → server → device key. Inline for now (owner's choice).
 
   # ── where: Bark (iOS push via Apple) — primary ──────────────────────────────────────────

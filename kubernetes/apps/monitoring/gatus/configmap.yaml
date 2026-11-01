@@ -194,12 +194,6 @@ data:
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
         alerts: [{ type: custom }]
-      - name: argocd.williampring.ca
-        group: edge
-        url: "https://argocd.williampring.ca/healthz"
-        interval: 5m
-        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: custom }]
       - name: portfolio.williampring.ca
         group: edge
         url: "https://portfolio.williampring.ca/api/v1/health"

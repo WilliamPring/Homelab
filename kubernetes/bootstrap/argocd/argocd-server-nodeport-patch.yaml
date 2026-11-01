@@ -1,0 +1,27 @@
+# The Argo CD UI's ONLY door:   http://192.168.68.93:30443
+#
+# WHY NO INGRESS: argocd.williampring.ca depended on a chain — Cloudflare record → the master's
+# Tailscale IP → Traefik → a Let's Encrypt cert issued over Cloudflare DNS-01. When Argo is the
+# tool you need IN ORDER TO FIX a broken edge, depending on the edge is backwards. A NodePort has
+# none of those dependencies: no DNS, no cert, no Tailscale, no Traefik.
+#
+# ⚠️ PLAIN HTTP. argocd-server runs in insecure mode (config.yaml here), so this port is
+#    unencrypted — the Argo password and session token cross the LAN in the clear. Acceptable on
+#    a home network you control; not from one you do not.
+#
+# ⚠️ LAN ONLY. 192.168.68.x is not reachable over Tailscale. Off-network, use the SSH
+#    port-forward in docs/platform/argocd.md, or put an Ingress back.
+#
+# ⚠️ WHY JSON-6902 AND NOT A STRATEGIC MERGE: a strategic merge patch on a Service applies
+#    `type: NodePort` but SILENTLY DROPS `nodePort` from the port entry — verified by rendering
+#    it both ways. The result looks correct and gets a random port instead. This form survives.
+#
+# ⚠️ /spec/ports/0 is the `http` entry (80 → 8080); index 1 is `https`. If an Argo CD upgrade
+#    reorders them this lands on the wrong port. After a version bump, verify with:
+#      kubectl kustomize kubernetes/bootstrap/argocd/ | grep -B4 -A6 'name: argocd-server'
+- op: replace
+  path: /spec/type
+  value: NodePort
+- op: add
+  path: /spec/ports/0/nodePort
+  value: 30443

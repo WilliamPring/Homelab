@@ -8,7 +8,6 @@ resources:
   # PR per Argo release. After merging: `kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd` once.
   - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.6/manifests/install.yaml
   - config.yaml
-  - ingress.yaml
 
 patches:
   - path: repo-server-ksops-patch.yaml
@@ -18,3 +17,10 @@ patches:
       version: v1
       kind: ConfigMap
       name: argocd-cm
+  # The UI's only door: http://192.168.68.93:30443 (no Ingress, no DNS, no cert).
+  # JSON-6902 on purpose — a strategic merge drops `nodePort` silently.
+  - path: argocd-server-nodeport-patch.yaml
+    target:
+      version: v1
+      kind: Service
+      name: argocd-server

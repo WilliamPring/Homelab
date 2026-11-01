@@ -93,7 +93,7 @@ data:
             icon: gatus.png
 
         - Argo CD:
-            href: https://argocd.williampring.ca
+            href: http://192.168.68.93:30443
             description: GitOps deployments
             icon: si-argo
 

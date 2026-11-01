@@ -7,7 +7,7 @@ the per-app workflow.)
 ## At a glance
 | | |
 |---|---|
-| **URL** | https://argocd.williampring.ca |
+| **URL** | `http://192.168.68.93:30443` — **LAN only, plain HTTP.** No hostname, no cert, no Cloudflare, no Tailscale |
 | **Namespace** | `argocd` |
 | **Installed by** | `kubectl apply -k kubernetes/bootstrap/argocd/` (by hand — NOT Ansible, NOT self-managed). The directory is a **kustomization**: the upstream install manifest (fetched from GitHub, pinned to a tag) + your patches |
 | **Sync mode** | Manual per app (`syncPolicy` has `CreateNamespace=true`, no `automated:`) |
@@ -34,7 +34,12 @@ What the directory sets up:
   upstream install pinned to a tag. Not vendored, so CRDs/RBAC/images always match. Renovate PRs the
   tag (label `argocd`); upgrading Argo = merge that PR, run the `apply -k` line once.
 - `config.yaml` → `server.insecure: true` in `argocd-cmd-params-cm` (see below).
-- `ingress.yaml` → `argocd.williampring.ca`, cert-manager TLS (`argocd-tls`), backend `argocd-server:80`.
+- `argocd-server-nodeport-patch.yaml` → a JSON-6902 patch making the `argocd-server` Service a
+  NodePort on **30443**. ⚠️ Must be JSON-6902: a strategic-merge patch applies `type: NodePort`
+  but **silently drops `nodePort`**, giving you a random port and a Service that looks right.
+  ⚠️ It also carries no `namespace:` — the upstream manifest's resources have none, so a
+  namespaced patch matches nothing.
+  (There is no `ingress.yaml` any more — see Access.)
 - `argocd-cm-patch.yaml` → a JSON patch on the install's `argocd-cm`: `kustomize.buildOptions: --enable-alpha-plugins --enable-helm`.
   `--enable-alpha-plugins` lets kustomize run the KSOPS generator; `--enable-helm` lets it inflate `helmCharts:` (immich, cert-manager).
   (`argocd-cm.yaml` in the same folder is the older whole-ConfigMap version, no longer in the kustomization.)
@@ -71,9 +76,21 @@ This is why the Ingress backend is port **80**, not 443.
 
 ## Access
 ```
-https://argocd.williampring.ca        (Tailscale on)          — HTTPS via Ingress
+http://192.168.68.93:30443            same LAN                — HTTP, NodePort
 http://<master-ip>:8080               port-forward (below)    — HTTP, insecure mode
 ```
+
+**There is no Ingress and no hostname.** `argocd.williampring.ca` was removed deliberately: it
+depended on a Cloudflare record → the master's Tailscale IP → Traefik → a Let's Encrypt cert
+issued over Cloudflare DNS-01. When Argo is the tool you need *in order to fix* a broken edge,
+depending on the edge is backwards. The NodePort has none of those dependencies.
+
+⚠️ **Plain HTTP.** `server.insecure: true` (needed so Traefik could terminate TLS) means this
+port is unencrypted — the Argo password and session token cross the LAN in the clear. Acceptable
+on a home network; do not use it from one you do not control.
+
+⚠️ **Not reachable over Tailscale.** A LAN IP needs you on the LAN. Off-network, use the
+port-forward below over SSH, or put the hostname back.
 Port-forward fallback (note `:80`, and http — server is insecure):
 ```bash
 sudo k3s kubectl -n argocd port-forward --address 0.0.0.0 svc/argocd-server 8080:80

@@ -77,7 +77,9 @@ Every Application is subscribed by default — no annotations to maintain.
 | `on-sync-failed` | operation phase Error/Failed | 5 🚨 | bad manifest, KSOPS decrypt, missing secret, image pull |
 | `on-health-degraded` | health Degraded | 5 ⚠️ | crash-loop / failing probes |
 
-Each notification's tap-target opens the app in Argo (`argocd.williampring.ca`).
+Each notification's tap-target opens the app in Argo (`http://192.168.68.93:30443`, set as
+`argocdUrl` in `argocd-notifications-cm.yaml`). ⚠️ That is a LAN address — tapping a Bark alert
+while away from home will not open.
 
 ### Setup
 1. Push, then re-apply the Argo kustomization (`-k`, not `-f`: the directory has patches; `-n argocd`
