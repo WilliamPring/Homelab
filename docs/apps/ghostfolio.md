@@ -108,7 +108,10 @@ Yahoo Finance symbols need the exchange suffix:
 | US | none | `AAPL` |
 | Crypto | — | CoinGecko data source |
 
-Set the base currency to **CAD** in Settings so US holdings convert for display.
+**Base currency is `BASE_CURRENCY` in `deployment.yaml`, not a UI setting** — there is no dropdown
+for it in the app. It is set to `CAD`. ⚠️ Upstream documents it as **not changeable later**, so
+changing it means starting from an empty database. The currency dropdown you *can* find under
+My Ghostfolio is a per-user display preference, not this.
 
 ### ⚠️ This is not your tax number
 

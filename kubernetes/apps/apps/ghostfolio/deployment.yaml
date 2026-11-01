@@ -78,6 +78,16 @@ spec:
                 secretKeyRef:
                   name: ghostfolio-secret
                   key: JWT_SECRET_KEY
+            # ── locale ──────────────────────────────────────────────────────────────────
+            # The base currency is an ENV VAR, not a UI setting — there is no dropdown for it
+            # anywhere in the app, which is confusing when you go looking. Default is USD.
+            # ⚠️ Upstream documents this as NOT changeable later: it is the currency every
+            #    holding is converted INTO for totals and charts, and historical conversions
+            #    are not recomputed if you change it. Set it before entering holdings, or
+            #    start from an empty database.
+            # (The per-user dropdown under My Ghostfolio is a display preference, not this.)
+            - name: BASE_CURRENCY
+              value: "CAD"
             - name: TZ
               value: "America/Vancouver"
           ports:
