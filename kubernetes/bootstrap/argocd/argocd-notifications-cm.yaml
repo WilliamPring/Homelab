@@ -28,9 +28,11 @@ metadata:
   name: argocd-notifications-cm   # no namespace on purpose: must match the install's object id (ns is set at apply time)
 data:
   context: |
-    # LAN-only: the Ingress was removed, so this must be the NodePort or every
-    # notification's tap-target 404s. Needs to be on the LAN (not Tailscale) to open.
-    argocdUrl: http://192.168.68.93:30443
+    # The tap-target for every Bark notification. A phone on cellular cannot reach a
+    # 192.168.68.x NodePort, so this is the public hostname (NPMplus + Cloudflare tunnel),
+    # NOT the LAN fallback — otherwise every notification you tap from outside the house
+    # goes nowhere. There is no Ingress for it in this repo; NPMplus owns the edge.
+    argocdUrl: https://deploy.williampring.ca
     barkDeviceKey: REPLACE_ME_DEVICE_KEY     # Bark iOS app → server → device key. Inline for now (owner's choice).
 
   # ── where: Bark (iOS push via Apple) — primary ──────────────────────────────────────────

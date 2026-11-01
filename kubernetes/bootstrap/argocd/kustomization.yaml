@@ -20,7 +20,8 @@ patches:
       version: v1
       kind: ConfigMap
       name: argocd-cm
-  # The UI's only door: http://192.168.68.93:30443 (no Ingress, no DNS, no cert).
+  # The UI's LAN fallback door: http://192.168.68.93:30443 (no Ingress, no DNS, no cert).
+  # Everyday access is https://deploy.williampring.ca via NPMplus + a Cloudflare tunnel.
   # JSON-6902 on purpose — a strategic merge drops `nodePort` silently.
   - path: argocd-server-nodeport-patch.yaml
     target:

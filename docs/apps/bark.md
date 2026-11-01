@@ -6,10 +6,13 @@ your server, and your server is Tailscale-only, so pushes were lost whenever Tai
 source (MIT), tiny Go server, free iOS app.
 
 ```
+ALERT PATH (in-cluster — no DNS, no Cloudflare, no NPMplus, no cert):
 Gatus (outages)  ─┐
-                  ├─ POST /push ─► bark (monitoring ns, NodePort 30889) ─► APNs ─► iPhone (Bark app)
-Argo CD (deploys)─┘
-Phone ─► NPMplus (bark.<domain>, TLS) ─► node:30889   ← only for the one-time device registration
+                  ├─ POST http://bark.monitoring.svc.cluster.local:8080/push
+Argo CD (deploys)─┘        └─► bark (monitoring ns) ─► APNs ─► iPhone (Bark app)
+
+REGISTRATION PATH (only used once, by the phone):
+Phone ─► https://bark.williampring.ca ─► Cloudflare ─► NPMplus (TLS) ─► <any node>:30889
 ```
 
 | Argo app | Path | Deploys |
@@ -24,17 +27,27 @@ Phone ─► NPMplus (bark.<domain>, TLS) ─► node:30889   ← only for the o
 Push → the ApplicationSet registers `bark` → Argo UI → Sync.
 ```bash
 sudo k3s kubectl get pods -n monitoring -l app=bark
-curl -s http://192.168.68.62:30889/ping          # {"code":200,"message":"pong",...}
+curl -s http://<any-node-LAN-IP>:30889/ping      # {"code":200,"message":"pong",...}
 ```
 
 ### 2. NPMplus proxy host (your side)
-Proxy host `bark.<your domain>` → scheme `http`, forward host `192.168.68.62`, port `30889`.
-TLS as you do for your other NPMplus hosts. Websockets not needed. (Plain `http://192.168.68.62:30889`
-also works from the LAN for testing.)
+Proxy host **`bark.williampring.ca`** → scheme **`http`**, forward host = **any node's LAN IP**,
+port **`30889`**. TLS as you do for your other NPMplus hosts. Websockets not needed.
+
+> ⚠️ **Scheme must be `http`.** Bark serves plain HTTP; NPMplus terminates the TLS. Pointing it
+> at `https` is the same mistake that produced the Argo CD redirect loop.
+>
+> ℹ️ A NodePort answers on **every** node, so the forward host is not fussy — but it must be a
+> *current* node IP. Confirm before trusting it, because a wrong one here fails silently and
+> Bark is the only alert channel:
+> ```bash
+> sudo k3s kubectl get nodes -o wide          # pick any INTERNAL-IP
+> curl -s http://<that-ip>:30889/ping         # must return pong
+> ```
 
 ### 3. Register the phone
 Bark app (App Store, "Bark – Custom notifications") → **Servers** (top-right) → add server →
-`https://bark.<your domain>` (or the LAN URL while testing) → the app registers and shows a
+`https://bark.williampring.ca` (or the LAN URL while testing) → the app registers and shows a
 **device key** (a short string like `aBcD12…`). Copy it.
 
 ### 4. Put the device key where the senders read it

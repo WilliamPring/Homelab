@@ -19,6 +19,11 @@ spec:
         app: homepage
 
     spec:
+      # Grants the read-only cluster access that kubernetes.yaml (mode: cluster) needs for
+      # the cluster/node widgets and per-tile pod status. Defined in rbac.yaml.
+      # Without this the pod falls back to the `default` SA and every k8s widget errors.
+      serviceAccountName: homepage
+
       containers:
         - name: homepage
           image: ghcr.io/gethomepage/homepage:v2.4.0   # pinned — Renovate PRs bumps (grouped weekly, stateless)
@@ -48,6 +53,10 @@ spec:
             - name: config
               mountPath: /app/config/bookmarks.yaml
               subPath: bookmarks.yaml
+
+            - name: config
+              mountPath: /app/config/kubernetes.yaml
+              subPath: kubernetes.yaml
 
           resources:
             requests:

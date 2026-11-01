@@ -1,4 +1,12 @@
-# The Argo CD UI's ONLY door:   http://192.168.68.93:30443
+# The Argo CD UI's LAN FALLBACK door:   http://192.168.68.93:30443
+#
+# Everyday access is https://deploy.williampring.ca — NPMplus + a Cloudflare tunnel pointed at
+# this NodePort. That hostname is NOT an Ingress and has no cert-manager cert (same arrangement
+# as Bark). ⚠️ The tunnel's Service URL must be http://, not https:// — Argo runs insecure, and
+# pointing it at https gives ERR_TOO_MANY_REDIRECTS.
+#
+# This NodePort is the fallback and is not optional: the hostname depends on Cloudflare + the
+# tunnel + NPMplus, and Argo is the tool you need to repair exactly those things.
 #
 # WHY NO INGRESS: argocd.williampring.ca depended on a chain — Cloudflare record → the master's
 # Tailscale IP → Traefik → a Let's Encrypt cert issued over Cloudflare DNS-01. When Argo is the

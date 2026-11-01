@@ -3,15 +3,26 @@
 #
 # Groups:
 #   apps   — in-cluster Service URLs (exact, no DNS/TLS in the way): "is the app itself alive?"
-#   edge   — the public hostnames through Traefik: "does DNS + cert + ingress work?"  (+ cert expiry)
+#   edge   — the public hostnames: "does DNS + cert + the front door work?"  (+ cert expiry)
+#            ⚠️ NOT all one path. Most go Cloudflare DNS → the master's Tailscale IP → Traefik →
+#            a cert-manager/Let's Encrypt cert. But deploy.williampring.ca (Argo CD) goes
+#            Cloudflare → TUNNEL → NPMplus → a NodePort, with NPMplus's own certbot cert, and
+#            has no Ingress in this repo at all. Bark is fronted the same way. So "the edge
+#            group is red" can mean two completely different outages — check which rows.
 #   public — the ONE internet-facing path (Immich share proxy via Cloudflare)
 #   infra  — the boxes the apps depend on: Postgres LXC, Valkey, NFS, Proxmox
 #   dns    — Cloudflare records still exist
 #
-# ⚠️ `edge` checks resolve *.williampring.ca to the master's TAILSCALE IP from inside a pod. That
-#    works when the nodes route 100.x via their own tailscale0 (they do — Ansible put Tailscale
-#    on every node). If the whole edge group is red while apps are green, see docs/apps/gatus.md →
-#    "edge group all red".
+# ⚠️ Traefik-fronted `edge` checks resolve *.williampring.ca to the master's TAILSCALE IP from
+#    inside a pod. That works when the nodes route 100.x via their own tailscale0 (they do —
+#    Ansible put Tailscale on every node). If the whole edge group is red while apps are green,
+#    see docs/apps/gatus.md → "edge group all red".
+#
+# ⚠️ Gatus cannot watch itself. If Gatus is down, nothing alerts and it looks like a quiet week.
+#    Same for Bark, the only channel. LAN fallbacks, which need no DNS/cert/Traefik/tunnel:
+#      Gatus   http://192.168.68.93:30881
+#      Bark    http://192.168.68.93:30889
+#      Argo    http://192.168.68.93:30443
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -40,6 +51,9 @@ data:
         method: POST
         headers:
           Content-Type: application/json
+        # ⚠️ `body` is a JSON literal block — a `#` inside it is NOT a comment, it is invalid
+        # JSON and Gatus would fail to send every alert. Keep notes out here.
+        # The "url" below is each push's tap-target. LAN fallback: http://192.168.68.93:30881
         body: |
           {
             "device_key": "${BARK_DEVICE_KEY}",
@@ -197,6 +211,26 @@ data:
       - name: portfolio.williampring.ca
         group: edge
         url: "https://portfolio.williampring.ca/api/v1/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: custom }]
+      # Argo CD's public front door. Unlike every other edge check this one does NOT go
+      # through Traefik or a cert-manager cert — it is NPMplus + a Cloudflare tunnel, with
+      # NPMplus's own certbot cert. It is also the path a Bark notification's tap-target
+      # uses (argocdUrl), so if this is red, tapping a deploy alert goes nowhere.
+      # A 3xx here means server.insecure got wiped again — see bootstrap/argocd/config.yaml.
+      # The phone's registration path. NOT the alert path — alerts go in-cluster, so this
+      # being red does not silence alerting; it means a NEW phone could not register and
+      # that NPMplus/Cloudflare is unhappy. Also NPMplus's own certbot cert, not cert-manager.
+      - name: bark.williampring.ca
+        group: edge
+        url: "https://bark.williampring.ca/ping"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: custom }]
+      - name: deploy.williampring.ca
+        group: edge
+        url: "https://deploy.williampring.ca/healthz?full=true"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
         alerts: [{ type: custom }]

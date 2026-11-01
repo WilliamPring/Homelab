@@ -32,6 +32,18 @@ data:
     color: slate
     headerStyle: clean
 
+    # Every tile has a siteMonitor, so without this each one prints a response time in ms.
+    # At 20+ tiles that is noise — `dot` collapses it to green/red. Per-service `statusStyle`
+    # overrides this if you ever want the number back on one tile.
+    statusStyle: dot
+
+    # Type anywhere on the page to filter tiles and launch one. `provider` is inherited from
+    # the search widget below (degoog), so a query that matches no tile falls through to it.
+    quicklaunch:
+      searchDescriptions: true
+      hideVisitURL: false
+      mobileButtonPosition: bottom-right
+
     layout:
       Media:
         style: row
@@ -56,30 +68,46 @@ data:
             description: Photo & video backup, iPhone sync
             icon: immich.png
             siteMonitor: http://immich-server.media.svc.cluster.local:2283/api/server/ping
+            namespace: media
+            # ⚠️ UNVERIFIED — every other tile's selector was read straight out of this repo's
+            #    manifests, but Immich is rendered by the upstream Helm chart, so its labels are
+            #    the chart's, not ours. Confirm before trusting a red dot here:
+            #      sudo k3s kubectl get pod -n media -l app.kubernetes.io/instance=immich
+            #    If that returns the server pod, uncomment. If not, take the labels from:
+            #      sudo k3s kubectl get pod -n media --show-labels | grep immich-server
+            # podSelector: app.kubernetes.io/instance=immich
 
         - Library:
             href: https://library.williampring.ca
             description: Manga & books reader (Kavita)
             icon: kavita.png
             siteMonitor: http://kavita.media.svc.cluster.local:5000/api/health
+            namespace: media
+            podSelector: app=kavita
 
         - Books:
             href: https://books.williampring.ca
             description: Ebook ingest & metadata (Calibre-Web)
             icon: calibre-web.png
             siteMonitor: http://calibre.media.svc.cluster.local:8083/
+            namespace: media
+            podSelector: app=calibre
 
         - Manga sources:
             href: https://suwayomi.williampring.ca
             description: Browse & subscribe to online manga (Suwayomi)
             icon: suwayomi.png
             siteMonitor: http://suwayomi.media.svc.cluster.local:4567/
+            namespace: media
+            podSelector: app=suwayomi
 
         - Games:
             href: https://roms.williampring.ca
             description: ROM library & in-browser play (RomM)
             icon: romm.png
             siteMonitor: http://romm.media.svc.cluster.local:8080/
+            namespace: media
+            podSelector: app=romm
 
         - Downloads:
             href: https://qbittorrent.williampring.ca
@@ -88,12 +116,16 @@ data:
             # Red whenever the VPN is down — Gluetun's kill switch makes the pod NotReady
             # on purpose, so "unreachable" here is the kill switch working, not a bug.
             siteMonitor: http://qbittorrent.media.svc.cluster.local:8080/
+            namespace: media
+            podSelector: app=qbittorrent
 
         - Metadata:
             href: https://komf.williampring.ca
             description: Fetches manga/book metadata for Kavita (Komf)
             icon: mdi-tag-text-outline
             siteMonitor: http://komf.media.svc.cluster.local:8085/
+            namespace: media
+            podSelector: app=komf
 
     - Apps:
         - SearXNG:
@@ -101,30 +133,40 @@ data:
             description: Private metasearch
             icon: searxng.png
             siteMonitor: http://searxng.apps.svc.cluster.local:8080/healthz
+            namespace: apps
+            podSelector: app=searxng
 
         - degoog:
             href: https://search.williampring.ca
             description: Search aggregator (Valkey-backed)
             icon: si-google
             siteMonitor: http://degoog.apps.svc.cluster.local:4444/
+            namespace: apps
+            podSelector: app=degoog
 
         - Bookmarks:
             href: https://karakeep.williampring.ca
             description: Saved links with archived copies (Karakeep)
             icon: karakeep.png
             siteMonitor: http://karakeep.apps.svc.cluster.local:3000/api/health
+            namespace: apps
+            podSelector: app=karakeep
 
         - Budget:
             href: https://actual.williampring.ca
             description: Envelope budgeting & sync (Actual)
             icon: actual-budget.png
             siteMonitor: http://actual.apps.svc.cluster.local:5006/
+            namespace: apps
+            podSelector: app=actual
 
         - Portfolio:
             href: https://portfolio.williampring.ca
             description: Stocks, ETFs & crypto (Ghostfolio)
             icon: ghostfolio.png
             siteMonitor: http://ghostfolio.apps.svc.cluster.local:3333/api/v1/health
+            namespace: apps
+            podSelector: app=ghostfolio
 
     - Monitoring:
         - Status:
@@ -132,23 +174,41 @@ data:
             description: Uptime checks & alerts (Gatus)
             icon: gatus.png
             siteMonitor: http://gatus.monitoring.svc.cluster.local:8080/
+            namespace: monitoring
+            podSelector: app=gatus
 
         - Argo CD:
-            href: http://192.168.68.93:30443
-            # LAN ONLY, plain HTTP, no DNS and no cert — deliberately. When Argo is the
-            # tool you need IN ORDER TO FIX a broken edge, depending on the edge is
-            # backwards. See kubernetes/bootstrap/argocd/argocd-server-nodeport-patch.yaml.
-            description: GitOps deployments (LAN only, http)
+            # Fronted by NPMplus + a Cloudflare tunnel — NOT Traefik, and there is no Ingress
+            # in this repo for it (same arrangement as Bark). The tunnel's Service URL must
+            # point at http://<node>:30443 — plain HTTP. If it points at https, or Argo's
+            # server.insecure is not live, this loops with ERR_TOO_MANY_REDIRECTS.
+            #
+            # ⚠️ The NodePort below it in bookmarks is the FALLBACK and is not optional:
+            #    this hostname depends on Cloudflare + the tunnel + NPMplus, and Argo is the
+            #    tool you need IN ORDER TO FIX a broken edge. Never delete that bookmark.
+            href: https://deploy.williampring.ca
+            description: GitOps deployments (Argo CD)
             icon: si-argo
             siteMonitor: http://argocd-server.argocd.svc.cluster.local:80/healthz?full=true
+            namespace: argocd
+            # ⚠️ UNVERIFIED — labels come from the upstream install manifest, not this repo.
+            #      sudo k3s kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-server
+            # podSelector: app.kubernetes.io/name=argocd-server
 
         - Bark:
-            # No Ingress by design — NPMplus owns this hostname. It is the ONLY alert
-            # channel, so a dead Bark looks exactly like a quiet week. Watch this tile.
-            href: http://192.168.68.93:30889
-            description: iOS push — the only alert channel (LAN only)
+            # No Ingress by design — NPMplus owns this hostname (same as deploy.*).
+            # It is the ONLY alert channel, so a dead Bark looks exactly like a quiet week.
+            #
+            # ⚠️ This hostname is ONLY for the iPhone app's one-time registration and for
+            #    this tile. Gatus and Argo push to http://bark.monitoring.svc.cluster.local
+            #    instead — in-cluster, on purpose. If alerts were sent via this hostname,
+            #    a Cloudflare/NPMplus outage would SILENCE the alert that tells you about it.
+            href: https://bark.williampring.ca
+            description: iOS push — the only alert channel
             icon: mdi-bell-ring-outline
             siteMonitor: http://bark.monitoring.svc.cluster.local:8080/ping
+            namespace: monitoring
+            podSelector: app=bark
 
     - Infrastructure:
         - Pulse:
@@ -164,11 +224,36 @@ data:
               loadingStrategy: eager # optional, default: eager
               allowScrolling: yes # optional, default: yes
 
+  kubernetes.yaml: |
+    # `cluster` = read the API with the projected ServiceAccount token mounted in this pod
+    # (see rbac.yaml). `default` would look for a kubeconfig, which a pod does not have.
+    mode: cluster
+
+    # ⚠️ These are SERVICE DISCOVERY toggles, not display toggles. Left on, Homepage scans
+    #    Ingresses/IngressRoutes and auto-creates tiles for any that carry the annotation
+    #    `gethomepage.dev/enabled: "true"`. Nothing in this repo sets that annotation, so
+    #    discovery finds nothing and services.yaml stays the single source of truth.
+    #    Turn one on only if you decide you want tiles defined next to each app instead.
+    ingress: false
+    traefik: false
+    gateway: false
+
   widgets.yaml: |
-    - resources:
-        cpu: true
-        memory: true
-        disk: /
+    # Replaces the old `resources` widget, which read the filesystem/CPU of WHICHEVER NODE
+    # the homepage pod happened to land on — and silently changed meaning on a reschedule.
+    # This reads the real cluster through metrics-server.
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: cluster
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
 
     - search:
         provider: custom
@@ -205,46 +290,52 @@ data:
     #    .93 is used here only because it is the one address that is never in doubt.
     # ⚠️ Plain http, LAN only. Not reachable over Tailscale (192.168.68.x is not routed).
     - LAN fallback (no DNS needed):
+        # 🛑 Argo CD first, because it is the one you need when everything else is broken.
+        #    deploy.williampring.ca runs through Cloudflare + a tunnel + NPMplus; this does not.
+        - Argo CD:
+            - abbr: "ACD"
+              href: http://192.168.68.93:30443
+
         - Immich shares:
-            - abbr: "42"
+            - abbr: "IPP"
               href: http://192.168.68.93:30042
 
         - qBittorrent:
-            - abbr: "80"
+            - abbr: "QBT"
               href: http://192.168.68.93:30080
 
         - Calibre-Web:
-            - abbr: "83"
+            - abbr: "CAL"
               href: http://192.168.68.93:30083
 
         - Karakeep:
-            - abbr: "00"
+            - abbr: "KRK"
               href: http://192.168.68.93:30300
 
         - Suwayomi:
-            - abbr: "56"
+            - abbr: "SUW"
               href: http://192.168.68.93:30456
 
         - Kavita:
-            - abbr: "00"
+            - abbr: "KAV"
               href: http://192.168.68.93:30500
 
         - Actual:
-            - abbr: "06"
+            - abbr: "ACT"
               href: http://192.168.68.93:30506
 
         - RomM:
-            - abbr: "08"
+            - abbr: "ROM"
               href: http://192.168.68.93:30808
 
         - SearXNG:
-            - abbr: "80"
+            - abbr: "SRX"
               href: http://192.168.68.93:30880
 
         - Gatus:
-            - abbr: "81"
+            - abbr: "GTS"
               href: http://192.168.68.93:30881
 
         - Bark:
-            - abbr: "89"
+            - abbr: "BRK"
               href: http://192.168.68.93:30889

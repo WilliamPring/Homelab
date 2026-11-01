@@ -1,5 +1,6 @@
 # ClusterIP for Gatus/Argo (http://bark.monitoring.svc.cluster.local:8080) + NodePort for NPMplus
-# (proxy bark.<domain> → http://<node-LAN-IP>:30889). No Ingress by design — NPMplus owns the edge.
+# (proxy bark.williampring.ca → http://<any-node-LAN-IP>:30889). No Ingress by design —
+# NPMplus owns the edge, exactly as it does for deploy.williampring.ca (Argo CD).
 apiVersion: v1
 kind: Service
 metadata:
@@ -15,4 +16,4 @@ spec:
     - name: http
       port: 8080
       targetPort: http
-      nodePort: 30889      # LAN: http://192.168.68.62:30889  (free; see README port table)
+      nodePort: 30889      # answers on EVERY node, so any node IP works; see README port table

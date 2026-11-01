@@ -7,7 +7,7 @@ the per-app workflow.)
 ## At a glance
 | | |
 |---|---|
-| **URL** | `http://192.168.68.93:30443` — **LAN only, plain HTTP.** No hostname, no cert, no Cloudflare, no Tailscale |
+| **URL** | `https://deploy.williampring.ca` (NPMplus + Cloudflare tunnel). Fallback: `http://192.168.68.93:30443` — **LAN only, plain HTTP** |
 | **Namespace** | `argocd` |
 | **Installed by** | `kubectl apply -k kubernetes/bootstrap/argocd/` (by hand — NOT Ansible, NOT self-managed). The directory is a **kustomization**: the upstream install manifest (fetched from GitHub, pinned to a tag) + your patches |
 | **Sync mode** | Manual per app (`syncPolicy` has `CreateNamespace=true`, no `automated:`) |
@@ -76,14 +76,26 @@ This is why the Ingress backend is port **80**, not 443.
 
 ## Access
 ```
-http://192.168.68.93:30443            same LAN                — HTTP, NodePort
+https://deploy.williampring.ca        anywhere                — NPMplus + Cloudflare tunnel
+http://192.168.68.93:30443            same LAN                — HTTP, NodePort  (FALLBACK)
 http://<master-ip>:8080               port-forward (below)    — HTTP, insecure mode
 ```
 
-**There is no Ingress and no hostname.** `argocd.williampring.ca` was removed deliberately: it
-depended on a Cloudflare record → the master's Tailscale IP → Traefik → a Let's Encrypt cert
-issued over Cloudflare DNS-01. When Argo is the tool you need *in order to fix* a broken edge,
-depending on the edge is backwards. The NodePort has none of those dependencies.
+**Two doors, on purpose — and the second is not optional.**
+
+`deploy.williampring.ca` is the everyday one. ⚠️ It is **not** an Ingress: there is no Ingress
+and no cert-manager certificate for Argo in this repo. NPMplus owns that hostname (via a
+Cloudflare tunnel, with NPMplus's own certbot cert) exactly as it does for Bark. So the chain is
+Cloudflare → tunnel → NPMplus → `http://<node>:30443`.
+
+⚠️ **The tunnel's Service URL must be `http://`, not `https://`.** Argo runs in insecure mode;
+pointing the tunnel at https, or losing `server.insecure`, produces ERR_TOO_MANY_REDIRECTS.
+That exact loop cost a night in Nov 2026 — see the header of `config.yaml`.
+
+The NodePort stays because that whole chain is the thing Argo is often needed to repair.
+`argocd.williampring.ca` was removed for the same reason: it depended on a Cloudflare record →
+the master's Tailscale IP → Traefik → a Let's Encrypt cert issued over Cloudflare DNS-01. When
+Argo is the tool you need *in order to fix* a broken edge, depending on the edge is backwards.
 
 ⚠️ **Plain HTTP.** `server.insecure: true` (needed so Traefik could terminate TLS) means this
 port is unencrypted — the Argo password and session token cross the LAN in the clear. Acceptable
