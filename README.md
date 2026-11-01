@@ -75,7 +75,7 @@ See [`kubernetes/README.md`](kubernetes/README.md) for the full workflow.
 | What | IP | Notes |
 |---|---|---|
 | k3s master | `192.168.68.93` | Argo/Traefik entry; any NodePort also answers here |
-| k3s worker (32GB) | `192.168.68.63` | Immich, RomM, Suwayomi, qBittorrent are pinned here |
+| k3s worker (32GB) | `192.168.68.62` | Immich, RomM, Suwayomi, qBittorrent are pinned here |
 | file server (NFS `/data`) | `192.168.68.50` | photos, manga, books, ROMs, downloads |
 | Postgres LXC | `192.168.68.7` | RomM, Ghostfolio (and formerly Vaultwarden) |
 | Valkey / Redis | `192.168.68.103` | Immich, degoog, RomM (Ghostfolio runs its own — see its doc) |

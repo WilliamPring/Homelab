@@ -152,7 +152,7 @@ curl -u <user>:<pass> -s https://suwayomi.williampring.ca/api/graphql -H 'Conten
 
 ## Quick reference
 ```
-Computer:   https://suwayomi.williampring.ca      (LAN http: http://192.168.68.63:30456)
+Computer:   https://suwayomi.williampring.ca      (LAN http: http://192.168.68.62:30456)
 iPhone:     Paperback → extension https://tahouse.github.io/tachidesk-paperback-ext/ → Server URL above + creds
 Downloads:  192.168.68.50:/data/library/manga/<Source>/<Series>/   → Kavita Manga library
 Creds:      kubernetes/apps/media/suwayomi/deployment.yaml (AUTH_USERNAME / AUTH_PASSWORD)

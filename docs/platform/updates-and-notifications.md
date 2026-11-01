@@ -183,7 +183,7 @@ different from "updates available".
 | Field | `bark-proxmox` | `bark-proxmox-urgent` |
 |---|---|---|
 | Method | `POST` | `POST` |
-| URL | `http://192.168.68.63:30889/push` | same |
+| URL | `http://192.168.68.62:30889/push` | same |
 | Header | `Content-Type` = `application/json` | same |
 | Secret | name `device_key`, value = your Bark key | same |
 
@@ -258,7 +258,7 @@ if ping -c2 -W3 192.168.68.93 >/dev/null 2>&1; then
 fi
 [ -f "$STAMP" ] && exit 0              # already alerted; don't repeat every 5 min
 touch "$STAMP"
-curl -s -X POST http://192.168.68.63:30889/push -H 'Content-Type: application/json' \
+curl -s -X POST http://192.168.68.62:30889/push -H 'Content-Type: application/json' \
   -d "{\"device_key\":\"$KEY\",\"title\":\"k3s master DOWN\",\"body\":\"192.168.68.93 not responding to ping from Proxmox.\",\"level\":\"timeSensitive\",\"group\":\"homelab\"}"
 ```
 

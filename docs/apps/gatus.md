@@ -12,7 +12,7 @@ gatus (monitoring ns) ──probes──► apps (in-cluster Service URLs)
                       ──probes──► infra (Postgres LXC, Valkey, NFS, Proxmox)
                       ──queries─► dns (Cloudflare records)
                       ──alerts──► Bark ──► APNs ──► your phone  (docs/apps/bark.md)
-Dashboard: https://status.williampring.ca   (LAN: http://192.168.68.63:30881)
+Dashboard: https://status.williampring.ca   (LAN: http://192.168.68.62:30881)
 ```
 
 | Argo app | Path | Deploys |

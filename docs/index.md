@@ -15,7 +15,7 @@ This page is the mental model. Each section ends with where to read more.
 ┌─ Hardware ──────────────────────────────────────────────────────────────────────────────┐
 │ Proxmox pve-a (.96) + pve-b (.89)                                                       │
 │   ├─ VM  k3s master  192.168.68.93      ├─ LXC file server  .50   NFS /data (photos, manga, books, ROMs)
-│   ├─ VM  k3s worker  192.168.68.63 (32GB — Immich, RomM, Suwayomi, qBittorrent pinned here)│
+│   ├─ VM  k3s worker  192.168.68.62 (32GB — Immich, RomM, Suwayomi, qBittorrent pinned here)│
 │   ├─ LXC Postgres   .7   (RomM; was Vaultwarden)   ├─ LXC Valkey/Redis .103 (Immich, degoog, RomM)
 └──────────────────────────────────────────────────────────────────────────────────────────┘
           │  Ansible (ansible/)  — Tailscale, k3s, nfs-common, the few out-of-git secrets/labels
@@ -85,7 +85,7 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
 ```
                      phone/laptop ON TAILSCALE                        same-LAN device (Kindle, TV)
                               │                                                │
-   Cloudflare DNS: <app>.williampring.ca → A → master's Tailscale 100.x IP     │  http://192.168.68.63:<NodePort>
+   Cloudflare DNS: <app>.williampring.ca → A → master's Tailscale 100.x IP     │  http://192.168.68.62:<NodePort>
                               │  (grey cloud / DNS-only: not public)           │
                               ▼                                                ▼
                    Traefik :443 (TLS from cert-manager)  ──────────────►  Service  ──►  Pod

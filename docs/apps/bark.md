@@ -24,12 +24,12 @@ Phone ─► NPMplus (bark.<domain>, TLS) ─► node:30889   ← only for the o
 Push → the ApplicationSet registers `bark` → Argo UI → Sync.
 ```bash
 sudo k3s kubectl get pods -n monitoring -l app=bark
-curl -s http://192.168.68.63:30889/ping          # {"code":200,"message":"pong",...}
+curl -s http://192.168.68.62:30889/ping          # {"code":200,"message":"pong",...}
 ```
 
 ### 2. NPMplus proxy host (your side)
-Proxy host `bark.<your domain>` → scheme `http`, forward host `192.168.68.63`, port `30889`.
-TLS as you do for your other NPMplus hosts. Websockets not needed. (Plain `http://192.168.68.63:30889`
+Proxy host `bark.<your domain>` → scheme `http`, forward host `192.168.68.62`, port `30889`.
+TLS as you do for your other NPMplus hosts. Websockets not needed. (Plain `http://192.168.68.62:30889`
 also works from the LAN for testing.)
 
 ### 3. Register the phone
@@ -57,7 +57,7 @@ Then push → Sync `gatus` → `sudo k3s kubectl -n monitoring rollout restart d
 
 ### 5. Test
 ```bash
-curl -s -X POST http://192.168.68.63:30889/push -H 'Content-Type: application/json' \
+curl -s -X POST http://192.168.68.62:30889/push -H 'Content-Type: application/json' \
   -d '{"device_key":"<KEY>","title":"homelab","body":"hello from the cluster","group":"test"}'
 ```
 Phone buzzes within a second, Tailscale on or off. Then lock the phone and send again — same.

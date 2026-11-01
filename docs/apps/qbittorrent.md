@@ -13,7 +13,7 @@ you ── https://qbittorrent.williampring.ca (Tailscale) ──► WebUI      
 | | |
 |---|---|
 | Argo app | `qbittorrent` (namespace `media`): `kubernetes/apps/media/qbittorrent/` |
-| WebUI | `https://qbittorrent.williampring.ca` (Tailscale) · `http://192.168.68.63:30080` (LAN) |
+| WebUI | `https://qbittorrent.williampring.ca` (Tailscale) · `http://192.168.68.62:30080` (LAN) |
 | Downloads | NFS `192.168.68.50:/data/downloads/{incomplete,complete}` |
 | Runs on | the 32GB worker (`immich-node: "true"`) |
 
