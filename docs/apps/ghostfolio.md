@@ -6,7 +6,7 @@ Self-hosted dashboard for what you own and how it's doing, across every brokerag
 doesn't exist in the software. You enter transactions or import a broker CSV. That's the point.
 
 ```
-you ──► https://ghostfolio.williampring.ca (Tailscale) ──► Traefik ──► ghostfolio :3333
+you ──► https://portfolio.williampring.ca (Tailscale) ──► Traefik ──► ghostfolio :3333
                                                                         │
                                                  Postgres LXC .7 ◄──────┤  all your data
                                                  ghostfolio-valkey ◄────┤  quote cache + job queue
@@ -85,7 +85,7 @@ Push → Argo registers it → Sync. First boot runs Prisma migrations, which is
 ```bash
 sudo k3s kubectl get pods -n apps -l app=ghostfolio -w
 sudo k3s kubectl logs -n apps deploy/ghostfolio --tail=50
-curl -s https://ghostfolio.williampring.ca/api/v1/health
+curl -s https://portfolio.williampring.ca/api/v1/health
 ```
 
 ### 5. First login
@@ -177,7 +177,7 @@ the way Bark has one.
 
 ## Quick reference
 ```
-URL        https://ghostfolio.williampring.ca   (Tailscale only, no NodePort)
+URL        https://portfolio.williampring.ca   (Tailscale only, no NodePort)
 namespace  apps          image  ghostfolio/ghostfolio
 DB         192.168.68.7  db/user ghostfolio     Cache  ghostfolio-valkey (in-cluster)
 health     /api/v1/health

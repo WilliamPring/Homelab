@@ -1,5 +1,8 @@
-# https://ghostfolio.williampring.ca — Tailscale-only (DNS: ghostfolio → A → master Tailscale IP,
+# https://portfolio.williampring.ca — Tailscale-only (DNS: portfolio → A → master Tailscale IP,
 # grey cloud / DNS-only). This is the ONLY way in: there is no NodePort (see service.yaml).
+#
+# The hostname says what it DOES, like library (Kavita) and roms (RomM) — the app/directory keeps
+# the product name `ghostfolio` so the image, the Argo app and the docs all agree.
 #
 # ⚠️ On your phone this is a PWA — it has to REACH the server to load, like the old ntfy app did.
 # Tailscale must be up. There is no push fallback the way Bark has one (docs/apps/bark.md).
@@ -16,10 +19,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - ghostfolio.williampring.ca
+        - portfolio.williampring.ca
       secretName: ghostfolio-tls
   rules:
-    - host: ghostfolio.williampring.ca
+    - host: portfolio.williampring.ca
       http:
         paths:
           - path: /

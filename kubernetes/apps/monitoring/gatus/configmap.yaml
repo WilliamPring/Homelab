@@ -200,9 +200,9 @@ data:
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
         alerts: [{ type: custom }]
-      - name: ghostfolio.williampring.ca
+      - name: portfolio.williampring.ca
         group: edge
-        url: "https://ghostfolio.williampring.ca/api/v1/health"
+        url: "https://portfolio.williampring.ca/api/v1/health"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
         alerts: [{ type: custom }]

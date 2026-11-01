@@ -82,7 +82,7 @@ data:
             icon: actual-budget.png
 
         - Portfolio:
-            href: https://ghostfolio.williampring.ca
+            href: https://portfolio.williampring.ca
             description: Stocks, ETFs & crypto (Ghostfolio)
             icon: ghostfolio.png
 

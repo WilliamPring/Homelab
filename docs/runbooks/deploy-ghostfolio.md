@@ -254,7 +254,7 @@ network to a Tailscale IP they cannot reach, and it breaks the DNS-01 certificat
 **Verify:**
 
 ```bash
-dig +short ghostfolio.williampring.ca
+dig +short portfolio.williampring.ca
 # → the master's Tailscale IP (100.x.x.x), nothing else
 ```
 
@@ -330,7 +330,7 @@ sudo k3s kubectl get certificate -n apps ghostfolio-tls
 **Verify end to end**, from a Tailscale-connected device:
 
 ```bash
-curl -s https://ghostfolio.williampring.ca/api/v1/health
+curl -s https://portfolio.williampring.ca/api/v1/health
 # → {"status":"ok"}
 ```
 
@@ -345,7 +345,7 @@ Your phone should also get a Bark push: **"ghostfolio: deployed"**.
 
 ## ⑦ First login — and the thing you must not lose
 
-Open <https://ghostfolio.williampring.ca> → **Get Started** → create your account.
+Open <https://portfolio.williampring.ca> → **Get Started** → create your account.
 
 🔑 **Ghostfolio has no password. It gives you a security token — a long random string — and that
 is the only way back in.**
