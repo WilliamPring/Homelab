@@ -63,6 +63,11 @@ Migrating these into `.enc.yaml` files is the open item (§5 below is the recipe
   password of the shared `redis` user. It is in git history on GitHub. Fix = rotate that password
   on the Valkey host, update `immich-secret`, move the URL into `degoog-secret`. Encrypting later
   does not un-leak it.
+- `kubernetes/apps/apps/searxng/configmap.yaml` still has the placeholder `server.secret_key`
+  (`REPLACE-WITH-…` — not `REPLACE_ME`, so the conventions check can't see it). SearXNG signs its
+  image-proxy URLs with it, so anyone who knows it can use the instance as an image proxy; it is
+  Tailscale-only, which limits that. Fix = `./scripts/secrets.sh new apps/searxng SEARXNG_SECRET`,
+  set it to `-` (generate), and pass it as the `SEARXNG_SECRET` env var, which overrides the file.
 
 ---
 

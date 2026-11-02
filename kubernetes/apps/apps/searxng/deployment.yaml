@@ -26,6 +26,13 @@ spec:
             - name: settings
               mountPath: /etc/searxng/settings.yml
               subPath: settings.yml
+          # /healthz is SearXNG's own health endpoint (also what Gatus checks).
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
           resources:
             requests:
               memory: "128Mi"

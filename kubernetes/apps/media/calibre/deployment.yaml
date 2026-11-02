@@ -39,6 +39,14 @@ spec:
               mountPath: /calibre-library  # the Calibre library (NFS)
             - name: ingest
               mountPath: /cwa-book-ingest  # drop books here → auto-added (NFS)
+          # "/" is the path Gatus checks. Any 2xx/3xx counts, so the redirect to the login page is
+          # fine. CWA runs its setup scripts on boot, hence the longer initial delay.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 15
           resources:
             requests:
               cpu: "1"

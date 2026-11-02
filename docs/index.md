@@ -3,7 +3,9 @@
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
 from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Komf, Calibre-Web), games
 (RomM), torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
-copies (Karakeep), budgeting (Actual), and the glue (cert-manager, Gatus, Bark, Homepage).
+copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio), and the glue (cert-manager, Gatus, Bark, Homepage).
+
+New here? Learn the workflow hands-on first: **[`learn/onboarding-an-app.md`](learn/onboarding-an-app.md)**.
 
 This page is the mental model. Each section ends with where to read more.
 
@@ -16,7 +18,7 @@ This page is the mental model. Each section ends with where to read more.
 │ Proxmox pve-a (.96) + pve-b (.89)                                                       │
 │   ├─ VM  k3s-master-01 192.168.68.63      ├─ LXC file server  .50   NFS /data (photos, manga, books, ROMs)
 │   ├─ VM  k3s-worker-01 192.168.68.62 (32GB — Immich, RomM, Suwayomi, qBittorrent pinned here)│
-│   ├─ LXC Postgres   .7   (RomM; was Vaultwarden)   ├─ LXC Valkey/Redis .103 (Immich, degoog, RomM)
+│   ├─ LXC Postgres   .7   (RomM, Ghostfolio)        ├─ LXC Valkey/Redis .103 (Immich, degoog, RomM)
 └──────────────────────────────────────────────────────────────────────────────────────────┘
           │  Ansible (ansible/)  — Tailscale, k3s, nfs-common, the few out-of-git secrets/labels
           ▼
@@ -25,7 +27,7 @@ This page is the mental model. Each section ends with where to read more.
 │  Argo CD  ◄── kubernetes/bootstrap/   (applied by hand, twice, ever)                     │
 │     └─ ApplicationSet ──► one Application per  kubernetes/apps/<namespace>/<app>/        │
 │           media: immich · immich-prereqs · immich-public-proxy · kavita · komf · calibre · suwayomi · romm · qbittorrent
-│           apps: searxng · degoog · homepage · karakeep · actual
+│           apps: searxng · degoog · homepage · karakeep · actual · ghostfolio
 │           monitoring: gatus · bark
 │           cert-manager: cert-manager · cert-manager-issuer                               │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
@@ -91,12 +93,14 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
                    Traefik :443 (TLS from cert-manager)  ──────────────►  Service  ──►  Pod
                                                                   (NodePort = same Service, other door)
    OUT through a VPN: only qBittorrent's torrent traffic → Gluetun → Mullvad   (apps/qbittorrent.md)
-   INTERNET (strangers): only  share.williampring.ca  → Cloudflare → Immich Public Proxy → Immich
+   INTERNET (strangers):  share.williampring.ca   → Cloudflare → Immich Public Proxy → Immich
+                          deploy.williampring.ca  → Cloudflare tunnel → NPMplus → Argo CD's NodePort
+                          bark.williampring.ca    → Cloudflare tunnel → NPMplus → Bark's NodePort
 ```
 - One Ingress per app, annotated `cert-manager.io/cluster-issuer: letsencrypt`; cert-manager proves domain
-  ownership with a Cloudflare TXT record (DNS-01) so certs issue even though nothing is public.
+  ownership with a Cloudflare TXT record (DNS-01) so certs issue even for hostnames that aren't public.
 - NodePorts (30xxx, table in the README) exist for LAN devices that can't run Tailscale.
-- Bark is the exception: no Ingress, NPMplus fronts its NodePort.
+- Argo CD and Bark are the exceptions: no Ingress — NPMplus fronts their NodePorts, with its own certificate.
 → `platform/tls.md`, the README **Addresses** table
 
 ## 5. Where data lives (and what is precious)
@@ -123,8 +127,10 @@ you (age private key on the Arch box)  ──sops -e──►  <app>-secret.enc.
                                                               ▼
                                                    a real Kubernetes Secret → the pod
 ```
-A value is either `ENC[...]` in git or not in git. Today, while testing, two templates are placeholders and
-Suwayomi's login is inline; the checks WARN until `STRICT_SECRETS=1`.
+A value is either `ENC[...]` in git or not in git. Today, while testing: three templates are placeholders (komf,
+qbittorrent, romm), Karakeep's secret is applied as cleartext, and Suwayomi's login, degoog's Valkey URL and the Bark
+device key (placeholders) are inline. The checks WARN until `STRICT_SECRETS=1` — the full list is the known-debt
+section of `platform/secrets.md`.
 → `platform/secrets.md` (day-to-day), `platform/secrets-architecture.md` (deep dive)
 
 ## 7. Notifications
@@ -137,7 +143,8 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 ## 8. Adding, changing, removing an app
 
 - **Add**: a directory under `kubernetes/apps/<namespace>/` with the standard files → push → it appears in Argo.
-  Full checklist with a copyable template: **`platform/adding-an-app.md`**.
+  Full checklist with a copyable template: **`platform/adding-an-app.md`**. First time? Do the guided lab in
+  **`learn/onboarding-an-app.md`** — it walks a throwaway app through every layer and back out.
 - **Change**: edit the manifest → push → Sync.
 - **Remove**: delete the directory → push → the Application disappears; its resources stay until you delete
   them (`runbooks/cluster-cleanup.md`).
@@ -148,15 +155,25 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 2. **Secrets strict mode** — parked while testing (§6).
 3. **The Immich Ingress** still lives in Ansible's `tls_ingress` role (last non-Argo object).
 4. **Bark is the only channel** — if Bark itself is down, nothing can page you. Watch the Gatus dashboard.
+5. **Argo CD is reachable from the internet** (`deploy.williampring.ca`) with only its own login in front of it.
+   A Cloudflare Access policy on that hostname (free; email code or GitHub login) would put a second door first.
+6. **k3s isn't pinned** — Ansible installs the `stable` channel (`ansible/group_vars/all.yml`), so a rebuild or a
+   new node gets whatever version is current that day.
 
 ---
 
 ## Docs by purpose
 
+**Learn** — understand it by doing it
+- [`learn/onboarding-an-app.md`](learn/onboarding-an-app.md) — **onboard a throwaway app through every layer, then remove it** (start here)
+- [`../ansible/LEARN.md`](../ansible/LEARN.md) — Ansible, with this repo as the textbook
+- [`architecture/production-architecture.md`](architecture/production-architecture.md) — how this compares to production, and the roadmap of what to learn next
+
 **Apps** — one guide per app: setup, how it fits, troubleshooting
 - [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
-- [`apps/romm.md`](apps/romm.md) · [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/degoog.md`](apps/degoog.md) · [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md)
-- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/ghostfolio.md`](apps/ghostfolio.md)
+- [`apps/romm.md`](apps/romm.md) · [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/searxng.md`](apps/searxng.md) · [`apps/degoog.md`](apps/degoog.md)
+- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/ghostfolio.md`](apps/ghostfolio.md) · [`apps/homepage.md`](apps/homepage.md)
+- [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md)
 
 **Platform** — the things apps rely on
 - [`platform/argocd.md`](platform/argocd.md) — Argo CD: install, how it renders, the ApplicationSet, gotchas

@@ -108,6 +108,17 @@ spec:
             - --hide-scrollbars
             - --disable-blink-features=AutomationControlled
             - --window-size=1440,900
+          # /json/version through the image's socat forward (:9222 → Chrome on 127.0.0.1:9223) —
+          # the same call Karakeep's crawler makes to find the browser, so it proves Chrome answers,
+          # not just that the port is open. ⚠️ A sidecar's readiness gates the WHOLE pod: if Chrome
+          # stops answering for ~1 min, Karakeep drops out of its Service and Gatus/Argo say so,
+          # instead of bookmarks quietly saving with no snapshot. Rather keep the UI up regardless?
+          # Use `tcpSocket: { port: 9222 }` instead (that only checks socat).
+          readinessProbe:
+            httpGet: { path: /json/version, port: 9222 }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
           # Request is small (Chrome idles cheaply) but the LIMIT is deliberately NOT cut: a page
           # with heavy JS can spike to several hundred MB for a few seconds, and an OOM-kill mid-
           # archive is silent — the bookmark saves, the snapshot never appears. This is the one
@@ -130,6 +141,12 @@ spec:
           volumeMounts:
             - name: meili
               mountPath: /meili_data
+          # /health needs no API key. Like chrome above, this gates the whole pod.
+          readinessProbe:
+            httpGet: { path: /health, port: 7700 }
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 5
           # Meilisearch memory-maps its index, so RSS tracks index size rather than a fixed need.
           # A few thousand bookmarks is comfortably inside this; raise the limit if search gets
           # OOM-killed once the archive is large.

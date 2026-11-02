@@ -2,6 +2,11 @@
 
 This document explains the architectural choices made and the tradeoffs considered.
 
+> **Status (Nov 2026):** a record of *why*, written while the platform was being built. Still current: k3s,
+> Tailscale, the Gluetun sidecar, cert-manager. Two sections describe a Traefik setup (DaemonSet + hostPort) that
+> **nothing in this repo configures today** — see the notes on them. Public exposure has also changed since the last
+> section was written.
+
 ---
 
 ## Why k3s Over Full Kubernetes
@@ -68,6 +73,12 @@ Decision: cert-manager is the right tool for HA ingress. The RAM cost is justifi
 
 ## Why DaemonSet for Traefik
 
+> **Not in the repo today.** No `HelmChartConfig` or other Traefik config exists in this repo, so the cluster runs
+> the Traefik k3s ships — unless a file was placed by hand on the master
+> (`/var/lib/rancher/k3s/server/manifests/traefik-config.yaml`). If there is one, it is out-of-git state that
+> [`../runbooks/rebuild-from-zero.md`](../runbooks/rebuild-from-zero.md) would lose: capture it here. If not, read
+> this section and the next as history. (DNS also points at the master's Tailscale IP alone, not at every node.)
+
 A single Traefik Deployment means:
 - All traffic goes through one node (SPOF)
 - DNS must point to that specific node's IP
@@ -82,6 +93,8 @@ DaemonSet Traefik:
 ---
 
 ## Why hostPort Over LoadBalancer (svclb)
+
+> Same caveat as the section above: check the master for a hand-placed Traefik config before relying on this.
 
 k3s's built-in `svclb` controller creates DaemonSet pods that write iptables DNAT rules to forward host ports to service ClusterIPs.
 
@@ -113,6 +126,10 @@ Format: `<service>.<function>.williampring.ca`
 ---
 
 ## Why Not Expose Services Publicly
+
+> **Updated (Nov 2026):** three hostnames are now internet-facing on purpose — `share.` (the Immich share proxy),
+> and `deploy.` (Argo CD) + `bark.` through a Cloudflare tunnel → NPMplus. Everything else is still Tailscale-only.
+> Argo's own login is the only gate on `deploy.`; [`../index.md`](../index.md) §9 has the suggested fix.
 
 All services are internal — DNS points to Tailscale IPs (`100.x.x.x`) which are not publicly routable. No port forwarding on the router, no home IP exposure.
 

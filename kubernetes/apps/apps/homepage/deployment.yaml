@@ -35,6 +35,15 @@ spec:
             - name: HOMEPAGE_ALLOWED_HOSTS
               value: "home.williampring.ca"
 
+          # Ready = the dashboard renders. "/" is the path Gatus already checks from inside the
+          # cluster, so it is known to answer 200 to a request that isn't for home.williampring.ca.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+
           volumeMounts:
             # Keep these as individual subPath mounts.
             # This allows Homepage to create /app/config/logs.

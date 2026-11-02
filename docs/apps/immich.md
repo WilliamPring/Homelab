@@ -37,12 +37,14 @@ chart split, and lets Postgres sync before Immich):
 | `immich-prereqs` | `kubernetes/apps/media/immich-prereqs/` (raw manifests) | vector Postgres (Deployment/PVC/Service) + NFS library PV/PVC |
 | `immich` | OCI chart `ghcr.io/immich-app/immich-charts` + `kubernetes/apps/media/immich/values.yaml` | immich-server, machine-learning, valkey |
 
-**Chart/version:** `targetRevision: "*"` (latest chart). The **Immich version is pinned** in
-`values.yaml` at `controllers.main.containers.main.image.tag` (currently **v3.1.0**). That
-top-level `controllers` block is shared, so the one tag pins both `immich-server` and
-`immich-machine-learning`. Without the pin you get the chart's default appVersion, which
-changes whenever the chart bumps (chart 0.13.2 → v3.2.0). ⚠️ The key is NOT top-level
-`image.tag` — that is silently ignored by this chart.
+**Chart/version:** the chart is pinned in `kustomization.yaml` (`helmCharts:` → `version:`; Renovate's
+kustomize manager bumps it). The **Immich version is pinned separately** in `values.yaml` at
+`controllers.main.containers.main.image.tag` (currently **v3.3.5**). That top-level `controllers`
+block is shared, so the one tag pins both `immich-server` and `immich-machine-learning`. Without
+the pin you get the chart's default appVersion, which changes whenever the chart bumps (chart
+0.13.4 → v3.2.0). Renovate tracks the tag through a custom regex manager (`renovate.json` →
+"Immich APP version") and opens one `⚠️ db-migration` PR per release. ⚠️ The key is NOT
+top-level `image.tag` — that is silently ignored by this chart.
 
 ### What stays OUT of git (must already exist)
 | Item | How | Check |
@@ -74,6 +76,7 @@ changes whenever the chart bumps (chart 0.13.2 → v3.2.0). ⚠️ The key is NO
      pg_dumpall --clean --if-exists --username=immich | gzip > immich-db-$(date +%F).sql.gz
    ```
 3. Bump `controllers.main.containers.main.image.tag` in `kubernetes/apps/media/immich/values.yaml` → git push.
+   (Usually Renovate has already opened that PR — merging it is this step.)
 4. Argo UI → `immich` app → Refresh → **review the diff** (expect: both Deployments' image tag
    change, plus any chart-version drift since the last sync) → **Sync**.
 5. Watch the migration + startup:

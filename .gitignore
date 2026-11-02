@@ -3,9 +3,13 @@
 *.secret
 acme.json
 kubeconfig
-k3s.yaml            # the k3s admin kubeconfig — cluster-admin in a single file
+# ⚠️ Comments must sit on their OWN line: git has no inline comments, so `k3s.yaml  # note`
+#    would be one pattern (text and all) that never matches the file.
+# the k3s admin kubeconfig — cluster-admin in a single file
+k3s.yaml
 *.agekey
-keys.txt            # sops/age private key file (`age-keygen -o keys.txt`)
+# sops/age private key file (`age-keygen -o keys.txt`)
+keys.txt
 *.pem
 *.key
 *.crt

@@ -46,6 +46,13 @@ spec:
             - name: books
               mountPath: /books       # the Calibre library (NFS, RO) — add as a "Book" library
               readOnly: true
+          # /api/health is Kavita's own health endpoint (also what Gatus checks).
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 15
           resources:
             requests:
               cpu: 100m

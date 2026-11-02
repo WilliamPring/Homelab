@@ -1,7 +1,10 @@
 # Adding an app — the onboarding checklist
 
 How every app in `kubernetes/apps/` was added. Follow it top to bottom; each step says *why* it exists.
-Reference app to copy from: **`kubernetes/apps/media/komf/`** (raw manifests + a SOPS secret + a doc).
+**First time?** Do the guided lab first: [`../learn/onboarding-an-app.md`](../learn/onboarding-an-app.md) walks a
+throwaway app through every step below and back out again. This page is the checklist you use after that.
+Reference app to copy from: **`kubernetes/apps/media/komf/`** (raw manifests + secret wiring + a doc — its secret is
+still a placeholder; `kubernetes/apps/apps/ghostfolio/` has a real encrypted one).
 A blank skeleton lives in **`kubernetes/templates/app/`**.
 
 ```
@@ -16,12 +19,12 @@ decide ──► write the directory ──► validate locally ──► push �
 |---|---|---|
 | **Namespace** | `media` (content), `apps` (tools), `monitoring`, `notifications`, `cert-manager` | the directory path *is* the namespace: `kubernetes/apps/<namespace>/<app>/` |
 | **State** | NFS (precious: files you can't recreate) · local-path (rebuildable: caches, indexes, thumbnails) · external DB (Postgres LXC `.7`, Valkey `.103`) | NFS survives a cluster rebuild, local-path does not, external DBs survive everything |
-| **Who reaches it** | Tailscale devices (Ingress + hostname) · LAN devices (NodePort too) · the internet (**no** — only the Immich share proxy is public) | decides `ingress.yaml` and whether `service.yaml` gets a `nodePort` |
+| **Who reaches it** | Tailscale devices (Ingress + hostname) · LAN devices (NodePort too) · the internet (**no** — the only internet-facing paths are the Immich share proxy, and Argo CD + Bark through NPMplus) | decides `ingress.yaml` and whether `service.yaml` gets a `nodePort` |
 | **Secrets** | none · SOPS-encrypted (`<app>-secret.enc.yaml`) · (while testing: inline, flagged in `secrets.md` debt) | decides whether `kustomization.yaml` has a `generators:` block |
 
-Pick a **hostname**: `<app>.williampring.ca` (existing ones: library, books, roms, suwayomi, komf, status,
-search, private, home, immich, argocd, qbittorrent, karakeep, actual, ghostfolio). Pick a **NodePort** if LAN access is wanted: a free `30xxx`
-from the README's Addresses table.
+Pick a **hostname**: `<app>.williampring.ca` (taken: library, books, roms, suwayomi, komf, status, search,
+private, home, immich, qbittorrent, karakeep, actual, portfolio — plus share, deploy and bark, which don't go through
+Traefik). Pick a **NodePort** if LAN access is wanted: a free `30xxx` from the README's Addresses table.
 
 ## 1. Create the directory
 
@@ -50,6 +53,9 @@ helmCharts:
     valuesFile: values.yaml
 ```
 (see `kubernetes/apps/media/immich/`). Argo renders it with `--enable-helm`; the CI script does the same.
+⚠️ If the chart also chooses the **app** version (its `appVersion`), pin the image tag in `values.yaml` as well and
+give Renovate a custom manager for it — otherwise every chart bump quietly upgrades the app. `media/immich/values.yaml`
+plus the "Immich APP version" manager in `renovate.json` are the pattern.
 
 ## 2. The conventions inside the files (and why)
 
@@ -57,7 +63,7 @@ helmCharts:
 |---|---|---|
 | `deployment.yaml` | `image: repo/name:X.Y.Z` — **never `latest`** | Renovate can only bump a number; `latest` also makes rollbacks impossible |
 | | `resources.requests` + `limits.memory` | one runaway app can't starve Immich on the shared worker |
-| | readiness + liveness probes | Argo health and Gatus both rely on the pod being honestly Ready |
+| | a **readiness** probe on every container — the app's health endpoint, else the path Gatus checks. Sidecars too: one unready container takes the whole pod out of its Service. Liveness only where a restart cures a hang | Argo health and Gatus both rely on the pod being honestly Ready; `make conventions` (G) warns when one is missing. How to choose: [`../learn/onboarding-an-app.md`](../learn/onboarding-an-app.md) §3.2 |
 | | `nodeSelector: immich-node: "true"` for heavy apps | the 32GB worker is where the RAM is; the master is small |
 | | run as uid 1000 (`securityContext` or the image's PUID/PGID) when it writes to NFS | every folder under `/data` is owned 1000:1000 |
 | | `strategy: Recreate` when it has an RWO volume | a RollingUpdate would try to mount the same local-path volume twice |
@@ -72,6 +78,7 @@ helmCharts:
 
 ```bash
 make validate          # renders every app exactly like Argo will (kustomize + helm + KSOPS stripped) + kubeconform
+make conventions       # this repo's own rules: depth, NodePorts, pins, secretKeyRefs, ingress, probes
 make lint              # yamllint
 make render APP=kubernetes/apps/<namespace>/<app>     # eyeball the rendered objects
 ```

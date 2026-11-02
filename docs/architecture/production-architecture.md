@@ -1,7 +1,8 @@
-> **Status (Oct 2026):** this is the original target-architecture write-up. Most of it was built; some
+> **Status (Nov 2026):** this is the original target-architecture write-up. Most of it was built; some
 > choices changed along the way — Gatus (uptime) instead of a Prometheus/Grafana/Loki stack, Vaultwarden
-> removed, Argo CD with manual sync, SOPS/KSOPS for secrets. Read it as direction + history; the current
-> truth is `docs/index.md` and the app/platform docs.
+> removed, Argo CD with manual sync, SOPS/KSOPS for secrets. The comparison table and the roadmap below now
+> show where things stand; the prose around them is the original reasoning. The current truth is
+> `docs/index.md` and the app/platform docs.
 
 # How This Would Look in Production ("The Professional Way")
 
@@ -56,23 +57,25 @@ match Git. Git is the single source of truth and the audit log.
 
 ## Current setup vs professional
 
-| Concern | Your homelab (now) | Professional |
+| Concern | Your homelab (Nov 2026) | Professional |
 |---------|--------------------|--------------|
-| **App delivery** | Ansible runs `kubectl apply` (push) | **GitOps** — cluster pulls from Git (Argo CD/Flux) |
-| **Node provisioning** | Hand-installed Debian + Ansible | Automated (preseed/cloud-init) or **immutable OS (Talos)** |
-| **Control plane** | Single master (SPOF) | **HA** — 3+ control-plane nodes |
-| **Secrets** | plaintext `changeme` → ansible-vault | **SOPS / Sealed Secrets / External Secrets** (encrypted in Git) |
-| **Ingress/TLS/DNS** | NodePort, manual certs | Ingress + **cert-manager** + **ExternalDNS** |
-| **Observability** | Beszel/Uptime Kuma (planned) | **Prometheus + Grafana + Loki + Alertmanager** |
-| **Storage** | local-path / mergerfs / restic | **CSI (Longhorn/Ceph) + Velero** |
-| **Security/policy** | minimal | RBAC, NetworkPolicies, **Kyverno**, Trivy |
-| **CI** | none | lint/test/build/scan pipeline |
+| **App delivery** | ✅ **GitOps** — Argo CD + an ApplicationSet; Sync is a manual click | **GitOps** — cluster pulls from Git (Argo CD/Flux) |
+| **Node provisioning** | Hand-installed Debian VMs + Ansible | Automated (preseed/cloud-init) or **immutable OS (Talos)** |
+| **Control plane** | Single master (SPOF) — fine at home | **HA** — 3+ control-plane nodes |
+| **Secrets** | ✅ **SOPS + age via KSOPS** (a few placeholders/inline values while testing) | **SOPS / Sealed Secrets / External Secrets** (encrypted in Git) |
+| **Ingress/TLS/DNS** | ✅ Traefik Ingress + **cert-manager** (DNS-01); DNS records still added by hand | Ingress + **cert-manager** + **ExternalDNS** |
+| **Observability** | Gatus checks → Bark push; Pulse for Proxmox; no metrics/logs stack | **Prometheus + Grafana + Loki + Alertmanager** |
+| **Storage** | NFS (precious) + local-path (rebuildable); backups not automated yet | **CSI (Longhorn/Ceph) + Velero** |
+| **Security/policy** | pinned images + probes checked in CI; no NetworkPolicies or Pod Security | RBAC, NetworkPolicies, **Kyverno**, Trivy |
+| **CI** | ✅ GitHub Actions: render + kubeconform + conventions + yamllint + a PR render-diff (not yet required to merge) | lint/test/build/scan pipeline |
 | **Environments** | one cluster | dev/staging/prod (overlays or clusters) |
 | **Node fixes** | manual SSH (sudo, disk, join) | **never** — nodes are reproducible/immutable |
 
 ---
 
 ## The #1 shift to learn: GitOps (push → pull)
+
+> ✅ **Done** — this is how every app ships now ([`../platform/argocd.md`](../platform/argocd.md)). Kept for the reasoning.
 
 This is the single biggest professional practice you're missing, and it's the most
 worth learning:
@@ -112,8 +115,8 @@ it's the antidote to the Debian papercuts.
 ## What's FINE to keep simple (homelab ≠ prod)
 Don't over-engineer. These simplifications are correct for a homelab:
 - **Single control-plane node** — HA (3 masters) is overkill at home.
-- **local-path / mergerfs storage** — Ceph/Longhorn is heavy; your DAS+restic is fine.
-- **Light monitoring** (Beszel/Uptime Kuma) — a full Prometheus stack is a lot to run.
+- **NFS + local-path storage** — Ceph/Longhorn is heavy; an NFS server with real, tested backups is fine.
+- **Light monitoring** (Gatus) — a full Prometheus stack is a lot to run.
 - **One cluster, no staging** — you don't need dev/staging/prod at home.
 - **Tailscale instead of a real LB/VPN stack** — perfect for a homelab.
 
@@ -124,21 +127,31 @@ overkill for your scale.
 
 ## Evolution roadmap: from here → prod-grade (keeps everything you built)
 
-1. **Keep Ansible for nodes only.** Tailscale + k3s + Samba + storage. (Already correct.)
-2. **Adopt GitOps (Argo CD).** Move app manifests out of Ansible-apply into a Git repo
+1. ✅ **Keep Ansible for nodes only.** Tailscale + k3s + storage. (Done — the Immich Ingress is
+   the last app object Ansible still owns.)
+2. ✅ **Adopt GitOps (Argo CD).** Move app manifests out of Ansible-apply into a Git repo
    Argo watches. *This is the big lesson.* Ansible installs Argo; Argo does the rest.
-3. **Real secrets** — **SOPS+age** or **Sealed Secrets**, so encrypted secrets live in the
+3. ✅ **Real secrets** — **SOPS+age** or **Sealed Secrets**, so encrypted secrets live in the
    GitOps repo (works with Argo). Replaces plaintext/ansible-vault for app secrets.
-4. **Ingress + TLS + DNS** — finish **cert-manager**, add **ExternalDNS** (auto Cloudflare
-   records). Move apps off NodePort onto real hostnames.
-5. **Observability** — **kube-prometheus-stack** (Prometheus + Grafana + Alertmanager) +
-   **Loki** for logs. Real dashboards and alerts.
-6. **CI checks** — `ansible-lint`, `kubeconform`, `trivy` in a pipeline before merge.
-7. **(Advanced, optional)** HA control plane, Longhorn CSI, Velero DR, Kyverno policies,
+   (SOPS + KSOPS; the testing-stance exceptions are listed in `platform/secrets.md`.)
+4. ◐ **Ingress + TLS + DNS** — finish **cert-manager**, add **ExternalDNS** (auto Cloudflare
+   records). Move apps off NodePort onto real hostnames. (cert-manager ✅; ExternalDNS not yet.)
+5. ☐ **Observability** — **kube-prometheus-stack** (Prometheus + Grafana + Alertmanager) +
+   **Loki** for logs. Real dashboards and alerts. (Gatus covers "is it up" only.)
+6. ◐ **CI checks** — `ansible-lint`, `kubeconform`, `trivy` in a pipeline before merge.
+   (kubeconform + the conventions check + yamllint + render-diff ✅; ansible-lint and trivy not
+   yet; CI isn't a required check yet.)
+7. ☐ **(Advanced, optional)** HA control plane, Longhorn CSI, Velero DR, Kyverno policies,
    Talos for immutable nodes.
 
-Do them **in that order** — each is one new professional concept, and each builds on a
-stable base. GitOps (step 2) is the highest-leverage thing to learn next.
+Steps 1–3 are done. The highest-leverage next lessons came out of running the thing rather than
+off this list:
+- **Backups you have test-restored** — the biggest open gap (`docs/index.md` §9). restic (or
+  Backrest, its web UI) to off-site storage, then one practice restore.
+- **Pin k3s**, then let the system-upgrade-controller do upgrades through git, like everything else.
+- **Pod Security in `warn` mode** — label a namespace `pod-security.kubernetes.io/warn: restricted`
+  and Kubernetes lists what would violate, without blocking anything.
+- Then step 5, then step 4's ExternalDNS (it removes the manual DNS step from onboarding).
 
 ---
 
@@ -148,5 +161,6 @@ or automated installs provision the **machines**; **GitOps (Argo CD/Flux)** cont
 delivers the **apps** from Git; **cert-manager + ExternalDNS** handle ingress/TLS/DNS;
 **Prometheus/Grafana/Loki** give observability; **SOPS/Sealed Secrets** handle secrets in
 Git; and a **CI pipeline** validates changes. Nobody hand-runs `kubectl` or SSHes in to fix
-nodes. Your homelab already nails IaC and declarative config — the biggest professional
-leap to learn next is **GitOps**, and the antidote to your node pain is an **immutable OS**.
+nodes. Your homelab now does IaC, GitOps, encrypted secrets and CI — the next professional
+leaps are **backups you have restored from**, **observability** and **policy**, and the
+antidote to node pain is still an **immutable OS**.

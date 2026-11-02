@@ -378,17 +378,22 @@ project) or **[next]** (you'll meet it as you grow). Skim now, return as referen
 
 The project is deliberately shaped so each of these is *additive*, not a rewrite:
 
-1. **Add worker nodes** → add lines under `[workers]` in `inventory.ini`, re-run.
-   Play 3 wakes up and joins them. Nothing else changes.
+1. ✅ **Add worker nodes** → add lines under `[workers]` in `inventory.ini`, re-run.
+   Play 3 wakes up and joins them. Nothing else changes. (Done — that is how `k3s-worker-01` joined.)
 2. **Switch to your real Tailscale networking** → set `k3s_server_args` /
    `k3s_agent_args` in `group_vars/all.yml` to include
    `--flannel-iface=tailscale0 --node-ip=<ts-ip>`. (You'll add a small task to
    discover each node's Tailscale IP into a fact first — good next exercise.)
-3. **Deploy cluster apps** (cert-manager, Traefik, the VPN stack) → add a
-   `cluster_apps` role that applies your existing `k3s/*.yaml` manifests, and a
-   4th play in `site.yml`. This is where templates + vault come in for the secrets.
+3. ~~**Deploy cluster apps** with a `cluster_apps` role~~ — **superseded.** Apps are deployed by
+   Argo CD from `kubernetes/` now (`docs/platform/argocd.md`), and Ansible stops at "a working
+   cluster". The exercise that replaced it: move the last Ingress (Immich) out of the
+   `tls_ingress` role, then delete the role and Play 5.
 4. **Move the control plane to new hardware** → change `ansible_host` for
    `homelab-master`. The automation doesn't care what the box is.
+5. **Pin k3s** → add a `k3s_version` (e.g. `v1.xx.y+k3s1`) to `group_vars/all.yml` and pass it
+   to both install tasks as `INSTALL_K3S_VERSION` in place of the channel. A rebuild then gets the
+   version you tested, not whatever `stable` means that day. (Teaches: variables flowing into
+   `environment`, and why "latest" is as bad for nodes as it is for images.)
 
 Each step teaches one new concept from §7. That's the plan.
 

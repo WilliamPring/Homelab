@@ -43,6 +43,14 @@ spec:
               value: "--data-checksums"
           ports:
             - containerPort: 5432
+          # pg_isready = accepting connections, which is more than "port open": Postgres listens
+          # while it is still starting up or recovering, and refuses queries until it is done.
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "--username=immich", "--dbname=immich"]
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
           volumeMounts:
             - name: pgdata
               mountPath: /var/lib/postgresql/data

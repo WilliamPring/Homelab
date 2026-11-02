@@ -1,6 +1,6 @@
 # Ingress → https://private.williampring.ca. cert-manager auto-issues searxng-tls from
-# the 'letsencrypt' ClusterIssuer (Cloudflare DNS-01). That ClusterIssuer + the
-# cloudflare-api-token secret stay INFRA (Ansible tls_ingress role) — shared cluster-wide.
+# the 'letsencrypt' ClusterIssuer (Cloudflare DNS-01). That ClusterIssuer is its own Argo app
+# (kubernetes/apps/cert-manager/cert-manager-issuer); its cloudflare-api-token secret is hand-made.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

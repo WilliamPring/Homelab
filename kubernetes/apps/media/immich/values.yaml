@@ -27,10 +27,15 @@ controllers:
   main:
     containers:
       main:
-        # ⚠️ IMMICH VERSION PIN. Without this the chart default appVersion runs (chart 0.13.2
-        #    → v3.2.0). Bumping this runs a one-way DB migration: SNAPSHOT the worker +
-        #    pg_dump BEFORE syncing. Downgrades are not supported.
-        #    Release notes: https://github.com/immich-app/immich/releases/tag/v3.1.0
+        # ⚠️ IMMICH VERSION PIN — server AND machine-learning (this block is shared, see above).
+        #    Renovate tracks this line (renovate.json → customManagers "Immich APP version") and
+        #    opens one PR per release, labelled db-migration. Without it the chart's own appVersion
+        #    runs (chart 0.13.4 → v3.2.0), so every chart bump would quietly upgrade Immich too.
+        #    Bumping runs a one-way DB migration: SNAPSHOT the worker + pg_dump BEFORE syncing
+        #    (docs/apps/immich.md). Downgrades are not supported.
+        #    Release notes: https://github.com/immich-app/immich/releases
+        image:
+          tag: v3.3.5
         env:
           DB_HOSTNAME: immich-postgres
           DB_USERNAME: immich

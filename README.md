@@ -2,12 +2,12 @@
 
 A self-hosted **k3s** cluster running on **Proxmox**, provisioned with **Ansible** (infra)
 and deployed with **Argo CD / GitOps** (apps). A learning-focused homelab that actually runs
-real services — a password manager, photo backup, and privacy search — behind Tailscale with
-real HTTPS.
+real services — photo backup, books and manga, a budget, bookmarks and private search — behind
+Tailscale with real HTTPS.
 
 ```
 Ansible  →  builds the cluster + infrastructure   (you run the playbook)
-Argo CD  →  deploys the apps from this git repo    (declarative, self-healing)
+Argo CD  →  deploys the apps from this git repo    (declarative; shows the diff, you click Sync)
 ```
 
 ## Stack
@@ -24,32 +24,42 @@ Argo CD  →  deploys the apps from this git repo    (declarative, self-healing)
 
 ## Apps
 
-| App | What | URL |
-|---|---|---|
-| **Immich** | Self-hosted photo/video backup (iPhone sync), vector Postgres + NFS library | `immich.williampring.ca` |
-| **SearXNG** | Privacy metasearch engine | `private.williampring.ca` |
-| **degoog** | Search aggregator (Valkey-backed) | `search.williampring.ca` |
+| Namespace | App | What | Hostname (`*.williampring.ca`) |
+|---|---|---|---|
+| `media` | **Immich** + Immich Public Proxy | photo/video backup with iPhone sync; public share links | `immich` · `share` |
+| | **Kavita** + **Komf** | manga, comics and ebooks; Komf fills in the metadata | `library` · `komf` |
+| | **Calibre-Web-Automated** | ebook library, auto-import, send to Kindle | `books` |
+| | **Suwayomi** | manga sources and downloads | `suwayomi` |
+| | **RomM** | ROM library, play in the browser | `roms` |
+| | **qBittorrent** + Gluetun | torrents, through Mullvad | `qbittorrent` |
+| `apps` | **SearXNG** · **degoog** | private metasearch · search aggregator | `private` · `search` |
+| | **Karakeep** | bookmarks with archived copies | `karakeep` |
+| | **Actual** | envelope budgeting | `actual` |
+| | **Ghostfolio** | portfolio tracking | `portfolio` |
+| | **Homepage** | the dashboard | `home` |
+| `monitoring` | **Gatus** · **Bark** | uptime checks · iOS push alerts | `status` · `bark` |
+| `cert-manager` | **cert-manager** | Let's Encrypt certificates (Cloudflare DNS-01) | — |
 
-All apps are reachable over **Tailscale** with **Let's Encrypt** certs (issued via Cloudflare
-DNS-01, so no public exposure is required).
+Everything is reachable over **Tailscale** with **Let's Encrypt** certs (issued via Cloudflare DNS-01, so
+nothing has to be public). The deliberate exceptions reach the internet: `share` (Immich share links), and
+`deploy` (Argo CD) + `bark` through a Cloudflare tunnel → NPMplus. One guide per app in `docs/apps/`.
 
 ## Repo layout
 
 ```
 ansible/          Infrastructure as code — the "make the cluster exist" layer
-  site.yml          Tailscale → k3s → infra secrets → the two legacy Ingresses
-  roles/            tailscale, k3s_server, k3s_agent, certmanager, tls_ingress, immich(infra)
+  site.yml          Tailscale → k3s → Immich infra (secret + node label) → the last Ansible-owned Ingress (Immich)
+  roles/            tailscale, k3s_server, k3s_agent, immich (infra only), tls_ingress
   group_vars/       cluster config + feature toggles
 
-kubernetes/       Apps as code — Argo CD watches this (bootstrap/ + apps/<namespace>/<app>/)
-  apps/             one Argo Application per app (searxng, degoog, immich[-prereqs], kavita, komf, romm, …)
-  searxng/          raw manifests (one file per kind)
-  degoog/           raw manifests + Valkey + PVCs
-  immich/           Helm values + prereqs/ (vector Postgres + NFS library)
-  README.md         the GitOps workflow + how to onboard a new app
+kubernetes/       Apps as code — Argo CD watches this
+  bootstrap/        Argo CD's own install + the ApplicationSet (applied by hand)
+  apps/<ns>/<app>/  one directory per app = one Argo Application (kustomize; Helm charts via helmCharts:)
+  templates/app/    the copyable skeleton for a new app
+  README.md         the tree + which apps live in which namespace
 
-docs/             Reference guides (Proxmox install, per-app docs, cheatsheet, architecture)
-scripts/          Standalone setup scripts (e.g. the Postgres LXC)
+docs/             Start at docs/index.md — apps/, platform/, runbooks/, learn/, architecture/
+scripts/          ci/ (validate, conventions, render-diff), secrets.sh (the SOPS helper), LXC setup scripts
 ```
 
 ## How it works
@@ -59,16 +69,16 @@ scripts/          Standalone setup scripts (e.g. the Postgres LXC)
 cd ansible
 ansible-playbook site.yml --ask-become-pass
 ```
-Installs Tailscale + k3s on the nodes, the two Ingresses not yet in gitops, and the
+Installs Tailscale + k3s on the nodes, the one Ingress not yet in GitOps (Immich), and the
 out-of-git secrets/labels the apps rely on. Ansible's job ends at "a working cluster."
 
 **Apps (Argo CD)** — deployed from git, not the playbook:
 ```bash
-# one-time: install Argo CD, then register an app
-git push   # the ApplicationSet (kubernetes/bootstrap/apps.yaml) registers the new directory as an app
-# thereafter: edit a manifest → git push → Argo syncs it
+# one-time: install Argo CD + the ApplicationSet (docs/runbooks/rebuild-from-zero.md)
+git push   # the ApplicationSet (kubernetes/bootstrap/apps.yaml) registers any new app directory
+# thereafter: edit a manifest → git push → Argo shows OutOfSync → you review the diff and click Sync
 ```
-See [`kubernetes/README.md`](kubernetes/README.md) for the full workflow.
+New to it? Onboard a throwaway app with the guided lab: [`docs/learn/onboarding-an-app.md`](docs/learn/onboarding-an-app.md).
 
 ## Addresses (LAN)
 
@@ -96,18 +106,20 @@ Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: 
 ## Design principles
 
 - **One owner per thing.** Infra lives in Ansible; apps live in GitOps. Nothing is deployed twice.
-- **Secrets + stateful data stay out of git.** DB passwords are k8s Secrets (hand-managed);
-  the databases themselves run in LXCs and survive cluster rebuilds.
+- **Secrets live in git only as ciphertext.** SOPS + age encrypts the values; KSOPS decrypts them inside
+  Argo. The few bootstrap secrets (the age key, `immich-db`, the Cloudflare token) are created by hand.
+- **Stateful data stays out of the cluster.** NFS and the Postgres/Valkey LXCs survive a cluster rebuild.
 - **Manual sync by default.** Argo shows drift but waits for a click — no surprise upgrades.
 
 ## Docs
 
 Start at **[`docs/index.md`](docs/index.md)**. Grouped by purpose:
 
-- `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, degoog, Gatus)
-- `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, Valkey
-- `docs/runbooks/` — **rebuild from zero**, cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
-- `docs/architecture/` — the plan docs (partly historical)
+- `docs/learn/` — **[onboard an app: a guided lab](docs/learn/onboarding-an-app.md)** (start here to learn the workflow)
+- `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, Ghostfolio, SearXNG, degoog, Homepage, Gatus, Bark)
+- `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, CI, Valkey
+- `docs/runbooks/` — **rebuild from zero**, deploying Ghostfolio (a full worked example), cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
+- `docs/architecture/` — the plan docs (partly historical) and the learning roadmap
 - `docs/archive/` — removed/superseded setups
 - [`ansible/README.md`](ansible/README.md) / [`ansible/LEARN.md`](ansible/LEARN.md) — node provisioning + the Ansible teaching guide
 - [`kubernetes/README.md`](kubernetes/README.md) — the app tree and how to add an app · [`CLAUDE.md`](CLAUDE.md) — conventions
