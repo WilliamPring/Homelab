@@ -17,7 +17,7 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
   `docs/platform/secrets.md` known debt.
 - **One owner per thing.** Ansible = nodes (Tailscale, k3s, the few out-of-git secrets/labels). Argo = every app.
 - **Hostnames** are `*.williampring.ca` → the master's Tailscale IP (DNS-only). Internet-facing exceptions:
-  `share.` (Immich share proxy), and `deploy.` (Argo CD) + `bark.` via a Cloudflare tunnel → NPMplus (no Ingress here).
+  `public-immich.` (Immich share proxy), and `deploy.` (Argo CD) + `bark.` via a Cloudflare tunnel → NPMplus (no Ingress here).
 
 ## Layout
 - `kubernetes/apps/<namespace>/<app>/` — every app's manifests. Directory name = Argo app name; parent = its namespace.

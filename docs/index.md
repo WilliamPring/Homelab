@@ -93,9 +93,9 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
                    Traefik :443 (TLS from cert-manager)  ──────────────►  Service  ──►  Pod
                                                                   (NodePort = same Service, other door)
    OUT through a VPN: only qBittorrent's torrent traffic → Gluetun → Mullvad   (apps/qbittorrent.md)
-   INTERNET (strangers):  share.williampring.ca   → Cloudflare → Immich Public Proxy → Immich
-                          deploy.williampring.ca  → Cloudflare tunnel → NPMplus → Argo CD's NodePort
-                          bark.williampring.ca    → Cloudflare tunnel → NPMplus → Bark's NodePort
+   INTERNET (strangers):  public-immich.williampring.ca → Cloudflare → Immich Public Proxy → Immich
+                          deploy.williampring.ca        → Cloudflare tunnel → NPMplus → Argo CD's NodePort
+                          bark.williampring.ca          → Cloudflare tunnel → NPMplus → Bark's NodePort
 ```
 - One Ingress per app, annotated `cert-manager.io/cluster-issuer: letsencrypt`; cert-manager proves domain
   ownership with a Cloudflare TXT record (DNS-01) so certs issue even for hostnames that aren't public.

@@ -8,7 +8,6 @@ they ever return) are the history half — they coexist (see the FAQ at the bott
 ```
 gatus (monitoring ns) ──probes──► apps (in-cluster Service URLs)
                       ──probes──► edge (https://*.williampring.ca via Traefik: DNS + cert + ingress)
-                      ──probes──► public (share.williampring.ca through Cloudflare)
                       ──probes──► infra (Postgres LXC, Valkey, NFS, Proxmox)
                       ──queries─► dns (Cloudflare records)
                       ──alerts──► Bark ──► APNs ──► your phone  (docs/apps/bark.md)

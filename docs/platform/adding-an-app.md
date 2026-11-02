@@ -63,7 +63,7 @@ plus the "Immich APP version" manager in `renovate.json` are the pattern.
 |---|---|---|
 | `deployment.yaml` | `image: repo/name:X.Y.Z` — **never `latest`** | Renovate can only bump a number; `latest` also makes rollbacks impossible |
 | | `resources.requests` + `limits.memory` | one runaway app can't starve Immich on the shared worker |
-| | a **readiness** probe on every container — the app's health endpoint, else the path Gatus checks. Sidecars too: one unready container takes the whole pod out of its Service. Liveness only where a restart cures a hang | Argo health and Gatus both rely on the pod being honestly Ready; `make conventions` (G) warns when one is missing. How to choose: [`../learn/onboarding-an-app.md`](../learn/onboarding-an-app.md) §3.2 |
+| | a **readiness** probe on every container — copy the image's own `HEALTHCHECK` if it has one, else its health endpoint, else the path Gatus checks. Apps that check the `Host` header (Homepage) need `httpHeaders`. Sidecars too: one unready container takes the whole pod out of its Service. Liveness only where a restart cures a hang | Argo health and Gatus both rely on the pod being honestly Ready; `make conventions` (G) warns when one is missing. How to choose: [`../learn/onboarding-an-app.md`](../learn/onboarding-an-app.md) §3.2 |
 | | `nodeSelector: immich-node: "true"` for heavy apps | the 32GB worker is where the RAM is; the master is small |
 | | run as uid 1000 (`securityContext` or the image's PUID/PGID) when it writes to NFS | every folder under `/data` is owned 1000:1000 |
 | | `strategy: Recreate` when it has an RWO volume | a RollingUpdate would try to mount the same local-path volume twice |

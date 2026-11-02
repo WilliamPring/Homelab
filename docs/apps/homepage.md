@@ -110,10 +110,19 @@ the tunnel + NPMplus, and Argo is the tool you need in order to repair exactly t
 > that tells you about it.
 
 > 🛑 **The fallback list has a bootstrap problem.** Homepage itself has no NodePort, and
-> `HOMEPAGE_ALLOWED_HOSTS` is `home.williampring.ca` only — so if DNS dies you cannot load the
-> page that holds the fallback links. Keep the two addresses above somewhere outside the
-> cluster. Fixing this properly needs a NodePort **and** a wider `HOMEPAGE_ALLOWED_HOSTS`
-> **and** a README port-table entry; doing half of it just fails.
+> `HOMEPAGE_ALLOWED_HOSTS` lists only `home.williampring.ca` plus the in-cluster name Gatus uses —
+> so if DNS dies you cannot load the page that holds the fallback links. Keep the two addresses
+> above somewhere outside the cluster. Fixing this properly needs a NodePort **and** a wider
+> `HOMEPAGE_ALLOWED_HOSTS` **and** a README port-table entry; doing half of it just fails.
+
+> ⚠️ **Every request is Host-checked — `/` included, not just the API.** Anything addressed to a
+> host that isn't in `HOMEPAGE_ALLOWED_HOSTS` (or `localhost:3000` / `127.0.0.1:3000`, always
+> allowed) gets `400 Host validation failed`. That bites three ways:
+> - **The readiness probe** arrives as `<pod-ip>:3000`, so it sends `Host: 127.0.0.1:3000` to
+>   `/api/healthcheck` — exactly what the image's own `HEALTHCHECK` does.
+> - **Gatus's in-cluster check** arrives as `homepage.apps.svc.cluster.local:3000`, which is why that
+>   name is in the list.
+> - **A new hostname or a NodePort** gets 400 until you add it too (with the port, e.g. `192.168.68.63:30xxx`).
 
 ---
 
@@ -184,6 +193,6 @@ sudo k3s kubectl top nodes            # must work before the widget can
 - **Pulse has no widget yet.** Its embedded iframe was removed in Nov 2026 (it loaded a whole
   second app on every page view). Homepage has a real `pulse` widget that would show VM/LXC and
   backup state as data — it needs an API token, so it is blocked on the same secret path.
-- **The Immich Public Proxy has no tile**, because its `PUBLIC_BASE_URL`
-  (`public-immich.williampring.ca`) disagrees with CLAUDE.md, `docs/index.md` and Gatus
-  (`share.williampring.ca`). Resolve which hostname is live before adding one.
+- **The Immich Public Proxy has no tile.** Its live hostname is `public-immich.williampring.ca`
+  (the proxy's `PUBLIC_BASE_URL`); the old `share.williampring.ca` record is gone. Point a tile
+  there if you want one.

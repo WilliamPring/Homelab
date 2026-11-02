@@ -26,7 +26,7 @@ Argo CD  →  deploys the apps from this git repo    (declarative; shows the dif
 
 | Namespace | App | What | Hostname (`*.williampring.ca`) |
 |---|---|---|---|
-| `media` | **Immich** + Immich Public Proxy | photo/video backup with iPhone sync; public share links | `immich` · `share` |
+| `media` | **Immich** + Immich Public Proxy | photo/video backup with iPhone sync; public share links | `immich` · `public-immich` |
 | | **Kavita** + **Komf** | manga, comics and ebooks; Komf fills in the metadata | `library` · `komf` |
 | | **Calibre-Web-Automated** | ebook library, auto-import, send to Kindle | `books` |
 | | **Suwayomi** | manga sources and downloads | `suwayomi` |
@@ -41,7 +41,7 @@ Argo CD  →  deploys the apps from this git repo    (declarative; shows the dif
 | `cert-manager` | **cert-manager** | Let's Encrypt certificates (Cloudflare DNS-01) | — |
 
 Everything is reachable over **Tailscale** with **Let's Encrypt** certs (issued via Cloudflare DNS-01, so
-nothing has to be public). The deliberate exceptions reach the internet: `share` (Immich share links), and
+nothing has to be public). The deliberate exceptions reach the internet: `public-immich` (Immich share links), and
 `deploy` (Argo CD) + `bark` through a Cloudflare tunnel → NPMplus. One guide per app in `docs/apps/`.
 
 ## Repo layout

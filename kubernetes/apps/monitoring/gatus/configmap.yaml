@@ -9,7 +9,8 @@
 #            Cloudflare → TUNNEL → NPMplus → a NodePort, with NPMplus's own certbot cert, and
 #            has no Ingress in this repo at all. Bark is fronted the same way. So "the edge
 #            group is red" can mean two completely different outages — check which rows.
-#   public — the ONE internet-facing path (Immich share proxy via Cloudflare)
+#            (The Immich share proxy, public-immich.williampring.ca, has no edge row: its
+#            in-cluster check is in `apps` and its Cloudflare record in `dns`.)
 #   infra  — the boxes the apps depend on: Postgres LXC, Valkey, NFS, Proxmox
 #   dns    — Cloudflare records still exist
 #
@@ -279,12 +280,14 @@ data:
           query-type: "A"
         conditions: ["[DNS_RCODE] == NOERROR"]
         alerts: [{ type: custom }]
-      - name: DNS share.williampring.ca
+      # The share proxy's public hostname — what its PUBLIC_BASE_URL says
+      # (kubernetes/apps/media/immich-public-proxy). share.williampring.ca is gone (NXDOMAIN).
+      - name: DNS public-immich.williampring.ca
         group: dns
         url: "1.1.1.1"
         interval: 10m
         dns:
-          query-name: "share.williampring.ca"
-          query-type: "CNAME"
+          query-name: "public-immich.williampring.ca"
+          query-type: "A"
         conditions: ["[DNS_RCODE] == NOERROR"]
         alerts: [{ type: custom }]

@@ -385,7 +385,8 @@ What follows from that choice:
 | The app has… | Use | Examples here |
 |---|---|---|
 | a health endpoint | `httpGet` on it | Kavita `/api/health`, Karakeep `/api/health`, SearXNG `/healthz`, Meilisearch `/health` |
-| no health endpoint | `httpGet` on `/` — any 2xx/3xx passes, so a redirect to a login page is fine | degoog, Homepage, Calibre-Web |
+| no health endpoint | `httpGet` on `/` — any 2xx/3xx passes, so a redirect to a login page is fine | degoog, Calibre-Web |
+| a check on the `Host` header | `httpGet` + `httpHeaders: [{ name: Host, value: … }]` with a host the app accepts | Homepage: `/api/healthcheck` as `Host: 127.0.0.1:3000` |
 | no HTTP at all | `exec` a client, or `tcpSocket` | immich-postgres runs `pg_isready` |
 | a sidecar container | a probe on the sidecar too — ⚠️ it gates the **whole** pod | Karakeep's `chrome` (`/json/version`) |
 
@@ -395,7 +396,13 @@ What follows from that choice:
   depends on another service, or a database blip turns into a restart loop.
 - Slow first boot (migrations)? A long `initialDelaySeconds` on readiness is harmless. For liveness use a
   `startupProbe` instead, so a slow boot isn't killed halfway through a migration.
-- Probe the same path Gatus checks, so "Ready" in Kubernetes and "green" in Gatus mean the same thing.
+- **Look at the image's own `HEALTHCHECK` first** — it is the authors' answer to "how do I know this is up?",
+  path *and* host. It's in the Dockerfile, or `docker inspect <image>` → `Config.Healthcheck`.
+- A probe is a request from the kubelet to `<pod-ip>:<port>` — not to your hostname. An app that checks the `Host`
+  header (Homepage does, on every route) answers it with **400**, even though the same URL works in your browser.
+  That is what `httpHeaders` is for.
+- Otherwise probe the same path Gatus checks, so "Ready" in Kubernetes and "green" in Gatus mean the same thing —
+  and if Gatus is red for that app, find out why before copying its path.
 
 ### 3.3 Size and placement
 
@@ -436,7 +443,7 @@ through a custom regex manager in `renovate.json`.
 
 ### 3.8 Public? Default no.
 
-Everything is Tailscale-only (grey-cloud DNS → a Tailscale IP). The exceptions are few and deliberate: `share.`
+Everything is Tailscale-only (grey-cloud DNS → a Tailscale IP). The exceptions are few and deliberate: `public-immich.`
 (the Immich share proxy), plus `deploy.` (Argo CD) and `bark.` through a Cloudflare tunnel → NPMplus. Don't add
 another without a reason and an auth layer in front of it.
 
@@ -458,6 +465,7 @@ do the Ingress, cert and DNS work?
 | `CreateContainerConfigError` | a Secret or one of its keys is missing (an out-of-band secret not created, a key typo) | `describe pod`; `make conventions` (D) |
 | `CrashLoopBackOff` | the app itself: config, DB unreachable, permissions | `sudo k3s kubectl logs deploy/<app> -n <ns> --previous` |
 | `Running` but `0/1` | readiness failing: wrong path or port, still starting, a sidecar not ready | `describe pod` → "Readiness probe failed: …" |
+| "HTTP probe failed with statuscode: 400" | the app rejects the probe's `Host` (`<pod-ip>:<port>`) | send an allowed one with `httpHeaders` (§3.2) — Homepage is the example |
 | `permission denied` under `/data` | NFS folder not owned by 1000:1000, or the container isn't uid 1000 | `ls -ln /data/<folder>` on `.50`; `runAsUser` / `PUID` |
 | Traefik's `404 page not found` | no Ingress matches that host: a typo, or no `ingressClassName: traefik` | `sudo k3s kubectl get ingress -A \| grep <host>` |
 | `no available server` | the Service has no Ready endpoints: selector ≠ pod labels, or readiness failing | `get endpointslices -n <ns> -l kubernetes.io/service-name=<app>` |
@@ -523,6 +531,14 @@ chart bump changes only the chart's templates. An Immich upgrade arrives as its 
 <details><summary>9. You add a readiness probe to a sidecar and the whole app goes offline. Why?</summary>
 
 A pod counts as Ready only when every container in it is Ready. One unready sidecar takes the pod out of its Service.
+</details>
+
+<details><summary>10. Homepage loads fine in your browser, but its readiness probe fails with status 400. Why?</summary>
+
+The probe isn't your browser. It is a request from the kubelet to `<pod-ip>:3000`, and Homepage refuses any `Host` that
+isn't on its `HOMEPAGE_ALLOWED_HOSTS` list. Your browser sends `home.williampring.ca`, which is on the list. The fix is
+to make the probe send a Host the app allows (`httpHeaders`) — copied from the image's own `HEALTHCHECK`, which uses
+`127.0.0.1:3000` and `/api/healthcheck`. (This really happened, the first time these probes were added.)
 </details>
 
 ---

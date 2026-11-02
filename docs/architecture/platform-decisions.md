@@ -127,7 +127,7 @@ Format: `<service>.<function>.williampring.ca`
 
 ## Why Not Expose Services Publicly
 
-> **Updated (Nov 2026):** three hostnames are now internet-facing on purpose — `share.` (the Immich share proxy),
+> **Updated (Nov 2026):** three hostnames are now internet-facing on purpose — `public-immich.` (the Immich share proxy),
 > and `deploy.` (Argo CD) + `bark.` through a Cloudflare tunnel → NPMplus. Everything else is still Tailscale-only.
 > Argo's own login is the only gate on `deploy.`; [`../index.md`](../index.md) §9 has the suggested fix.
 
