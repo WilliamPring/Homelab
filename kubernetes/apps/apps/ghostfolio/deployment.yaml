@@ -41,7 +41,7 @@ spec:
       enableServiceLinks: false
       containers:
         - name: ghostfolio
-          image: ghostfolio/ghostfolio:3.95.0   # pinned — Renovate PRs bumps
+          image: ghostfolio/ghostfolio:3.97.0   # pinned — Renovate PRs bumps
           # ⚠️ 3.96.0 exists but shipped the same day this was written. renovate.json sets
           # minimumReleaseAge: 3 days for exactly this reason, so the initial pin respects it —
           # Renovate will offer 3.96.0 once it has aged, and you merge it like any other bump.
