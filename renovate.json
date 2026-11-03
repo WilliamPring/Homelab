@@ -178,6 +178,16 @@
       "addLabels": [
         "step-by-minor"
       ]
+    },
+    {
+      "description": "Node in .github/workflows/validate.yaml only runs the Renovate config validator, so it stays on a Node that Renovate's own package.json engines allows (44.x: ^24.11.0). The bump to Node 26 turned CI red: npx skipped every Renovate that doesn't list 26 and fell back to 37.x, which rejects managerFilePatterns. Raise this when Renovate's engines move to the next Node major.",
+      "matchFileNames": [
+        ".github/workflows/validate.yaml"
+      ],
+      "matchDepNames": [
+        "node"
+      ],
+      "allowedVersions": "<25"
     }
   ],
   "automerge": false

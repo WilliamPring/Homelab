@@ -75,6 +75,13 @@ at all**. A secret-name/key typo is caught on the PR instead of at 11pm after a 
 ### 3. `lint` — yamllint, pinned
 ### 4. `renovate-config` — `renovate.json` still parses under `--strict`
 
+Runs a **pinned** Renovate (`RENOVATE_VERSION`) on the Node that Renovate's own `engines` field
+allows (44.x: `^24.11.0`). ⚠️ Don't let that Node run ahead of Renovate. Unpinned, `npx renovate`
+isn't "latest": npm picks the newest version whose engines accept the running Node. When Renovate
+bumped this job to Node 26 (Nov 2026), npm installed Renovate 37.x from 2024, which rejected
+`managerFilePatterns`, and the job went red. A `packageRules` entry in `renovate.json` now holds
+this Node at 24; raise it once Renovate's engines move to the next Node major.
+
 ---
 
 ## `render-diff` — what the change does to the *cluster*
@@ -162,6 +169,8 @@ never reach `main` belongs in the workflow too.
   the version; you paste the new hash from the release's `CHECKSUMS` (both env vars, together).
 - `yamllint` is version-pinned, so a new release cannot turn CI red on a commit that changed
   nothing.
+- The Renovate validator is version-pinned too (`RENOVATE_VERSION`), and its Node is held to what
+  Renovate supports; job 4 above explains why both matter.
 - Workflow permissions are `contents: read` by default; only `render-diff` adds
   `pull-requests: write`, and `persist-credentials: false` keeps a push-capable token out of
   `.git/config` on every checkout.

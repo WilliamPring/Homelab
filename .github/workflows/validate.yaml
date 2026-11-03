@@ -40,6 +40,8 @@ env:
   KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
   # renovate: datasource=pypi depName=yamllint
   YAMLLINT_VERSION: 1.38.0
+  # renovate: datasource=npm depName=renovate
+  RENOVATE_VERSION: 44.206.2
   # Secrets check: "0" = warn only (current — komf/romm/qbittorrent templates not yet encrypted),
   # "1" = a plaintext *.enc.yaml FAILS the run. Flip to "1" once those are encrypted.
   STRICT_SECRETS: "0"
@@ -97,5 +99,10 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
-          node-version: 26
-      - run: npx --yes --package renovate -- renovate-config-validator --strict renovate.json
+          # Held at a Node that Renovate's own `engines` allows (44.x: ^24.11.0), not the newest.
+          # On Node 26, npm skipped every Renovate that doesn't list it and quietly installed
+          # 37.x from 2024, which rejects this config. A rule in renovate.json holds this at 24.
+          node-version: 24
+      # Pinned like yamllint. Unpinned, `npx renovate` isn't "latest": npm picks the newest
+      # version whose engines accept the running Node, which is how 37.x got in.
+      - run: npx --yes --package "renovate@${RENOVATE_VERSION}" -- renovate-config-validator --strict renovate.json
