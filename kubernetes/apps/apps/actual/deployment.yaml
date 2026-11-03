@@ -42,7 +42,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: actual
-          image: docker.io/actualbudget/actual-server:26.10.0   # pinned — Renovate PRs bumps
+          image: docker.io/actualbudget/actual-server:26.11.0   # pinned — Renovate PRs bumps
           env:
             - name: TZ
               value: "America/Vancouver"
