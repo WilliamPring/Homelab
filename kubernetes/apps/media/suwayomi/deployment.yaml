@@ -45,7 +45,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: suwayomi
-          image: ghcr.io/suwayomi/suwayomi-server:v2.4.2366   # pinned — Renovate PRs bumps
+          image: ghcr.io/suwayomi/suwayomi-server:v2.4.2476   # pinned — Renovate PRs bumps
           env:
             - name: TZ
               value: "America/Vancouver"
