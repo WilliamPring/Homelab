@@ -19,7 +19,7 @@ spec:
       containers:
         - name: searxng
           # SearXNG tags are date+hash (no semver) → pin by DIGEST; Renovate PRs digest bumps (grouped weekly, stateless).
-          image: searxng/searxng:latest@sha256:c642712fcedcdaa78fac44f71eada86aff510745826ba1bd1a368211fea2ce7f
+          image: searxng/searxng:latest@sha256:a31763b7af3caf6ae9aac1816ba774214eb550252e06a4998f276ded8d60461b
           ports:
             - containerPort: 8080
           volumeMounts:
