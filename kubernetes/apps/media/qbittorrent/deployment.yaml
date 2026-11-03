@@ -139,7 +139,7 @@ spec:
         - name: qbittorrent
           # immutable tag: <app>_<libtorrent>-ls<build>. Plain `5.3.0` is re-pushed on every LSIO
           # rebuild, so the same tag can be a different image tomorrow. This one never moves.
-          image: lscr.io/linuxserver/qbittorrent:5.3.0_v2.1.2-ls485   # pinned — Renovate PRs bumps
+          image: lscr.io/linuxserver/qbittorrent:5.3.0_v2.1.2-ls486   # pinned — Renovate PRs bumps
           env:
             - name: TZ
               value: "America/Vancouver"
