@@ -39,7 +39,7 @@ env:
   #   curl -sSL https://github.com/yannh/kubeconform/releases/download/<ver>/CHECKSUMS | grep linux-amd64
   KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
   # renovate: datasource=pypi depName=yamllint
-  YAMLLINT_VERSION: 1.37.1
+  YAMLLINT_VERSION: 1.38.0
   # Secrets check: "0" = warn only (current — komf/romm/qbittorrent templates not yet encrypted),
   # "1" = a plaintext *.enc.yaml FAILS the run. Flip to "1" once those are encrypted.
   STRICT_SECRETS: "0"
