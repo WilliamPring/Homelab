@@ -28,7 +28,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: gatus
-          image: ghcr.io/twin/gatus:v5.37.0   # pinned — Renovate PRs bumps (grouped: stateless patch updates)
+          image: ghcr.io/twin/gatus:v5.38.0   # pinned — Renovate PRs bumps (grouped: stateless patch updates)
           env:
             - name: GATUS_CONFIG_PATH
               value: /config/config.yaml
