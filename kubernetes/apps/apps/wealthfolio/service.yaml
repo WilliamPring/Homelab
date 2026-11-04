@@ -1,0 +1,17 @@
+# ClusterIP only — NO NodePort, same reasoning as Ghostfolio: account balances have no business on
+# plain http on the LAN. Reachable only through the Ingress, over TLS, on the tailnet.
+apiVersion: v1
+kind: Service
+metadata:
+  name: wealthfolio
+  namespace: apps
+  labels:
+    app: wealthfolio
+spec:
+  type: ClusterIP
+  selector:
+    app: wealthfolio
+  ports:
+    - name: http
+      port: 8088
+      targetPort: http

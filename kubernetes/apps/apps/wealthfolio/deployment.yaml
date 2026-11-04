@@ -1,0 +1,96 @@
+# Wealthfolio — local-first portfolio tracker, on TRIAL next to Ghostfolio (docs/apps/wealthfolio.md).
+# One Rust binary that serves the web UI and the API; one SQLite file; no database server, no cache.
+#
+#   data   → local-path PVC (storage.yaml explains why it CANNOT be NFS: SQLite WAL mode)
+#   secret → wealthfolio-secret: WF_SECRET_KEY + WF_AUTH_PASSWORD_HASH (fill + encrypt before Sync)
+#   quotes → Yahoo Finance, fetched by the server. Canadian tickers need the suffix: XEQT.TO, VFV.TO
+#
+# Settings below follow upstream's production compose.yml (github.com/wealthfolio/wealthfolio).
+# Docs: https://wealthfolio.app   Releases: https://github.com/wealthfolio/wealthfolio/releases
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wealthfolio
+  namespace: apps
+  labels:
+    app: wealthfolio
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # one SQLite file on an RWO volume — never two writers at once
+  selector:
+    matchLabels:
+      app: wealthfolio
+  template:
+    metadata:
+      labels:
+        app: wealthfolio
+    spec:
+      # A Service named `wealthfolio` would inject WEALTHFOLIO_PORT=tcp://… into the pod. The app reads
+      # WF_* names, so it does not collide today — off anyway, like Actual and Ghostfolio.
+      enableServiceLinks: false
+      securityContext:
+        runAsUser: 1000       # the image's own `wealthfolio` user (USER 1000:1000 in its Dockerfile)
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: wealthfolio
+          image: wealthfolio/wealthfolio:3.12.0   # pinned — Renovate PRs bumps (db-migration label)
+          env:
+            - name: WF_LISTEN_ADDR
+              value: "0.0.0.0:8088"
+            - name: WF_DB_PATH
+              value: "/data/wealthfolio.db"
+            # The ONE origin the browser loads the app from. Required once auth is on; a mismatch
+            # shows up as a login that silently fails (CORS), not as an error page.
+            - name: WF_CORS_ALLOW_ORIGINS
+              value: "https://wealthfolio.williampring.ca"
+            # Encrypts secrets at rest AND signs login tokens. Must be 32 bytes: generate it with
+            # `openssl rand -base64 32` — NOT `secrets.sh set … =-`, which makes a 48-char value.
+            # Changing it later logs you out and makes stored secrets (e.g. API keys) unreadable.
+            - name: WF_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wealthfolio-secret
+                  key: WF_SECRET_KEY
+            # Argon2id PHC string of your login password ($argon2id$v=19$…). Required: the server
+            # refuses to listen on 0.0.0.0 without auth. In a Kubernetes Secret the `$` signs stay
+            # as they are — the `$$` doubling in upstream's docs is a Docker Compose thing only.
+            - name: WF_AUTH_PASSWORD_HASH
+              valueFrom:
+                secretKeyRef:
+                  name: wealthfolio-secret
+                  key: WF_AUTH_PASSWORD_HASH
+            - name: TZ
+              value: "America/Vancouver"
+          ports:
+            - name: http
+              containerPort: 8088
+          # Exactly the image's own compose healthcheck: GET /api/v1/healthz, no auth needed.
+          readinessProbe:
+            httpGet: { path: /api/v1/healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /api/v1/healthz, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }   # upstream compose: reservation 128M,
+            limits: { memory: 512Mi }               # limit 512M
+          # Upstream runs it read-only with a small /tmp; same here.
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: wealthfolio-data
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }

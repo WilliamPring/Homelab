@@ -1,0 +1,23 @@
+# Wealthfolio storage — ONE local-path volume holding the SQLite database.
+#
+# ⚠️ WHY NOT NFS (unlike Actual, which keeps its SQLite on NFS)
+# Wealthfolio opens its database in WAL mode (`PRAGMA journal_mode = WAL` in
+# crates/storage-sqlite/src/db/mod.rs). WAL needs shared memory between connections, and SQLite
+# documents that WAL does not work over a network filesystem — on NFS it corrupts or locks up.
+# So the data lives on node disk, and that disk is NOT backed up and does NOT survive a rebuild.
+#
+# That is acceptable while this is a TRIAL next to Ghostfolio (the data is a broker-CSV import away).
+# Before it becomes your real tracker, add the nightly copy to NFS described in docs/apps/wealthfolio.md.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wealthfolio-data
+  namespace: apps
+  labels:
+    app: wealthfolio
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

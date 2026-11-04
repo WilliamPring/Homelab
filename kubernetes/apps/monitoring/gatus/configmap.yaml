@@ -133,6 +133,13 @@ data:
         interval: 1m
         conditions: ["[STATUS] == 200"]
         alerts: [{ type: custom }]
+      - name: Wealthfolio
+        group: apps
+        # The image's own healthcheck endpoint; needs no login.
+        url: "http://wealthfolio.apps.svc.cluster.local:8088/api/v1/healthz"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }]
       - name: Immich Public Proxy
         group: apps
         url: "http://immich-public-proxy.media.svc.cluster.local:3000/share/healthcheck"
@@ -212,6 +219,12 @@ data:
       - name: portfolio.williampring.ca
         group: edge
         url: "https://portfolio.williampring.ca/api/v1/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: custom }]
+      - name: wealthfolio.williampring.ca
+        group: edge
+        url: "https://wealthfolio.williampring.ca/api/v1/healthz"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
         alerts: [{ type: custom }]

@@ -3,7 +3,7 @@
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
 from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Komf, Calibre-Web), games
 (RomM), torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
-copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio), and the glue (cert-manager, Gatus, Bark, Homepage).
+copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio, with Wealthfolio on trial), and the glue (cert-manager, Gatus, Bark, Homepage).
 
 New here? Learn the workflow hands-on first: **[`learn/onboarding-an-app.md`](learn/onboarding-an-app.md)**.
 
@@ -27,7 +27,7 @@ This page is the mental model. Each section ends with where to read more.
 │  Argo CD  ◄── kubernetes/bootstrap/   (applied by hand, twice, ever)                     │
 │     └─ ApplicationSet ──► one Application per  kubernetes/apps/<namespace>/<app>/        │
 │           media: immich · immich-prereqs · immich-public-proxy · kavita · komf · calibre · suwayomi · romm · qbittorrent
-│           apps: searxng · degoog · homepage · karakeep · actual · ghostfolio
+│           apps: searxng · degoog · homepage · karakeep · actual · ghostfolio · wealthfolio
 │           monitoring: gatus · bark
 │           cert-manager: cert-manager · cert-manager-issuer                               │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
@@ -172,7 +172,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 **Apps** — one guide per app: setup, how it fits, troubleshooting
 - [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
 - [`apps/romm.md`](apps/romm.md) · [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/searxng.md`](apps/searxng.md) · [`apps/degoog.md`](apps/degoog.md)
-- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/ghostfolio.md`](apps/ghostfolio.md) · [`apps/homepage.md`](apps/homepage.md)
+- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/ghostfolio.md`](apps/ghostfolio.md) · [`apps/wealthfolio.md`](apps/wealthfolio.md) · [`apps/homepage.md`](apps/homepage.md)
 - [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md)
 
 **Platform** — the things apps rely on

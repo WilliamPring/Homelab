@@ -104,7 +104,8 @@
         "/rommapp/",
         "/kavita/",
         "/calibre-web-automated/",
-        "/ghostfolio/"
+        "/ghostfolio/",
+        "/wealthfolio/"
       ],
       "addLabels": [
         "\u26a0\ufe0f db-migration"
