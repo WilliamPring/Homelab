@@ -181,6 +181,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 - [`platform/adding-an-app.md`](platform/adding-an-app.md) — **onboarding a new app, step by step**
 - [`platform/tls.md`](platform/tls.md) — cert-manager + Let's Encrypt (Cloudflare DNS-01)
 - [`platform/secrets.md`](platform/secrets.md) · [`platform/secrets-architecture.md`](platform/secrets-architecture.md)
+- [`platform/openbao.md`](platform/openbao.md) — **replacing SOPS (in progress)**: OpenBao on Proxmox + External Secrets Operator, every step explained
 - [`platform/updates-and-notifications.md`](platform/updates-and-notifications.md) — Renovate, Argo → phone, Proxmox → phone
 - [`platform/ci.md`](platform/ci.md) — the GitHub Actions gate, the conventions check, the PR render-diff
 - [`platform/redis.md`](platform/redis.md) — the shared Valkey and per-app ACL users

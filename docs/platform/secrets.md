@@ -1,5 +1,9 @@
 # Secrets — the working guide
 
+> **Being replaced (Nov 2026).** SOPS is on its way out in favour of OpenBao (on a Proxmox LXC) +
+> External Secrets Operator, so secret values stop living in git at all. Why, and the setup:
+> [`openbao.md`](openbao.md). Until the cluster side ships, everything below still applies.
+
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day
 reference. For the *why* and the full architecture, see `docs/platform/secrets-architecture.md` (deep dive) and
 the original plan (archived, since deleted).
