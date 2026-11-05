@@ -1,0 +1,108 @@
+# Alloy values. Chart pin: kustomization.yaml. Docs: docs/apps/grafana.md
+#
+# ONE replica (a Deployment), not a DaemonSet. Logs are read through the Kubernetes API
+# (loki.source.kubernetes), not from node disks, so one pod sees every node's pods. The previous
+# attempt ran this config as a DaemonSet: each node's Alloy tailed EVERY pod, so each line was
+# stored twice. A single replica also means events are collected exactly once.
+
+image:
+  registry: docker.io
+  repository: grafana/alloy
+  tag: v1.21.3                      # pinned — Renovate's helm-values manager sees it
+
+controller:
+  type: deployment
+  replicas: 1
+  nodeSelector:
+    immich-node: "true"
+
+# The reloader sidecar has no readiness probe. Without it, the chart puts a checksum of the config
+# on the pod, so a config change in git → Sync → the pod restarts with it. Same result, one less container.
+configReloader:
+  enabled: false
+
+crds:
+  create: false                     # PodLogs CRD — not used
+
+# Least privilege: the chart's default ClusterRole can also read every Secret and ConfigMap in the
+# cluster. Log tailing needs pods, their logs, namespaces and events, nothing more.
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "pods/log", "namespaces", "events"]
+      verbs: ["get", "list", "watch"]
+  clusterRules:
+    - apiGroups: [""]
+      resources: ["nodes"]
+      verbs: ["get", "list", "watch"]
+
+alloy:
+  enableReporting: false            # no anonymous usage stats to Grafana Labs
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+  configMap:
+    create: true
+    content: |-
+      // 1. every pod in the cluster
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // 2. Kubernetes metadata → the labels you filter by in Grafana
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_phase"]
+          regex         = "Pending"
+          action        = "drop"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          target_label  = "node"
+        }
+        // app = the `app` label this repo puts on everything; charts use app.kubernetes.io/name
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          regex         = "(.+)"
+          target_label  = "app"
+        }
+      }
+
+      // 3. tail their logs through the API (no hostPath mounts needed)
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pods.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      // 4. cluster events: OOMKilled, BackOff, Unhealthy (failed probes), FailedMount, ...
+      //    Kubernetes keeps events ~1h; Loki keeps them 14 days.
+      loki.source.kubernetes_events "events" {
+        job_name   = "kubernetes-events"
+        log_format = "logfmt"
+        forward_to = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }

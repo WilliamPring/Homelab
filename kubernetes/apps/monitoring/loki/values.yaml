@@ -1,0 +1,86 @@
+# Loki values. Chart pin: kustomization.yaml. Docs: docs/apps/grafana.md
+#
+# Monolithic ("SingleBinary") + filesystem storage on local-path: the simplest Loki there is. Logs are
+# rebuildable history, not precious data, so no NFS and no object store. Retention: 14 days, enforced
+# by the compactor.
+#
+# ⚠️ Homelab gotchas handled below (each one bit the previous attempt in Aug 2026):
+#   • chunksCache defaults to a ~9.6 GB memcached           → OFF
+#   • the chart's default mode is SimpleScalable (3 tiers)   → every non-single-binary target set to 0
+#   • gateway (nginx), canary, test pod                      → OFF; Alloy and Grafana talk to :3100 directly
+#   • the rules sidecar (a container with no readiness probe, for Loki's ruler — unused here) → OFF
+
+deploymentMode: SingleBinary
+
+loki:
+  # The chart's default Loki tag lags behind releases, so the app version is pinned here where
+  # Renovate's helm-values manager can see it (same idea as Immich's values.yaml).
+  image:
+    registry: docker.io
+    repository: grafana/loki
+    tag: 3.6.19
+  auth_enabled: false               # single tenant
+  commonConfig:
+    replication_factor: 1
+  schemaConfig:
+    configs:
+      - from: "2026-11-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  storage:
+    type: filesystem
+  limits_config:
+    retention_period: 336h          # 14 days
+    allow_structured_metadata: true
+    volume_enabled: true
+    discover_log_levels: true       # Grafana colours lines by level
+  compactor:
+    retention_enabled: true         # without this, retention_period is silently ignored
+    delete_request_store: filesystem
+    working_directory: /var/loki/compactor
+
+singleBinary:
+  replicas: 1
+  nodeSelector:
+    immich-node: "true"
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 10Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 1Gi }
+
+# ── zero out every non-single-binary component ───────────────────────────────────────────────────
+backend: { replicas: 0 }
+read: { replicas: 0 }
+write: { replicas: 0 }
+ingester: { replicas: 0 }
+querier: { replicas: 0 }
+queryFrontend: { replicas: 0 }
+queryScheduler: { replicas: 0 }
+distributor: { replicas: 0 }
+compactor: { replicas: 0 }
+indexGateway: { replicas: 0 }
+bloomPlanner: { replicas: 0 }
+bloomBuilder: { replicas: 0 }
+bloomGateway: { replicas: 0 }
+
+# ── keep it lean ─────────────────────────────────────────────────────────────────────────────────
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+gateway:
+  enabled: false
+sidecar:
+  rules:
+    enabled: false

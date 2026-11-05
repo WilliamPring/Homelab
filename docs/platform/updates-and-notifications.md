@@ -274,5 +274,5 @@ learn to ignore the group. Same idea as Argo's `oncePer`.
 - **A second alert channel** — Bark cannot report its own outage, so that one endpoint is
   dashboard-only. An external check (Healthchecks.io / Uptime Robot hitting `/ping`) would close
   the gap. Declined for now; the Gatus dashboard covers it in practice.
-- **Metrics/history (Prometheus + Grafana)** — removed. Gatus covers "is it up"; bring Grafana
-  back only when a question needs history.
+- ~~**Metrics/history (Prometheus + Grafana)**~~ — back since Nov 2026, to answer "what is each
+  app using, and why did it die?" Alertmanager is a third sender into Bark: `apps/grafana.md`.

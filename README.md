@@ -39,6 +39,7 @@ Argo CD  →  deploys the apps from this git repo    (declarative; shows the dif
 | | **Wealthfolio** | portfolio tracking, on trial next to Ghostfolio | `wealthfolio` |
 | | **Homepage** | the dashboard | `home` |
 | `monitoring` | **Gatus** · **Bark** | uptime checks · iOS push alerts | `status` · `bark` |
+| | **Grafana** + Prometheus · Loki · Alloy | per-app CPU/memory, logs, alerts on crash loops and OOMKills | `grafana` |
 | `cert-manager` | **cert-manager** | Let's Encrypt certificates (Cloudflare DNS-01) | — |
 
 Everything is reachable over **Tailscale** with **Let's Encrypt** certs (issued via Cloudflare DNS-01, so
@@ -117,7 +118,7 @@ Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: 
 Start at **[`docs/index.md`](docs/index.md)**. Grouped by purpose:
 
 - `docs/learn/` — **[onboard an app: a guided lab](docs/learn/onboarding-an-app.md)** (start here to learn the workflow)
-- `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, Ghostfolio, Wealthfolio, SearXNG, degoog, Homepage, Gatus, Bark)
+- `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, Ghostfolio, Wealthfolio, SearXNG, degoog, Homepage, Gatus, Bark, Grafana stack)
 - `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, CI, Valkey
 - `docs/runbooks/` — **rebuild from zero**, deploying Ghostfolio (a full worked example), cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
 - `docs/architecture/` — the plan docs (partly historical) and the learning roadmap

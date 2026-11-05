@@ -13,8 +13,9 @@
 # nothing deploys until you click Sync. Hand-edits to a generated Application spec are reverted by
 # the controller: change the directory, not the object.
 #
-# Per-app exceptions live in `templatePatch` (today: cert-manager needs ServerSideApply — its CRDs
-# exceed the client-side annotation limit).
+# Per-app exceptions live in `templatePatch` (today: cert-manager and kube-prometheus-stack need
+# ServerSideApply — their CRDs exceed the client-side annotation limit). Changing templatePatch means
+# re-applying THIS file by hand; nothing in git reconfigures the ApplicationSet itself.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -48,7 +49,7 @@ spec:
         syncOptions:
           - CreateNamespace=true
   templatePatch: |
-    {{- if eq .path.basename "cert-manager" }}
+    {{- if or (eq .path.basename "cert-manager") (eq .path.basename "kube-prometheus-stack") }}
     spec:
       syncPolicy:
         syncOptions:

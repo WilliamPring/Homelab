@@ -178,6 +178,20 @@ data:
             namespace: monitoring
             podSelector: app=gatus
 
+        - Grafana:
+            # Metrics (Prometheus) + logs (Loki) + alerts (Alertmanager → Bark), one UI.
+            # The widget counts Prometheus scrape targets — anything "down" is a target that
+            # stopped answering (a crashed exporter, or an app whose ServiceMonitor broke).
+            href: https://grafana.williampring.ca
+            description: Metrics, logs & alert history
+            icon: grafana.png
+            siteMonitor: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80/api/health
+            namespace: monitoring
+            podSelector: app.kubernetes.io/name=grafana
+            widget:
+              type: prometheus
+              url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+
         - Argo CD:
             # Fronted by NPMplus + a Cloudflare tunnel — NOT Traefik, and there is no Ingress
             # in this repo for it (same arrangement as Bark). The tunnel's Service URL must

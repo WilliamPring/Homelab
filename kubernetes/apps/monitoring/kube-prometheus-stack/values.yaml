@@ -1,0 +1,186 @@
+# kube-prometheus-stack values. Chart pin: kustomization.yaml. Docs: docs/apps/grafana.md
+#
+#   Prometheus      scrape + store 15 days of metrics (kubelet/cAdvisor = per-container CPU/RAM)
+#   kube-state-metrics  pod restarts, OOMKills, waiting reasons, replicas — what the alert rules read
+#   node-exporter   per-node CPU/RAM/disk (DaemonSet, both nodes)
+#   Alertmanager    groups alerts → bark-relay → Bark → phone
+#   Grafana         the ONE UI: these metrics + Loki logs, default Kubernetes dashboards
+#
+# Versions: Grafana's image is pinned below (Renovate's helm-values manager sees it). Prometheus,
+# Alertmanager, the operator, kube-state-metrics and node-exporter ride with the CHART version on
+# purpose — the operator and its CRDs are released as a set with them.
+#
+# Everything stateful sits on the 32GB worker (immich-node) on local-path: metrics/history are
+# rebuildable, so not on NFS (Prometheus's TSDB also must not live on NFS).
+
+# ── k3s: the control plane is one process and doesn't expose these separately — scraping them only
+#    yields permanently "down" targets and TargetDown alerts. Their rules go too (defaultRules below).
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+defaultRules:
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeProxy: false
+    windows: false
+  disabled:
+    # "can the cluster survive losing its biggest node?" — with two nodes the answer is no by design.
+    KubeCPUOvercommit: true
+    KubeMemoryOvercommit: true
+
+# ── Alertmanager → Bark ──────────────────────────────────────────────────────────────────────────
+alertmanager:
+  config:
+    route:
+      receiver: bark
+      group_by: [alertname, namespace]   # one push per problem per namespace, not one per pod
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 12h               # a still-broken thing re-pings twice a day, not every 5 min
+      routes:
+        - receiver: "null"
+          matchers: ['alertname =~ "Watchdog|InfoInhibitor"']   # always-firing plumbing alerts
+        - receiver: "null"
+          matchers: ['severity =~ "info|none"']                 # e.g. CPUThrottlingHigh — dashboard only
+    receivers:
+      - name: "null"
+      - name: bark
+        webhook_configs:
+          - url: http://bark-relay.monitoring.svc.cluster.local:8080/alert
+            send_resolved: true
+  alertmanagerSpec:
+    nodeSelector:
+      immich-node: "true"
+    retention: 120h
+    storage:                             # keeps silences across restarts
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+    resources:
+      requests: { cpu: 10m, memory: 48Mi }
+      limits: { memory: 128Mi }
+
+# ── Grafana ──────────────────────────────────────────────────────────────────────────────────────
+grafana:
+  image:
+    registry: docker.io
+    repository: grafana/grafana
+    tag: 13.3.0-distroless
+  admin:
+    existingSecret: kube-prometheus-stack-secret   # SOPS: kube-prometheus-stack-secret.enc.yaml
+    userKey: admin-user
+    passwordKey: admin-password
+  defaultDashboardsTimezone: browser
+  testFramework:
+    enabled: false                       # a `helm test` Pod — Argo never runs it, it would just sit in the diff
+  # ⚠️ The dashboard/datasource sidecars (k8s-sidecar) have no readiness probe, unlike every container
+  # this repo writes. The chart has ONE shared sidecar.readinessProbe and both sidecars default to the
+  # same health port, so a probe can't tell them apart. They only watch ConfigMaps; Grafana's own
+  # container is probed. Accepted as upstream ships it.
+  deploymentStrategy:
+    type: Recreate                       # RWO volume
+  nodeSelector:
+    immich-node: "true"
+  persistence:                           # users, prefs, hand-made dashboards (provisioned ones come from ConfigMaps)
+    enabled: true
+    type: pvc
+    storageClassName: local-path
+    size: 2Gi
+  resources:
+    requests: { cpu: 50m, memory: 192Mi }
+    limits: { memory: 512Mi }
+  grafana.ini:
+    server:
+      root_url: https://grafana.williampring.ca
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false           # Renovate owns updates
+      check_for_plugin_updates: false
+    users:
+      allow_sign_up: false
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+    hosts:
+      - grafana.williampring.ca
+    tls:
+      - hosts:
+          - grafana.williampring.ca
+        secretName: grafana-tls
+  # Prometheus + Alertmanager datasources are wired by the chart. Loki is added here; the fixed uid
+  # is what dashboard-logs.yaml points at.
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100
+      isDefault: false
+      jsonData:
+        maxLines: 5000
+
+# ── the operator ─────────────────────────────────────────────────────────────────────────────────
+prometheusOperator:
+  nodeSelector:
+    immich-node: "true"
+  # The validating webhook (rejects a broken PrometheusRule at Sync instead of Prometheus silently
+  # skipping it) needs a TLS cert. cert-manager is already here, so use it instead of the chart's
+  # certgen hook Jobs, which fight with Argo.
+  admissionWebhooks:
+    certManager:
+      enabled: true
+  resources:
+    requests: { cpu: 20m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+# ── Prometheus ───────────────────────────────────────────────────────────────────────────────────
+prometheus:
+  prometheusSpec:
+    nodeSelector:
+      immich-node: "true"
+    retention: 15d
+    retentionSize: 18GB                  # below the 20Gi volume, so a busy week can't fill the disk
+    # Pick up ServiceMonitors / PodMonitors / rules from EVERY namespace, not only ones carrying
+    # this chart's release label — so rules.yaml and any future app ServiceMonitor just work.
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+      limits: { memory: 2Gi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+kube-state-metrics:
+  nodeSelector:
+    immich-node: "true"
+  resources:
+    requests: { cpu: 10m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+prometheus-node-exporter:              # DaemonSet — runs on every node, no nodeSelector
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }

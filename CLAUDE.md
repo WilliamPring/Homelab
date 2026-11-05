@@ -42,8 +42,8 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 - Renovate able to see any new version pin (image tag / chart version).
 
 ## Notifications
-- **Bark** (`kubernetes/apps/monitoring/bark`, iOS push via APNs) is the primary channel for both Argo deploy events and
-  Gatus outages, and the ONLY channel (ntfy was retired). Bark has NO Ingress/cert on purpose — the owner fronts it
+- **Bark** (`kubernetes/apps/monitoring/bark`, iOS push via APNs) is the primary channel for Argo deploy events, Gatus
+  outages and Alertmanager pod alerts (via `bark-relay` in `kube-prometheus-stack/`), and the ONLY channel (ntfy was retired). Bark has NO Ingress/cert on purpose — the owner fronts it
   with NPMplus. Device key is inline for now (testing stance).
 
 ## Adding an app

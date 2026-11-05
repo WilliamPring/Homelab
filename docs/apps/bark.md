@@ -8,8 +8,9 @@ source (MIT), tiny Go server, free iOS app.
 ```
 ALERT PATH (in-cluster — no DNS, no Cloudflare, no NPMplus, no cert):
 Gatus (outages)  ─┐
-                  ├─ POST http://bark.monitoring.svc.cluster.local:8080/push
-Argo CD (deploys)─┘        └─► bark (monitoring ns) ─► APNs ─► iPhone (Bark app)
+Argo CD (deploys)─┼─ POST http://bark.monitoring.svc.cluster.local:8080/push
+Alertmanager ─► bark-relay ─┘   └─► bark (monitoring ns) ─► APNs ─► iPhone (Bark app)
+  (pod alerts — crash loops, OOMKills; docs/apps/grafana.md)
 
 REGISTRATION PATH (only used once, by the phone):
 Phone ─► https://bark.williampring.ca ─► Cloudflare ─► NPMplus (TLS) ─► <any node>:30889
@@ -57,6 +58,7 @@ Inline for now (your testing stance — a device key only allows sending pushes 
 |---|---|---|
 | Gatus | `kubernetes/apps/monitoring/gatus/deployment.yaml` → env `BARK_DEVICE_KEY` | yes |
 | Argo CD | `kubernetes/bootstrap/argocd/argocd-notifications-cm.yaml` → `context: barkDeviceKey` | yes |
+| Alertmanager (via bark-relay) | `kubernetes/apps/monitoring/kube-prometheus-stack/bark-relay.yaml` → env `BARK_DEVICE_KEY` | yes |
 | Proxmox | Datacenter → Notifications → the webhook target's **Secret** `device_key` | no — on the host |
 | Proxmox cron | `/root/.bark-key` (the master-down check) | no — on the host |
 
@@ -84,6 +86,8 @@ Phone buzzes within a second, Tailscale on or off. Then lock the phone and send 
 | Gatus resolved | 🟢 UP *endpoint* | timeSensitive | homelab |
 | Argo routine | *app*: update waiting / deployed | active (normal buzz) | argocd |
 | Argo failure | *app*: SYNC FAILED / DEGRADED | timeSensitive (breaks through Focus) | argocd |
+| Alertmanager firing | 🔴 *AlertName* (×N) — one line per pod | active (warning) / timeSensitive (critical) | homelab |
+| Alertmanager resolved | 🟢 *AlertName* resolved | passive (silent) | homelab |
 
 Levels: `passive` (silent), `active` (normal), `timeSensitive`, `critical` (overrides Do Not Disturb;
 needs the app's critical-alert permission). Change per sender in the Gatus ConfigMap / Argo templates.

@@ -1,0 +1,47 @@
+# Homelab alert rules, on top of the chart's ~150 default Kubernetes rules.
+#
+# The defaults already cover the big ones and route to Bark (severity warning/critical):
+#   KubePodCrashLooping          a container in CrashLoopBackOff for 15m
+#   KubePodNotReady              a pod not Ready for 15m (e.g. a sidecar failing its readiness probe)
+#   KubeDeploymentReplicasMismatch / KubeStatefulSetReplicasMismatch   fewer ready than wanted, 15m
+#   KubeContainerWaiting         stuck in ContainerCreating / CreateContainerConfigError, 1h
+#   KubePersistentVolumeFillingUp, NodeFilesystemSpaceFillingUp, NodeMemoryHighUtilization, ...
+#
+# What they DON'T say out loud, added here:
+#   - an OOMKill (the container just restarts; CrashLooping only fires if it keeps dying)
+#   - a container that restarts a few times and recovers — flapping you'd never see in Gatus
+#
+# Picked up automatically: values.yaml sets ruleSelectorNilUsesHelmValues: false.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homelab
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+spec:
+  groups:
+    - name: homelab.containers
+      rules:
+        - alert: ContainerOOMKilled
+          # restarted in the last 10 min AND the last termination reason was OOMKilled
+          expr: |
+            (increase(kube_pod_container_status_restarts_total[10m]) > 0)
+            and on (namespace, pod, container)
+            (kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1)
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) was OOMKilled"
+            description: >-
+              It ran out of memory and was restarted. Raise resources.limits.memory in its deployment.yaml,
+              or check the Compute Resources dashboard for a leak.
+        - alert: ContainerRestarting
+          expr: increase(kube_pod_container_status_restarts_total[30m]) >= 3
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) restarted {{ $value | humanize }}× in 30 min"
+            description: >-
+              Restarting repeatedly even if it comes back each time. Logs from BEFORE the restart are in Grafana →
+              App logs (Loki keeps them; kubectl logs only shows the current run).

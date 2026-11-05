@@ -1,0 +1,100 @@
+{
+  "title": "App logs",
+  "uid": "homelab-app-logs",
+  "description": "Logs and Kubernetes events per app, from Loki. Survives restarts — unlike kubectl logs.",
+  "tags": ["homelab", "logs"],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": { "label": "namespace", "stream": "", "type": 1 },
+        "definition": "label_values(namespace)",
+        "refresh": 2,
+        "current": { "text": "apps", "value": "apps" },
+        "sort": 1
+      },
+      {
+        "name": "app",
+        "label": "App",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": { "label": "app", "stream": "{namespace=\"$namespace\"}", "type": 1 },
+        "definition": "label_values({namespace=\"$namespace\"}, app)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": { "text": "All", "value": "$__all" },
+        "sort": 1
+      },
+      {
+        "name": "search",
+        "label": "Search (regex)",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Error-looking lines per app",
+      "description": "Lines matching error|fatal|panic|exception (case-insensitive). A spike is where to look first.",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum by (app) (count_over_time({namespace=\"$namespace\", app=~\"$app\"} |~ \"(?i)error|fatal|panic|exception\" [$__auto]))",
+          "legendFormat": "{{app}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }, "unit": "short" },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 2,
+      "type": "logs",
+      "title": "Kubernetes events — $namespace",
+      "description": "OOMKilled, BackOff, FailedMount, Unhealthy (failed probes), FailedScheduling...",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 7 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{job=\"kubernetes-events\", namespace=\"$namespace\"} |~ \"$search\""
+        }
+      ],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "id": 3,
+      "type": "logs",
+      "title": "Logs — $app",
+      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 15 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{namespace=\"$namespace\", app=~\"$app\"} |~ \"$search\""
+        }
+      ],
+      "options": { "showTime": true, "showLabels": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true, "dedupStrategy": "none" }
+    }
+  ]
+}

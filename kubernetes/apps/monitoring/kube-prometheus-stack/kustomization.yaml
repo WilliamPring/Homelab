@@ -1,0 +1,46 @@
+# kube-prometheus-stack — metrics, alert rules, Alertmanager and THE Grafana (logs + metrics).
+# Helm chart rendered through kustomize (one shape for every app); the pin lives here, values beside it.
+# Argo renders it with `kustomize build --enable-helm` (flag set in bootstrap/argocd/argocd-cm-patch.yaml).
+#
+# ⚠️ Needs ServerSideApply: the Prometheus Operator CRDs exceed the client-side annotation limit.
+#    That option is in the ApplicationSet's templatePatch (bootstrap/apps.yaml), so RE-APPLY apps.yaml
+#    once before the first Sync:  sudo k3s kubectl apply -f kubernetes/bootstrap/apps.yaml
+#
+# Sync order for the stack: kube-prometheus-stack (CRDs, Grafana) → loki → alloy. Docs: docs/apps/grafana.md
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: kube-prometheus-stack
+    repo: https://prometheus-community.github.io/helm-charts
+    version: 92.20.0
+    releaseName: kube-prometheus-stack   # object names: kube-prometheus-stack-{grafana,prometheus,alertmanager,operator}
+    namespace: monitoring
+    valuesFile: values.yaml
+    includeCRDs: true                    # the operator's CRDs ship in the chart's crds/ dir
+
+resources:
+  - rules.yaml           # homelab alert rules on top of the chart's defaults (OOMKilled, restart loops)
+  - bark-relay.yaml      # Alertmanager webhook → Bark's /push format (Deployment + Service)
+
+# The relay's code and the "App logs" dashboard as ConfigMaps. Generated names carry a content
+# hash: edit the file, Sync, and the relay pod restarts with the new code (no manual bump).
+configMapGenerator:
+  - name: bark-relay
+    namespace: monitoring
+    files:
+      - relay.py=bark-relay.py
+    options:
+      labels:
+        app: bark-relay
+  - name: grafana-dashboard-app-logs
+    namespace: monitoring
+    files:
+      - app-logs.json=dashboard-app-logs.json
+    options:
+      disableNameSuffixHash: true    # nothing references it by name; Grafana's sidecar finds it by label
+      labels:
+        grafana_dashboard: "1"
+
+generators:
+  - kube-prometheus-stack-secret.sops.yaml

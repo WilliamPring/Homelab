@@ -64,7 +64,7 @@ match Git. Git is the single source of truth and the audit log.
 | **Control plane** | Single master (SPOF) — fine at home | **HA** — 3+ control-plane nodes |
 | **Secrets** | ✅ **SOPS + age via KSOPS** (a few placeholders/inline values while testing) | **SOPS / Sealed Secrets / External Secrets** (encrypted in Git) |
 | **Ingress/TLS/DNS** | ✅ Traefik Ingress + **cert-manager** (DNS-01); DNS records still added by hand | Ingress + **cert-manager** + **ExternalDNS** |
-| **Observability** | Gatus checks → Bark push; Pulse for Proxmox; no metrics/logs stack | **Prometheus + Grafana + Loki + Alertmanager** |
+| **Observability** | ✅ kube-prometheus-stack + Loki/Alloy → Grafana, Alertmanager → Bark; Gatus for URLs; Pulse for Proxmox | **Prometheus + Grafana + Loki + Alertmanager** |
 | **Storage** | NFS (precious) + local-path (rebuildable); backups not automated yet | **CSI (Longhorn/Ceph) + Velero** |
 | **Security/policy** | pinned images + probes checked in CI; no NetworkPolicies or Pod Security | RBAC, NetworkPolicies, **Kyverno**, Trivy |
 | **CI** | ✅ GitHub Actions: render + kubeconform + conventions + yamllint + a PR render-diff (not yet required to merge) | lint/test/build/scan pipeline |
@@ -136,8 +136,8 @@ overkill for your scale.
    (SOPS + KSOPS; the testing-stance exceptions are listed in `platform/secrets.md`.)
 4. ◐ **Ingress + TLS + DNS** — finish **cert-manager**, add **ExternalDNS** (auto Cloudflare
    records). Move apps off NodePort onto real hostnames. (cert-manager ✅; ExternalDNS not yet.)
-5. ☐ **Observability** — **kube-prometheus-stack** (Prometheus + Grafana + Alertmanager) +
-   **Loki** for logs. Real dashboards and alerts. (Gatus covers "is it up" only.)
+5. ✅ **Observability** — **kube-prometheus-stack** (Prometheus + Grafana + Alertmanager) +
+   **Loki** for logs. Real dashboards and alerts (Nov 2026, `apps/grafana.md`). Gatus still covers "is it up".
 6. ◐ **CI checks** — `ansible-lint`, `kubeconform`, `trivy` in a pipeline before merge.
    (kubeconform + the conventions check + yamllint + render-diff ✅; ansible-lint and trivy not
    yet; CI isn't a required check yet.)

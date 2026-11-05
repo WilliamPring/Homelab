@@ -1,0 +1,12 @@
+# Alloy — the log SHIPPER. Tails every pod's logs (through the Kubernetes API) plus cluster events,
+# and pushes them to Loki (../loki). Helm chart rendered through kustomize. Docs: docs/apps/grafana.md
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: alloy
+    repo: https://grafana.github.io/helm-charts
+    version: 1.15.0
+    releaseName: alloy
+    namespace: monitoring
+    valuesFile: values.yaml

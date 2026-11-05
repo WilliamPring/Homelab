@@ -1,0 +1,13 @@
+# Loki — the log STORE. Alloy (../alloy) ships every pod's logs + Kubernetes events here; Grafana
+# (../kube-prometheus-stack) reads them. Single-binary mode, filesystem storage, 14-day retention.
+# Helm chart rendered through kustomize; the pin lives here, values beside it. Docs: docs/apps/grafana.md
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: loki
+    repo: https://grafana.github.io/helm-charts   # Grafana Labs' own chart (not the grafana-community fork)
+    version: 7.5.0
+    releaseName: loki          # Service: loki.monitoring.svc:3100 — Alloy and Grafana use that name
+    namespace: monitoring
+    valuesFile: values.yaml

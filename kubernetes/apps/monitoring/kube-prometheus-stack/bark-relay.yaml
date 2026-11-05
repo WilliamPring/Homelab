@@ -1,0 +1,89 @@
+# bark-relay — turns Alertmanager's webhook JSON into Bark's POST /push. The code is bark-relay.py
+# (~60 lines of stdlib Python), shipped as a ConfigMap by configMapGenerator in kustomization.yaml.
+#
+#   Prometheus rule fires → Alertmanager (groups, waits, de-dupes) → bark-relay → bark → APNs → iPhone
+#
+# Why it exists: Alertmanager's webhook body is a fixed format and cannot be templated, and Bark only
+# accepts its own {device_key,title,body,...}. Gatus and Argo can template a body; Alertmanager can't.
+#
+# One push per Alertmanager GROUP (= one alertname in one namespace), listing up to 5 affected pods.
+# A failed push returns 502, so Alertmanager retries it.
+#
+# Device key: inline placeholder, the same testing stance as Gatus and Argo notifications (see
+# CLAUDE.md). Replace REPLACE_ME_DEVICE_KEY in all three places together.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bark-relay
+  namespace: monitoring
+  labels:
+    app: bark-relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bark-relay
+  template:
+    metadata:
+      labels:
+        app: bark-relay
+    spec:
+      enableServiceLinks: false
+      nodeSelector:
+        immich-node: "true"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: relay
+          image: python:3.15.2-alpine3.24   # pinned — stdlib only, no pip install
+          command: ["python", "/app/relay.py"]
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: BARK_DEVICE_KEY            # Bark iOS app → server → device key. Inline for now.
+              value: "REPLACE_ME_DEVICE_KEY"
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 5m, memory: 24Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - name: app
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: app
+          configMap:
+            name: bark-relay   # kustomize appends the content hash here → new code = new pod
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bark-relay
+  namespace: monitoring
+  labels:
+    app: bark-relay
+spec:
+  type: ClusterIP
+  selector:
+    app: bark-relay
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

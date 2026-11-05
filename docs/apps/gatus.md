@@ -2,8 +2,8 @@
 
 Gatus probes every service on a schedule and pages your phone through Bark when something
 fails three times in a row, then again when it recovers. Config is one YAML file in git;
-history is a small sqlite file. It is the alerting half of monitoring; Grafana/Prometheus (if
-they ever return) are the history half — they coexist (see the FAQ at the bottom).
+history is a small sqlite file. It is the "is the URL up?" half of monitoring. The Grafana stack
+(`grafana.md`) is the "what is Kubernetes doing?" half, with its own alerts. They coexist (see the FAQ at the bottom).
 
 ```
 gatus (monitoring ns) ──probes──► apps (in-cluster Service URLs)
@@ -66,6 +66,7 @@ When you add an app to the cluster: add its in-cluster URL to `apps` and its hos
 
 ## FAQ: Gatus vs Grafana
 Gatus answers *is it up now?* and pages you. Grafana answers *what happened over time?* and
-needs Prometheus/Loki feeding it. If Grafana comes back, keep Gatus as the alerter and point
-Grafana at Gatus's `/metrics` for uptime history. Host metrics (disk, CPU, temps) are a third
-thing — Beszel is the light option for that.
+needs Prometheus/Loki feeding it. Both run now (`grafana.md`): Gatus pages on URLs, Alertmanager
+pages on pod behaviour (crash loops, OOMKills), and Gatus checks the Grafana stack's six components,
+because a dead Alertmanager can't page about itself. Optional next step: enable Gatus's `/metrics`
+and scrape it, for uptime history in Grafana.

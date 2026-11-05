@@ -178,6 +178,44 @@ data:
         interval: 1m
         conditions: ["[STATUS] == 200"]
         alerts: [{ type: custom }]
+      # The Grafana stack. Gatus is what notices when the OTHER alerting path is down: a dead
+      # Prometheus/Alertmanager/bark-relay can't page you about itself, but Gatus can.
+      - name: Grafana
+        group: apps
+        url: "http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80/api/health"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }]
+      - name: Prometheus
+        group: apps
+        url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/ready"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }]
+      - name: Alertmanager
+        group: apps
+        url: "http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093/-/ready"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }]
+      - name: Bark relay
+        group: apps
+        url: "http://bark-relay.monitoring.svc.cluster.local:8080/healthz"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }]
+      - name: Loki
+        group: apps
+        url: "http://loki.monitoring.svc.cluster.local:3100/ready"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }]
+      - name: Alloy
+        group: apps
+        url: "http://alloy.monitoring.svc.cluster.local:12345/-/ready"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: custom }]
 
       # ── edge (DNS → Tailscale IP → Traefik → cert) ─────────────────────────────────
       - name: library.williampring.ca
@@ -207,6 +245,12 @@ data:
       - name: karakeep.williampring.ca
         group: edge
         url: "https://karakeep.williampring.ca/api/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
+        alerts: [{ type: custom }]
+      - name: grafana.williampring.ca
+        group: edge
+        url: "https://grafana.williampring.ca/api/health"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
         alerts: [{ type: custom }]

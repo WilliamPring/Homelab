@@ -3,7 +3,7 @@
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
 from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Komf, Calibre-Web), games
 (RomM), torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
-copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio, with Wealthfolio on trial), and the glue (cert-manager, Gatus, Bark, Homepage).
+copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio, with Wealthfolio on trial), and the glue (cert-manager, Gatus, Bark, Homepage, and Grafana with Prometheus + Loki).
 
 New here? Learn the workflow hands-on first: **[`learn/onboarding-an-app.md`](learn/onboarding-an-app.md)**.
 
@@ -28,7 +28,7 @@ This page is the mental model. Each section ends with where to read more.
 │     └─ ApplicationSet ──► one Application per  kubernetes/apps/<namespace>/<app>/        │
 │           media: immich · immich-prereqs · immich-public-proxy · kavita · komf · calibre · suwayomi · romm · qbittorrent
 │           apps: searxng · degoog · homepage · karakeep · actual · ghostfolio · wealthfolio
-│           monitoring: gatus · bark
+│           monitoring: gatus · bark · kube-prometheus-stack · loki · alloy
 │           cert-manager: cert-manager · cert-manager-issuer                               │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -111,7 +111,7 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
 | budget files (Actual), bookmarks + archived pages (Karakeep) | NFS `192.168.68.50:/data/{actual,karakeep}` | **yes** | ⚠️ not automated yet |
 | Immich database | in-cluster Postgres (VectorChord image), **local-path** PVC on the worker | **yes** | ⚠️ not automated yet |
 | RomM database | external Postgres LXC `.7` | yes | ⚠️ |
-| Kavita/Komf/Calibre/Suwayomi/qBittorrent/Gatus/Bark state, Karakeep's search index | local-path PVCs | rebuildable (rescan/re-index) or cheap to lose | no, by design |
+| Kavita/Komf/Calibre/Suwayomi/qBittorrent/Gatus/Bark state, Karakeep's search index, metrics (Prometheus) + logs (Loki) | local-path PVCs | rebuildable (rescan/re-index) or cheap to lose | no, by design |
 | Redis/Valkey data | external LXC `.103` | cache | no |
 
 Rule of thumb in every `storage.yaml`: **NFS for anything you'd cry about, local-path for anything a rescan rebuilds.**
@@ -135,10 +135,11 @@ section of `platform/secrets.md`.
 
 ## 7. Notifications
 
-Two channels, two meanings: **Argo** ("you did something": update waiting / deployed / failed) and
-**Gatus** ("something broke": a probe failed 3× in a row / recovered). Both go to **Bark** (iOS push through
+Three senders, three meanings: **Argo** ("you did something": update waiting / deployed / failed),
+**Gatus** ("something broke": a probe failed 3× in a row / recovered) and **Alertmanager** ("a pod is
+misbehaving": crash-looping, OOMKilled, not Ready, a disk filling up). All go to **Bark** (iOS push through
 Apple — works even with Tailscale asleep). It is the only alert channel; ntfy was retired.
-→ `apps/bark.md`, `apps/gatus.md`, `platform/updates-and-notifications.md`
+→ `apps/bark.md`, `apps/gatus.md`, `apps/grafana.md`, `platform/updates-and-notifications.md`
 
 ## 8. Adding, changing, removing an app
 
@@ -173,7 +174,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 - [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
 - [`apps/romm.md`](apps/romm.md) · [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/searxng.md`](apps/searxng.md) · [`apps/degoog.md`](apps/degoog.md)
 - [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/ghostfolio.md`](apps/ghostfolio.md) · [`apps/wealthfolio.md`](apps/wealthfolio.md) · [`apps/homepage.md`](apps/homepage.md)
-- [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md)
+- [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md) · [`apps/grafana.md`](apps/grafana.md) (Prometheus, Loki, Alloy, Alertmanager)
 
 **Platform** — the things apps rely on
 - [`platform/argocd.md`](platform/argocd.md) — Argo CD: install, how it renders, the ApplicationSet, gotchas

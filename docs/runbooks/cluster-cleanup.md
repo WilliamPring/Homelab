@@ -39,6 +39,12 @@ Expect: a `monitoring` namespace with Loki PVC(s), the `grafana-admin` secret, m
 > Delete the old stack **by name**, from the LOOK output above. Anything named `gatus` or `bark`
 > stays. Done ~Nov 2026; this note is kept as the reason the obvious command is wrong.
 
+> 🛑 **Since Nov 2026 a NEW Grafana stack runs here** (`kubernetes/apps/monitoring/{kube-prometheus-stack,loki,alloy}`,
+> `docs/apps/grafana.md`) with the **same names**: the same CRDs, ClusterRoles, webhooks and
+> `part-of=kube-prometheus-stack` label. **Every DELETE command below would now delete the live stack.**
+> Don't run this block again. The only thing still to remove from the old attempt is the `grafana-admin` secret:
+> `k -n monitoring delete secret grafana-admin`.
+
 ```bash
 # confirm gatus/bark are NOT in the list before dropping --dry-run=client
 k delete deploy,sts,ds,svc,pvc,cm,secret,ingress -n monitoring \
