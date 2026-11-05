@@ -151,7 +151,7 @@ spec:
           # A few thousand bookmarks is comfortably inside this; raise the limit if search gets
           # OOM-killed once the archive is large.
           resources:
-            requests: { cpu: 25m, memory: 128Mi }
+            requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 512Mi }
 
       volumes:
