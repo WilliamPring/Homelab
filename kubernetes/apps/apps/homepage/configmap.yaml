@@ -182,8 +182,8 @@ data:
             # Metrics (Prometheus) + logs (Loki) + alerts (Alertmanager → Bark), one UI.
             # The widget counts Prometheus scrape targets — anything "down" is a target that
             # stopped answering (a crashed exporter, or an app whose ServiceMonitor broke).
-            href: https://grafana.williampring.ca
-            description: Metrics, logs & alert history
+            href: https://grafana.williampring.ca/d/homelab-apps   # straight to the per-app CPU/RAM dashboard
+            description: CPU & RAM per app, logs, alert history
             icon: grafana.png
             siteMonitor: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80/api/health
             namespace: monitoring

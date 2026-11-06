@@ -6,4 +6,4 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-  - externalsecret.yaml  # wealthfolio-secret ← OpenBao (was KSOPS/SOPS)
+  - externalsecret.yaml  # wealthfolio-secret ← OpenBao homelab/wealthfolio

@@ -32,19 +32,27 @@ git at all.** Plaintext never gets committed.
 | `kubernetes/apps/media/romm/romm-secret.enc.yaml` | `romm-secret` → media | `ROMM_AUTH_SECRET_KEY`, `DB_PASSWD`, `REDIS_PASSWORD`, 6 optional provider keys | RomM ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml` | `qbittorrent-secret` → media | `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_ADDRESSES` | Gluetun (Mullvad) ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep ⚠️ **template, not yet encrypted** |
-| ~~`kube-prometheus-stack-secret.enc.yaml`~~ → **moved to OpenBao** (`homelab/grafana`, `kube-prometheus-stack/externalsecret.yaml`) | `kube-prometheus-stack-secret` → monitoring | `admin-user`, `admin-password` | Grafana login — the OpenBao pilot, see `openbao.md` |
-
 Each one has a sibling `<app>-secret.sops.yaml` (the KSOPS *generator*, not a secret — it just
 says "decrypt that file") and is listed under `generators:` in the app's `kustomization.yaml`.
+
+### Moved to OpenBao (no SOPS files any more — see `openbao.md`)
+
+| OpenBao path | Secret → namespace | Keys | Used by |
+|---|---|---|---|
+| `homelab/grafana` | `kube-prometheus-stack-secret` → monitoring | `admin-user`, `admin-password` | Grafana login |
+| `homelab/wealthfolio` | `wealthfolio-secret` → apps | `WF_SECRET_KEY`, `WF_AUTH_PASSWORD_HASH` | Wealthfolio |
+
+Each is built by the app's `externalsecret.yaml`. Change a value in OpenBao, not here (`openbao.md` §6).
 
 ### Still hand-created in the cluster (NOT in git — recreate after a rebuild)
 
 | Secret | Namespace | Holds | Where it's documented |
 |---|---|---|---|
 | `sops-age` | argocd | the age **private key** — the master key, can never be in git | this doc §2 |
+| `openbao-approle` | external-secrets | External Secrets' login to OpenBao (role-id + secret-id) | `openbao.md` §7 step 4 |
 | `immich-db` | media | Postgres password for Immich's in-cluster vector DB | `docs/apps/immich.md` |
 | `vaultwarden-db`, `vaultwarden-admin` | apps | **orphans** — Vaultwarden was removed (Oct 2026); delete both secrets | `docs/runbooks/cluster-cleanup.md` §4 |
-| `grafana-admin` | monitoring | **orphan** from the August stack; delete it. Not used by the Nov 2026 stack, which reads `kube-prometheus-stack-secret` (from OpenBao since the pilot) | `docs/runbooks/cluster-cleanup.md` §1 |
+| `grafana-admin` | monitoring | **orphan** from the August stack; delete it. Not used by the Nov 2026 stack, which reads `kube-prometheus-stack-secret` (from OpenBao) | `docs/runbooks/cluster-cleanup.md` §1 |
 | `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/platform/tls.md` |
 
 Migrating these into `.enc.yaml` files is the open item (§5 below is the recipe).

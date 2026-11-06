@@ -28,6 +28,12 @@ serviceMonitor:
   renderMode: alwaysRender
   honorLabels: true
 
+# Upstream's own Grafana dashboard (sync rate, errors, reconcile time). The ConfigMap carries the
+# grafana_dashboard label; kube-prometheus-stack's Grafana sidecar watches ALL namespaces, so it loads
+# from here without being in `monitoring`.
+grafanaDashboard:
+  enabled: true
+
 webhook:
   resources:
     requests: { cpu: 10m, memory: 32Mi }

@@ -22,9 +22,9 @@ helmCharts:
 resources:
   - rules.yaml           # homelab alert rules on top of the chart's defaults (OOMKilled, restart loops)
   - bark-relay.yaml      # Alertmanager webhook → Bark's /push format (Deployment + Service)
-  - externalsecret.yaml  # kube-prometheus-stack-secret ← OpenBao (was KSOPS/SOPS)
+  - externalsecret.yaml  # kube-prometheus-stack-secret ← OpenBao homelab/grafana
 
-# The relay's code and the "App logs" dashboard as ConfigMaps. Generated names carry a content
+# The relay's code and the "App logs" + "Homelab apps" dashboards as ConfigMaps. Generated names carry a content
 # hash: edit the file, Sync, and the relay pod restarts with the new code (no manual bump).
 configMapGenerator:
   - name: bark-relay
@@ -40,5 +40,15 @@ configMapGenerator:
       - app-logs.json=dashboard-app-logs.json
     options:
       disableNameSuffixHash: true    # nothing references it by name; Grafana's sidecar finds it by label
+      labels:
+        grafana_dashboard: "1"
+  - name: grafana-dashboard-apps
+    namespace: monitoring
+    files:
+      # CPU / RAM / restarts / network / disk per app + the OpenBao secret sync. To change it, edit
+      # the panels in Grafana, then "Export → JSON" over this file (git wins at the next Sync).
+      - apps.json=dashboard-apps.json
+    options:
+      disableNameSuffixHash: true
       labels:
         grafana_dashboard: "1"

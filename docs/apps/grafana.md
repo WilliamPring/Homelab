@@ -121,9 +121,36 @@ expires and you get **🟢 TestAlert resolved**. Nothing arrives? See Troublesho
 
 ## Using it
 
+### The "Homelab apps" dashboard: start here
+Dashboards → **Homelab apps** (`kube-prometheus-stack/dashboard-apps.json`). Every app on one page;
+pick namespaces and apps at the top (default: `apps`, `media`, `monitoring`).
+
+| Part | Shows | Read it as |
+|---|---|---|
+| **top row** | cluster CPU %, cluster RAM %, pods not ready, restarts (24 h), OOM-killed containers, secrets not syncing | anything not green is worth a look |
+| **Every app, right now** (table) | per app: CPU cores, CPU requested, RAM, RAM limit, **RAM % of limit**, restarts 24 h, sorted by RAM | **RAM % of limit near 100%** = the next OOMKill. Raise `limits.memory` in that app's deployment (how Karakeep got 512Mi→1Gi) |
+| **CPU / RAM per app** | the same over time (default 6 h; change the time picker for days) | a line that climbs and never comes down = a leak |
+| **RAM % of limit, per container** | each container against its own limit, with an 80% / 95% band | the per-container version of the table column; sidecars included |
+| **CPU throttling** | how often an app hit its CPU limit and was paused | stays 0 for apps without `limits.cpu` (most here, on purpose) |
+| **Restarts / Network** | restarts per 10 min; bytes in and out | restarts in bursts = crash loop; network shows who's downloading |
+| **Nodes & disks** | CPU and RAM per node, root disk per node, PVC usage | root disk is where local-path PVCs (Prometheus, Loki, app state) live |
+| **Secrets** | each ExternalSecret ✅/❌, and External Secrets' calls to OpenBao by result | ❌ = can't refresh from OpenBao. Running pods are fine, see `openbao.md` §11.5 |
+
+"App" = the Deployment / StatefulSet / DaemonSet name. "CPU (cores)" 0.25 = a quarter of one core.
+RAM is the **working set**, the number the kernel compares to `limits.memory`, so it's the one that predicts OOMKills
+(it's lower than "RSS + cache" figures you may see elsewhere).
+
+To change it: edit in Grafana, then **Export → JSON** (with "Export for sharing externally" OFF) over
+`dashboard-apps.json` and Sync. Edits made only in Grafana are replaced by the git version at the next Sync.
+
+**External Secrets** also ships its own dashboard (Dashboards → *External Secrets Operator*): sync rate,
+errors per provider call and reconcile time. Turned on in `external-secrets/values.yaml`.
+
+### Everything else
+
 | You want | Go to |
 |---|---|
-| **what each app uses** | Dashboards → *Kubernetes / Compute Resources / Namespace (Pods)* → namespace `apps` or `media` |
+| **what each app uses** | **Homelab apps** (above), or *Kubernetes / Compute Resources / Namespace (Pods)* → namespace `apps` or `media` |
 | one pod's CPU/memory vs its limit | *Kubernetes / Compute Resources / Pod* |
 | node CPU/RAM/disk | *Node Exporter / Nodes* |
 | **an app's logs**, incl. before a restart | Dashboards → *App logs* → pick namespace + app (and a regex search) |
@@ -192,6 +219,8 @@ breaking point, and ServerSideApply handles applying them.
 | Prometheus / Loki / Grafana pod Pending | a leftover PVC bound on the master (setup step 0), or the worker is out of memory: `kubectl describe pod` |
 | Operator not Ready, webhook errors at Sync | cert-manager hasn't issued `kube-prometheus-stack-admission` yet: `kubectl -n monitoring get certificate` |
 | Grafana login refused | the password is set on **first** start only. Reset: `kubectl -n monitoring exec deploy/kube-prometheus-stack-grafana -c grafana -- grafana cli admin reset-admin-password '<new>'` (distroless image: if `grafana` isn't on PATH, try `/usr/share/grafana/bin/grafana`) |
+| *Homelab apps* panels say "No data" | Prometheus hasn't scraped yet (wait 2 min after a Sync), or the namespace/app filter at the top excludes everything. The **Secrets** row stays empty until `external-secrets` is synced |
+| *Homelab apps*: an app missing from the table | it has no Deployment/StatefulSet/DaemonSet owner (a bare pod), or its pods aren't Running |
 | *App logs* dashboard empty | Alloy not synced/Ready, or Loki not Ready: `kubectl -n monitoring logs deploy/alloy` (look for push errors to `loki:3100`) |
 | Test alert never reaches the phone | `kubectl -n monitoring logs deploy/bark-relay`: `pushed: …` means Bark got it (so check the device key); `push failed` gives the reason; nothing means Alertmanager never called, so check its logs |
 | A firing alert you don't care about | silence it (Alerting → Silences) or, for good, add it to `defaultRules.disabled` in values.yaml |
