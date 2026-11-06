@@ -73,10 +73,9 @@ Migrating these into `.enc.yaml` files is the open item (§5 below is the recipe
 - `kubernetes/apps/media/suwayomi/deployment.yaml` carries Suwayomi's Basic-auth username/password **inline**
   (chosen for now; host is Tailscale-only). Move to a SOPS secret with the §5 recipe when ready,
   then rotate the password since the old one stays in git history.
-- `kubernetes/apps/apps/degoog/deployment.yaml` still has the Valkey URL **inline in plaintext**, including the
-  password of the shared `redis` user. It is in git history on GitHub. Fix = rotate that password
-  on the Valkey host, update `immich-secret`, move the URL into `degoog-secret`. Encrypting later
-  does not un-leak it.
+- The shared Valkey user `redis`'s password was **inline in degoog's `deployment.yaml`**, so it is in git
+  history on GitHub. degoog now has its own user and its URL comes from OpenBao (`docs/apps/degoog.md`).
+  Still to do: rotate `redis`'s password (only Immich uses it) — degoog.md, "Its Valkey user", step 4.
 - `kubernetes/apps/apps/searxng/configmap.yaml` still has the placeholder `server.secret_key`
   (`REPLACE-WITH-…` — not `REPLACE_ME`, so the conventions check can't see it). SearXNG signs its
   image-proxy URLs with it, so anyone who knows it can use the instance as an image proxy; it is
