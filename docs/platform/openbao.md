@@ -1,11 +1,14 @@
 # OpenBao — where secrets live (replacing SOPS)
 
-> **Status (Nov 2026): pilot — Grafana only.** OpenBao runs on a Proxmox LXC (`192.168.68.91`) and has
-> had its one-time setup (§5). In the repo: External Secrets Operator, the OpenBao connection, and ONE
-> app switched over — Grafana's admin login (`kube-prometheus-stack`, OpenBao path `homelab/grafana`).
-> The other 8 apps still use SOPS (`secrets.md`) and keep working unchanged; both systems run side by
-> side. Roll the pilot out with §7. The full conversion is ready on branch `feat/migration-test-bao`
-> (§7, "after the pilot").
+> **Status (Nov 2026): pilot live — Grafana only.** OpenBao runs on a Proxmox LXC (`192.168.68.91`).
+> External Secrets Operator is deployed, the cluster's connection to OpenBao is `Valid`, and ONE app is
+> switched over and working: Grafana's admin login (`kube-prometheus-stack`, OpenBao path
+> `homelab/grafana`, ExternalSecret `SecretSynced`). The other 8 apps still use SOPS (`secrets.md`) and
+> keep working unchanged; both systems run side by side. The full conversion is ready on branch
+> `feat/migration-test-bao` (§7, "after the pilot").
+>
+> **New here? Read §11 "How it works, end to end" first**: diagrams plus one value followed from
+> OpenBao to the pod.
 
 This doc explains **what** was set up and **why each piece is the way it is**, in enough detail that you
 could rebuild it from nothing, or decide to change it, without guessing.
@@ -60,6 +63,7 @@ problem. Rebuild the cluster and the apps need the store, but the store is one o
 rebuilt, and it has secrets of its own. You'd be hand-creating secrets to start the secret manager.
 Outside the cluster it's like the Postgres (.7) and Valkey (.103) LXCs: **things the cluster depends on
 live outside it**, survive a rebuild untouched, and get Proxmox backups for free.
+(The full flow, with diagrams: §11.)
 
 ### Access: LAN and Tailscale, never the tunnel
 | Who | How | Why |
@@ -439,3 +443,201 @@ Karakeep's two values (they were cleartext in git history) — just `bao kv patc
 | alert `ExternalSecretNotSynced` | `kubectl -n <ns> describe externalsecret <name>` says why; usually one of the three rows above, or OpenBao sealed |
 | ESO: `invalid role or secret ID` | wrong or destroyed secret-id in `openbao-approle`. Mint a new one (§5 step 4) |
 | a value changed in OpenBao but the app still has the old one | ESO hasn't refreshed yet (wait, or annotate the ExternalSecret to force it), and env-var consumers need a pod restart |
+
+---
+
+## 11. How it works, end to end
+
+This section follows **one real value**, Grafana's admin password, from the moment you type it into
+OpenBao until Grafana uses it. The other apps work the same way once they're converted. Read it once
+and every error message in §10 will make sense.
+
+### 11.1 The big picture
+
+```mermaid
+flowchart LR
+  you(["👤 you<br/>bao CLI / web UI"])
+
+  subgraph PVE["Proxmox — LXC openbao · 192.168.68.91"]
+    direction TB
+    bao["OpenBao :8200<br/>(TLS, self-signed cert)"]
+    kv[("KV v2 mount homelab/<br/>homelab/grafana<br/>admin-user · admin-password<br/>(encrypted on disk, versioned)")]
+    auth["auth methods<br/>userpass: william → policy admin<br/>approle: eso → policy eso-read"]
+    bao --- kv
+    bao --- auth
+  end
+
+  subgraph GIT["git — GitHub, public"]
+    direction TB
+    es["kube-prometheus-stack/externalsecret.yaml<br/>Secret NAME + KEY NAMES — no values"]
+    css["external-secrets-store/<br/>clustersecretstore.yaml + openbao-ca.yaml<br/>WHERE OpenBao is + WHICH cert to trust"]
+    eso_chart["external-secrets/<br/>Helm chart pin + values"]
+  end
+
+  subgraph K3S["k3s cluster"]
+    direction TB
+    argo["Argo CD<br/>(manual Sync)"]
+    approle[/"Secret external-secrets/openbao-approle<br/>role-id · secret-id<br/>⚠️ made by hand, never in git"/]
+    ctrl["ESO controller<br/>namespace external-secrets"]
+    ksec[/"Secret monitoring/<br/>kube-prometheus-stack-secret"/]
+    graf["Grafana pod<br/>env GF_SECURITY_ADMIN_*"]
+  end
+
+  you -- "1 · bao kv put / UI Save<br/>(HTTPS, LAN or Tailscale)" --> bao
+  GIT -- "2 · you click Sync" --> argo
+  argo -- "3 · applies ExternalSecret,<br/>ClusterSecretStore, ESO" --> ctrl
+  approle -. "4 · read login" .-> ctrl
+  ctrl -- "5 · AppRole login → token<br/>6 · GET homelab/data/grafana<br/>(HTTPS, cert pinned)" --> bao
+  ctrl -- "7 · create / update<br/>(owns it)" --> ksec
+  ksec -- "8 · secretKeyRef at pod start" --> graf
+```
+
+Three things to notice:
+
+- **Values only ever travel two paths**: you → OpenBao, and OpenBao → ESO → Kubernetes Secret → pod.
+  Neither path goes through git, GitHub, Argo or Cloudflare.
+- **Git still drives everything that isn't a value.** Which apps get a Secret, under what name, with which
+  keys, from which OpenBao path, trusting which certificate. That keeps the repo the full description of
+  the cluster, so rebuilds and code review still work, without it holding anything worth stealing.
+- **The pod side didn't change at all.** Grafana reads a normal Kubernetes Secret with the same name and
+  keys that KSOPS used to produce. ESO is a *producer* of Secrets, not something apps talk to.
+
+### 11.2 What happens, step by step
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor You
+  participant Bao as OpenBao<br/>192.168.68.91:8200
+  participant Argo as Argo CD
+  participant API as Kubernetes API
+  participant ESO as ESO controller
+  participant Graf as Grafana pod
+
+  You->>Bao: login (userpass william) → token with policy "admin"
+  You->>Bao: write homelab/grafana {admin-user, admin-password}
+  Note over Bao: stored encrypted as version N<br/>(older versions kept)
+
+  You->>Argo: Sync kube-prometheus-stack
+  Argo->>API: apply ExternalSecret kube-prometheus-stack-secret
+  API->>ESO: webhook validates it, then the controller is told "new ExternalSecret"
+
+  ESO->>API: read ClusterSecretStore "openbao"<br/>+ Secret openbao-approle + ConfigMap openbao-ca
+  ESO->>Bao: POST /v1/auth/approle/login {role_id, secret_id}<br/>TLS verified against openbao-ca ONLY
+  Bao-->>ESO: client token · policy eso-read · TTL 1h
+  ESO->>Bao: GET /v1/homelab/data/grafana (with that token)
+  Bao-->>ESO: {admin-user, admin-password} (latest version)
+  ESO->>API: create/update Secret kube-prometheus-stack-secret<br/>(ownerReference → the ExternalSecret)
+  ESO->>API: ExternalSecret status: SecretSynced, Ready=True
+
+  API->>Graf: pod starts → env GF_SECURITY_ADMIN_USER / _PASSWORD<br/>from secretKeyRef
+  Note over ESO,Bao: every refreshInterval (1h), or on force-sync:<br/>steps 6–11 again. Changed value → Secret updated in place
+```
+
+What each numbered step is doing, and why:
+
+| # | Step | What's really going on |
+|---|---|---|
+| 1 | **You log in** | `userpass` swaps your password for a **token** carrying the `admin` policy. Everything after this uses the token, not the password. The web UI does the same thing behind the scenes |
+| 2 | **You write the value** | KV v2 stores it **encrypted** on the LXC's disk as a new **version**. `put` writes every key; `patch` changes one. Old versions stay readable (`bao kv get -version=…`) and restorable (`bao kv rollback`) |
+| 3–4 | **Argo applies the ExternalSecret** | Argo only sends what's in git: "a Secret called `kube-prometheus-stack-secret` with keys `admin-user`/`admin-password`, from `homelab/grafana`". ESO's **webhook** checks the object is well-formed before the API accepts it. That's why `external-secrets` must be synced, with its pods Ready, before anything that uses it |
+| 5 | **ESO reads its config** | From the cluster, not from OpenBao: the `ClusterSecretStore` (where OpenBao is, mount `homelab`, KV v2), the hand-made `openbao-approle` Secret (its login) and the `openbao-ca` ConfigMap (the only cert it will trust) |
+| 6–7 | **ESO logs in** | **AppRole** is the machine version of username + password: **role-id** (which role, not secret on its own) + **secret-id** (the actual credential). OpenBao answers with a **token** limited by policy `eso-read` and expiring after **1 h** (`token_ttl=1h`, `token_max_ttl=4h`). A leaked ESO token is useless an hour later |
+| | **TLS** | The connection is HTTPS to the **IP**. ESO accepts it only if the certificate OpenBao presents chains to the one in `openbao-ca.yaml` **and** lists `192.168.68.91` in its SANs (§5 step 6). Someone impersonating `.91` on the LAN can't produce that cert without the private key, which never leaves the LXC |
+| 8–9 | **ESO reads the value** | `GET homelab/data/grafana` returns the **latest version**. The `eso-read` policy allows only `read` on `homelab/data/*` and `read`/`list` on `homelab/metadata/*`: no writes, no deletes, no other mounts, no auth config |
+| 10 | **ESO writes the Kubernetes Secret** | It maps each `remoteRef.property` to its `secretKey` and creates or updates `kube-prometheus-stack-secret`, putting an **ownerReference** on it pointing at the ExternalSecret. That's how ESO took over the old KSOPS-made Secret of the same name, and why deleting the ExternalSecret later also deletes the Secret (Kubernetes garbage collection) |
+| 11 | **Status** | `kubectl get externalsecret` shows `SecretSynced / True`. ESO also exports metrics, so Prometheus gets `externalsecret_status_condition`, which the `ExternalSecretNotSynced` alert watches |
+| 12 | **The pod uses it** | The Grafana chart (`admin.existingSecret`) turns the two keys into env vars through `secretKeyRef`. Env vars are read **once, at container start**, which is why a changed value needs a pod restart. (Grafana itself also only uses the admin password on its very first start; after that, the password in its database wins) |
+
+### 11.3 Keeping it up to date: the refresh loop
+
+ESO doesn't watch OpenBao for changes. OpenBao has no push mechanism for that. Instead it **re-reads on a
+timer**:
+
+```mermaid
+flowchart LR
+  A["you change a value in OpenBao<br/>(new version)"] --> B{"ESO's next read"}
+  B -- "≤ 1 h later<br/>(refreshInterval: 1h)" --> C["Secret updated in place"]
+  B -- "now: annotate force-sync" --> C
+  C --> D{"how does the app read it?"}
+  D -- "env var (Grafana, most apps here)" --> E["restart the pod<br/>kubectl rollout restart"]
+  D -- "mounted file" --> F["kubelet updates the file<br/>within ~1 min, no restart"]
+```
+
+- **Why an hour?** It's a balance between how quickly changes arrive and how often 9 Secrets hit OpenBao.
+  Changes are rare, and `force-sync` covers "I want it now":
+  `kubectl -n <ns> annotate externalsecret <name> force-sync=$(date +%s) --overwrite`.
+- **If nothing changed,** the refresh rewrites nothing and no pod notices.
+- **The refresh also self-heals.** If someone edits or deletes the Kubernetes Secret by hand, ESO puts it
+  back from OpenBao on the next pass, because **OpenBao is the source of truth**, not the cluster.
+
+### 11.4 What each piece can (and can't) do
+
+| Who / what | Can | Can't |
+|---|---|---|
+| **git / GitHub** (public) | say which Secrets exist, their key names, where in OpenBao they come from | hold or reveal any value. There's nothing to decrypt: no `ENC[…]`, no age key |
+| **you** (`william`, policy `admin`) | everything in OpenBao: read, write, policies, auth | — (that's the point; it's your account, separate from root) |
+| **ESO** (AppRole `eso`, policy `eso-read`) | **read** `homelab/*` | write, delete, read other mounts, change policies or auth, live longer than 1–4 h per token |
+| **anyone with the role-id + secret-id** | the same as ESO: read-only | anything more. Revoke by minting a new secret-id and destroying the old (§8) |
+| **Argo CD** | create/delete the ExternalSecret objects | see values. It never talks to OpenBao (and no longer needs KSOPS or an age key for this app) |
+| **anyone who can `kubectl get secret` in that namespace** | read the Kubernetes Secret, exactly as before | — this hasn't changed. OpenBao protects the **source** of the value; inside the cluster it's a normal Secret |
+
+### 11.5 What breaks when, and what keeps working
+
+The important property: **ESO failing doesn't take apps down.** The Kubernetes Secret ESO already wrote
+stays where it is. ESO just can't *update* it.
+
+| If this happens | Running pods | A pod that restarts | You'll notice by |
+|---|---|---|---|
+| OpenBao LXC down / rebooting | keep running | starts fine (the Secret is still there) | Gatus `OpenBao (secrets)` red; after 15 min the `ExternalSecretNotSynced` alert on Bark |
+| OpenBao **sealed** (auto-unseal failed) | keep running | starts fine | same as above; `/sys/health` returns 503 |
+| ESO's secret-id revoked / wrong | keep running | starts fine | `clustersecretstore openbao` not Ready; alert |
+| a key missing from `homelab/<app>` | keep running | starts fine (old Secret kept) | that one ExternalSecret not Ready; alert |
+| cert regenerated, `openbao-ca.yaml` not updated | keep running | starts fine | store not Ready: `x509: certificate signed by unknown authority` |
+| **a brand-new app** whose Secret never existed + any of the above | — | **can't start** (`CreateContainerConfigError`) | the pod itself |
+| whole k3s cluster rebuilt | — | — | rebuild order: sync `external-secrets` → re-create `openbao-approle` → sync `external-secrets-store` → apps. OpenBao is untouched (§8) |
+
+So OpenBao is on the path for **changes and new things**, not for **keeping things running**. That's
+the main reason it can be one small LXC without high availability.
+
+### 11.6 Before and after, side by side
+
+```mermaid
+flowchart TB
+  subgraph BEFORE["Before — SOPS / KSOPS"]
+    direction LR
+    b1["edit plaintext file<br/>(only on the Arch box,<br/>which has the age key)"] --> b2["sops --encrypt<br/>(forget = plaintext pushed)"]
+    b2 --> b3["git push<br/>ENC[…] values in git"]
+    b3 --> b4["Argo repo-server<br/>+ KSOPS plugin + age key<br/>decrypts at render"]
+    b4 --> b5["Secret"] --> b6["pod"]
+  end
+  subgraph AFTER["After — OpenBao / ESO"]
+    direction LR
+    a1["bao kv patch / web UI<br/>(any machine on LAN/Tailscale)"] --> a2["OpenBao<br/>(versioned, encrypted)"]
+    a2 --> a3["ESO reads it<br/>(≤ 1 h or force-sync)"]
+    a3 --> a5["Secret"] --> a6["pod"]
+    g["git: externalsecret.yaml<br/>(names only)"] -. "Argo applies once" .-> a3
+  end
+```
+
+| | SOPS (before) | OpenBao (now) |
+|---|---|---|
+| change a value | edit → encrypt → commit → push → Sync | `bao kv patch` (or UI) → wait/force-sync |
+| needs the age key | yes, on whichever machine edits | no key on any laptop |
+| a mistake that leaks | commit before encrypting → value public forever | nothing in git to leak |
+| history / undo | git history of ciphertext | `bao kv get -version=` / `rollback` |
+| Argo | custom repo-server (KSOPS + age key) | stock, just applies YAML |
+| who changes a value | anyone with the repo **and** the age key | only logins OpenBao's policies allow |
+
+### 11.7 The words, mapped to the files
+
+| Word | What it is here | File / place |
+|---|---|---|
+| **ExternalSecret** | "make Secret X from OpenBao path Y, these keys". One per app | `kubernetes/apps/<ns>/<app>/externalsecret.yaml` |
+| **ClusterSecretStore** | "OpenBao is here, log in like this, trust this cert". One for the whole cluster | `external-secrets-store/clustersecretstore.yaml` |
+| **ESO** | the controller that does the reading and writing | `external-secrets/` (Helm chart 2.14.0) |
+| **AppRole** `eso` | ESO's login to OpenBao | created in §5 step 3; credentials in `external-secrets/openbao-approle` |
+| **policy** `eso-read` | what that login may do: read `homelab/*` | created in §5 step 3 |
+| **KV v2** `homelab/` | where values live, versioned | created in §5 step 2 |
+| **refreshInterval** | how often ESO re-reads (1 h) | each `externalsecret.yaml` |
+| **ownerReference** | the link that makes ESO "own" the Secret | set by ESO on the Secret; see `kubectl get secret … -o yaml` |
