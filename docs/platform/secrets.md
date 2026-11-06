@@ -2,8 +2,8 @@
 
 > **Being replaced (Nov 2026).** SOPS is on its way out in favour of OpenBao (on a Proxmox LXC) +
 > External Secrets Operator, so secret values stop living in git at all. Why, and the setup:
-> [`openbao.md`](openbao.md). **Already on OpenBao:** Grafana (`kube-prometheus-stack-secret`) and
-> Wealthfolio (`wealthfolio-secret`); for every other app, everything below still applies.
+> [`openbao.md`](openbao.md). **Already on OpenBao:** Grafana (`kube-prometheus-stack-secret`), Wealthfolio (`wealthfolio-secret`), degoog (`degoog-secret`) and Immich (`immich-secret`);
+> for every other app, everything below still applies.
 
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day
 reference. For the *why* and the full architecture, see `docs/platform/secrets-architecture.md` (deep dive) and
@@ -26,8 +26,6 @@ git at all.** Plaintext never gets committed.
 
 | File | Secret → namespace | Keys | Used by |
 |---|---|---|---|
-| `kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
-| `kubernetes/apps/apps/degoog/degoog-secret.enc.yaml` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS` | degoog |
 | `kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml` | `qbittorrent-secret` → media | `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_ADDRESSES` | Gluetun (Mullvad) ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep ⚠️ **template, not yet encrypted** |
 Each one has a sibling `<app>-secret.sops.yaml` (the KSOPS *generator*, not a secret — it just
@@ -39,6 +37,8 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 |---|---|---|---|
 | `homelab/grafana` | `kube-prometheus-stack-secret` → monitoring | `admin-user`, `admin-password` | Grafana login |
 | `homelab/wealthfolio` | `wealthfolio-secret` → apps | `WF_SECRET_KEY`, `WF_AUTH_PASSWORD_HASH` | Wealthfolio |
+| `homelab/degoog` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS`, `DEGOOG_VALKEY_URL` | degoog |
+| `homelab/immich` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
 
 Each is built by the app's `externalsecret.yaml`. Change a value in OpenBao, not here (`openbao.md` §6).
 
@@ -96,7 +96,7 @@ mkdir -p ~/.config/sops/age && scp arch:~/.config/sops/age/keys.txt ~/.config/so
 chmod 600 ~/.config/sops/age/keys.txt
 
 # prove it works (prints the decrypted immich secret to the terminal, changes nothing):
-sops -d kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
+sops -d kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml
 ```
 `.sops.yaml` at the repo root already matches `*.enc.yaml`, `*.sops.yaml` and `*secrets.yaml`
 and names the public key, so none of the commands below need flags.
@@ -155,10 +155,10 @@ Also `make secrets` (status) and `make secrets-help`.
 
 ```bash
 # VIEW — whole file decrypted to the terminal, file untouched
-sops -d kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
+sops -d kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml
 
 # EXTRACT — one value, e.g. to paste it somewhere else
-sops -d --extract '["stringData"]["REDIS_PASSWORD"]' kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
+sops -d --extract '["stringData"]["WIREGUARD_ADDRESSES"]' kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml
 
 # EDIT — decrypts into $EDITOR, re-encrypts on save (add/change/remove keys here)
 sops kubernetes/apps/apps/degoog/degoog-secret.enc.yaml
@@ -186,9 +186,9 @@ Secrets are per-app on purpose, but sometimes the *same* credential is genuinely
 Valkey host, one Postgres LXC). Pattern: extract → paste into the other app's template → encrypt.
 
 ```bash
-# example: give another app the same Valkey password Immich uses
-sops -d --extract '["stringData"]["REDIS_PASSWORD"]' kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
-#  → paste into REDIS_PASSWORD in kubernetes/apps/<ns>/<app>/<app>-secret.enc.yaml
+# example: copy one value out of an encrypted file into another app's secret
+sops -d --extract '["stringData"]["WIREGUARD_ADDRESSES"]' kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml
+#  → paste it into kubernetes/apps/<ns>/<app>/<app>-secret.enc.yaml
 sops -e -i kubernetes/apps/<ns>/<app>/<app>-secret.enc.yaml
 ```
 Do **not** do this with the Valkey password until the debt in §1 is fixed — you would be

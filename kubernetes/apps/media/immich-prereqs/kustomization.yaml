@@ -5,6 +5,4 @@ resources:
   - library.yaml
   - postgres.yaml
   - services.yaml
-
-generators:
-  - immich-secret.sops.yaml
+  - externalsecret.yaml  # immich-secret ← OpenBao homelab/immich
