@@ -3,8 +3,8 @@
 How every app in `kubernetes/apps/` was added. Follow it top to bottom; each step says *why* it exists.
 **First time?** Do the guided lab first: [`../learn/onboarding-an-app.md`](../learn/onboarding-an-app.md) walks a
 throwaway app through every step below and back out again. This page is the checklist you use after that.
-Reference app to copy from: **`kubernetes/apps/media/komf/`** (raw manifests + secret wiring + a doc — its secret is
-still a placeholder; `kubernetes/apps/apps/ghostfolio/` has a real encrypted one).
+Reference app to copy from: **`kubernetes/apps/apps/wealthfolio/`** (raw manifests + an ExternalSecret from OpenBao +
+a doc; `kubernetes/apps/apps/ghostfolio/` has a SOPS-encrypted one until it is converted).
 A blank skeleton lives in **`kubernetes/templates/app/`**.
 
 ```
@@ -22,7 +22,7 @@ decide ──► write the directory ──► validate locally ──► push �
 | **Who reaches it** | Tailscale devices (Ingress + hostname) · LAN devices (NodePort too) · the internet (**no** — the only internet-facing paths are the Immich share proxy, and Argo CD + Bark through NPMplus) | decides `ingress.yaml` and whether `service.yaml` gets a `nodePort` |
 | **Secrets** | none · SOPS-encrypted (`<app>-secret.enc.yaml`) · (while testing: inline, flagged in `secrets.md` debt) | decides whether `kustomization.yaml` has a `generators:` block |
 
-Pick a **hostname**: `<app>.williampring.ca` (taken: library, books, roms, suwayomi, komf, status, search,
+Pick a **hostname**: `<app>.williampring.ca` (taken: library, books, roms, suwayomi, status, search,
 private, home, immich, qbittorrent, karakeep, actual, portfolio, wealthfolio, grafana — plus share, deploy and bark, which don't go through
 Traefik). Pick a **NodePort** if LAN access is wanted: a free `30xxx` from the README's Addresses table.
 
@@ -142,6 +142,8 @@ Your phone gets "<app>: deployed" (Argo → Bark).
 ---
 
 ## Worked example: how Komf was added (the smallest complete app)
+*History: Komf itself was removed in Nov 2026 (`runbooks/cluster-cleanup.md` §8). The steps are still the pattern.*
+
 1. Decided: namespace `media`, state = local-path (its DB is a cache), reached over Tailscale only, one secret
    (Kavita API key).
 2. Wrote `kubernetes/apps/media/komf/`: `deployment.yaml` (pinned `sndxr/komf`, seed-config init container,

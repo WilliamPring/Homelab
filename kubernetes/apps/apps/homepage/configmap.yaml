@@ -112,13 +112,6 @@ data:
             namespace: media
             podSelector: app=qbittorrent
 
-        - Metadata:
-            href: https://komf.williampring.ca
-            description: Fetches manga/book metadata for Kavita (Komf)
-            icon: mdi-tag-text-outline
-            siteMonitor: http://komf.media.svc.cluster.local:8085/
-            namespace: media
-            podSelector: app=komf
 
     - Apps:
         - SearXNG:

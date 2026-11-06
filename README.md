@@ -27,7 +27,7 @@ Argo CD  →  deploys the apps from this git repo    (declarative; shows the dif
 | Namespace | App | What | Hostname (`*.williampring.ca`) |
 |---|---|---|---|
 | `media` | **Immich** + Immich Public Proxy | photo/video backup with iPhone sync; public share links | `immich` · `public-immich` |
-| | **Kavita** + **Komf** | manga, comics and ebooks; Komf fills in the metadata | `library` · `komf` |
+| | **Kavita** | manga, comics and ebooks | `library` |
 | | **Calibre-Web-Automated** | ebook library, auto-import, send to Kindle | `books` |
 | | **Suwayomi** | manga sources and downloads | `suwayomi` |
 | | **RomM** | ROM library, play in the browser | `roms` |
@@ -118,7 +118,7 @@ Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: 
 Start at **[`docs/index.md`](docs/index.md)**. Grouped by purpose:
 
 - `docs/learn/` — **[onboard an app: a guided lab](docs/learn/onboarding-an-app.md)** (start here to learn the workflow)
-- `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, Ghostfolio, Wealthfolio, SearXNG, degoog, Homepage, Gatus, Bark, Grafana stack)
+- `docs/apps/` — one guide per app (Immich, Kavita + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, Ghostfolio, Wealthfolio, SearXNG, degoog, Homepage, Gatus, Bark, Grafana stack)
 - `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, CI, Valkey
 - `docs/runbooks/` — **rebuild from zero**, deploying Ghostfolio (a full worked example), cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
 - `docs/architecture/` — the plan docs (partly historical) and the learning roadmap

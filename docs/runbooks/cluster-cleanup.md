@@ -125,7 +125,7 @@ k get applications -n argocd -o name | sed 's|application.argoproj.io/||' | sort
 ls -d kubernetes/apps/*/* | xargs -n1 basename | sort > /tmp/git.txt   # run from the repo (one dir per app)
 comm -23 /tmp/live.txt /tmp/git.txt                             # live but NOT in git
 ```
-Expect: `vaultwarden` (until item 4), nothing else. Anything else listed is a leftover.
+Expect: `vaultwarden` (until item 4), `komf` (until item 8), nothing else. Anything else listed is a leftover.
 
 **DELETE** (per name from the output)
 ```bash
@@ -156,6 +156,30 @@ k delete secret -n <ns> <name>
 git stash list                      # expect: stash@{0}: On main: stash kube pro stk  (old homepage + monitoring files)
 git stash drop stash@{0}
 ```
+- [ ] done
+
+## 8. Komf — removed from the repo Nov 2026
+
+Nothing in it is precious: its config PVC is a cache, and the metadata it already wrote stays in
+Kavita's database.
+
+**LOOK**
+```bash
+k get application -n argocd komf
+k get deploy,svc,ingress,configmap,pvc,secret -n media | grep -i komf
+k get certificate -n media | grep -i komf
+```
+**DELETE**
+```bash
+k delete application -n argocd komf                             # Argo record only (no finalizer)
+k delete deploy/komf svc/komf ingress/komf configmap/komf-config -n media
+k delete pvc/komf-config secret/komf-secret -n media
+k delete secret komf-tls -n media 2>/dev/null; k delete certificate komf-tls -n media 2>/dev/null
+```
+Also, by hand:
+- Cloudflare DNS: delete the `komf` A record.
+- Kavita → Settings → 3rd Party Clients: the API key Komf used still works — reset it if you like.
+- Browser: remove the komf extension, if installed.
 - [ ] done
 
 ---

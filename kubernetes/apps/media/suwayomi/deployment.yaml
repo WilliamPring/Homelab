@@ -5,7 +5,7 @@
 #     iPhone   : Paperback + the Suwayomi extension → same server, same library
 #
 # Downloads land as CBZ in NFS /data/library/manga/<Source>/<Series>/  — which IS Kavita's
-# Manga library (shared, by decision). Kavita picks them up on scan, Komf adds metadata,
+# Manga library (shared, by decision). Kavita picks them up on scan,
 # so the same chapters are readable in Kavita too. (A two-folder variant with a Local-source
 # mount was tried on 2026-10-13 and reverted — it caused issues; see docs/apps/suwayomi.md.)
 #

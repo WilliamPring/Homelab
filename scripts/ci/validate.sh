@@ -6,7 +6,7 @@
 # What it checks (each section prints PASS/FAIL; any FAIL = non-zero exit):
 #   1. secrets    every *.enc.yaml is SOPS-encrypted (sops: block, all values ENC[...], no REPLACE_ME)
 #                 ⚠️ currently WARN-only (does not fail the run). Set STRICT_SECRETS=1 to enforce —
-#                 flip it in .github/workflows/validate.yaml once komf/romm secrets are encrypted.
+#                 flip it in .github/workflows/validate.yaml once romm/qbittorrent secrets are encrypted.
 #   2. kustomize  every directory with a kustomization.yaml renders (KSOPS generator stripped —
 #                 CI has no age key, so decryption itself is not tested)
 #   3. plain      every plain manifest directory under gitops/ is valid YAML with k8s objects

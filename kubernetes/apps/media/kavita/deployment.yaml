@@ -2,7 +2,7 @@
 # sync + OPDS + scrobbling. Uses its EMBEDDED DB (in /config) — no external Postgres.
 #
 # Two content mounts:
-#   /library  → NFS /data/library  (manga, comics — Komf fills in the metadata, see kubernetes/apps/media/komf)
+#   /library  → NFS /data/library  (manga, comics)
 #   /books    → the CALIBRE library (read-only). Calibre-Web-Automated ingests + fixes book
 #               metadata; Kavita just reads the finished EPUBs. Add it as a "Book" library.
 #

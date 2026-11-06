@@ -49,7 +49,7 @@ spec:
         nameservers:
           - 127.0.0.1           # gluetun's DoT resolver, on the loopback this pod shares
       initContainers:
-        # ── 1. seed qBittorrent.conf on first start only (same pattern as komf) ──────────────────
+        # ── 1. seed qBittorrent.conf on first start only (seed-once pattern) ──────────────────
         - name: seed-config
           image: busybox:1.38
           command:

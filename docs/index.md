@@ -1,7 +1,7 @@
 # Start here — how the whole thing works
 
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
-from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Komf, Calibre-Web), games
+from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Calibre-Web), games
 (RomM), torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
 copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio, with Wealthfolio on trial), and the glue (cert-manager, Gatus, Bark, Homepage, and Grafana with Prometheus + Loki).
 
@@ -26,7 +26,7 @@ This page is the mental model. Each section ends with where to read more.
 │  Traefik (ingress, bundled)   cert-manager (Let's Encrypt via Cloudflare DNS-01)        │
 │  Argo CD  ◄── kubernetes/bootstrap/   (applied by hand, twice, ever)                     │
 │     └─ ApplicationSet ──► one Application per  kubernetes/apps/<namespace>/<app>/        │
-│           media: immich · immich-prereqs · immich-public-proxy · kavita · komf · calibre · suwayomi · romm · qbittorrent
+│           media: immich · immich-prereqs · immich-public-proxy · kavita · calibre · suwayomi · romm · qbittorrent
 │           apps: searxng · degoog · homepage · karakeep · actual · ghostfolio · wealthfolio
 │           monitoring: gatus · bark · kube-prometheus-stack · loki · alloy
 │           cert-manager: cert-manager · cert-manager-issuer                               │
@@ -111,7 +111,7 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
 | budget files (Actual), bookmarks + archived pages (Karakeep) | NFS `192.168.68.50:/data/{actual,karakeep}` | **yes** | ⚠️ not automated yet |
 | Immich database | in-cluster Postgres (VectorChord image), **local-path** PVC on the worker | **yes** | ⚠️ not automated yet |
 | RomM database | external Postgres LXC `.7` | yes | ⚠️ |
-| Kavita/Komf/Calibre/Suwayomi/qBittorrent/Gatus/Bark state, Karakeep's search index, metrics (Prometheus) + logs (Loki) | local-path PVCs | rebuildable (rescan/re-index) or cheap to lose | no, by design |
+| Kavita/Calibre/Suwayomi/qBittorrent/Gatus/Bark state, Karakeep's search index, metrics (Prometheus) + logs (Loki) | local-path PVCs | rebuildable (rescan/re-index) or cheap to lose | no, by design |
 | Redis/Valkey data | external LXC `.103` | cache | no |
 
 Rule of thumb in every `storage.yaml`: **NFS for anything you'd cry about, local-path for anything a rescan rebuilds.**
@@ -127,8 +127,8 @@ you (age private key on the Arch box)  ──sops -e──►  <app>-secret.enc.
                                                               ▼
                                                    a real Kubernetes Secret → the pod
 ```
-A value is either `ENC[...]` in git or not in git. Today, while testing: three templates are placeholders (komf,
-qbittorrent, romm), Karakeep's secret is applied as cleartext, and Suwayomi's login and the Bark
+A value is either `ENC[...]` in git or not in git. Today, while testing: two templates are placeholders
+(qbittorrent, romm), Karakeep's secret is applied as cleartext, and Suwayomi's login and the Bark
 device key (placeholders) are inline. The checks WARN until `STRICT_SECRETS=1` — the full list is the known-debt
 section of `platform/secrets.md`.
 → `platform/secrets.md` (day-to-day), `platform/secrets-architecture.md` (deep dive)

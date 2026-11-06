@@ -32,7 +32,6 @@ apps/ghostfolio-secret                    ghostfolio
 apps/karakeep-secret                      karakeep
 apps/wealthfolio-secret                   wealthfolio
 media/immich-secret                       immich
-media/komf-secret                         komf
 media/qbittorrent-secret                  qbittorrent
 media/romm-secret                         romm
 monitoring/kube-prometheus-stack-secret   grafana

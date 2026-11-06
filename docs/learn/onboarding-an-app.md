@@ -371,7 +371,7 @@ whoami skipped the hard parts. Each of these changes the files, and each has a r
 | Kind of data | Put it on | In `storage.yaml` | Copy from |
 |---|---|---|---|
 | precious — can't be recreated (photos, budget, archives) | NFS `192.168.68.50:/data/<folder>` | static PV (`Retain`) + a PVC bound to it by `volumeName`, `storageClassName: ""` | `apps/actual/storage.yaml` |
-| rebuildable (indexes, caches, thumbnails) | local-path = the node's disk | a PVC with `storageClassName: local-path`, ReadWriteOnce | `media/komf/pvc.yaml` |
+| rebuildable (indexes, caches, thumbnails) | local-path = the node's disk | a PVC with `storageClassName: local-path`, ReadWriteOnce | `media/kavita/storage.yaml` |
 | a database | the Postgres LXC `.7` / Valkey `.103` | nothing — env vars plus a secret | `media/romm/` |
 
 What follows from that choice:

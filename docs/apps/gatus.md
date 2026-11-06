@@ -33,7 +33,7 @@ Phone: nothing to subscribe to — Bark pushes to the device key in `gatus/deplo
 
 Open https://status.williampring.ca. Within ~5 minutes every endpoint has run at least once.
 Expected on day one: everything green except things that genuinely are not there yet (e.g.
-RomM/Komf if not synced). Fix or delete those entries rather than living with red.
+RomM if not synced). Fix or delete those entries rather than living with red.
 
 ## How alerts behave
 - `failure-threshold: 3` → an endpoint must fail 3 checks in a row before you are paged

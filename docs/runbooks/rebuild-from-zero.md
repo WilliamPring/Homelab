@@ -59,12 +59,12 @@ Sync in this order, waiting for Healthy each time:
 | Postgres roles/DBs | LXC `.7`: `romm` | `scripts/postgres-romm-setup.sh` |
 | Valkey ACL users | LXC `.103`: `immich`, `romm`, (`degoog`) | `platform/redis.md` |
 | DNS records | Cloudflare: one A per hostname → master Tailscale IP, grey cloud | by hand (README Addresses table) |
-| Suwayomi login, Komf/RomM secrets | inline / templates — see `platform/secrets.md` known debt | fill → `sops -e -i` |
+| Suwayomi login, RomM secrets | inline / templates — see `platform/secrets.md` known debt | fill → `sops -e -i` |
 
 ## 7. Apps, in dependency order
 ```
 immich-prereqs (vector Postgres + NFS library)  →  immich  →  immich-public-proxy
-kavita  →  komf (needs Kavita's API key)        calibre     suwayomi     romm (needs Postgres + Valkey users)
+kavita        calibre     suwayomi     romm (needs Postgres + Valkey users)
 searxng · degoog · homepage                     (independent)
 ```
 Each: Argo → Sync → pod Ready → certificate READY → open the hostname → the app's doc for first-run steps

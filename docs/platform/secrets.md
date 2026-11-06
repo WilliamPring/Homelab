@@ -28,7 +28,6 @@ git at all.** Plaintext never gets committed.
 |---|---|---|---|
 | `kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
 | `kubernetes/apps/apps/degoog/degoog-secret.enc.yaml` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS` | degoog |
-| `kubernetes/apps/media/komf/komf-secret.enc.yaml` | `komf-secret` → media | `KAVITA_API_KEY` | Komf ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/media/romm/romm-secret.enc.yaml` | `romm-secret` → media | `ROMM_AUTH_SECRET_KEY`, `DB_PASSWD`, `REDIS_PASSWORD`, 6 optional provider keys | RomM ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml` | `qbittorrent-secret` → media | `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_ADDRESSES` | Gluetun (Mullvad) ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep ⚠️ **template, not yet encrypted** |
@@ -166,13 +165,13 @@ sops -d --extract '["stringData"]["REDIS_PASSWORD"]' kubernetes/apps/media/immic
 sops kubernetes/apps/apps/degoog/degoog-secret.enc.yaml
 
 # ENCRYPT — a plaintext template, in place, first time only
-sops -e -i kubernetes/apps/media/komf/komf-secret.enc.yaml
+sops -e -i kubernetes/apps/media/romm/romm-secret.enc.yaml
 
 # VERIFY — before every commit. sops refuses to decrypt a file that was never encrypted,
 # so a clean round-trip proves the file is ciphertext:
-sops -d kubernetes/apps/media/komf/komf-secret.enc.yaml > /dev/null && echo "ENCRYPTED - safe to commit"
+sops -d kubernetes/apps/media/romm/romm-secret.enc.yaml > /dev/null && echo "ENCRYPTED - safe to commit"
 #   "sops metadata not found"  → still plaintext, do NOT commit
-grep -c 'ENC\[' kubernetes/apps/media/komf/komf-secret.enc.yaml      # should equal the number of values (+1 for the mac line)
+grep -c 'ENC\[' kubernetes/apps/media/romm/romm-secret.enc.yaml      # should equal the number of values (+1 for the mac line)
 ```
 
 After changing a secret: push → Argo → Sync. **Pods do not restart on Secret changes**, so:
@@ -255,7 +254,7 @@ sops -e -i kubernetes/apps/<namespace>/myapp/myapp-secret.enc.yaml     # 5. encr
 # 6. VERIFY (see §3) → commit → push → kubectl apply the Argo app → Sync
 sudo k3s kubectl get secret myapp-secret -n media  # 7. exists → KSOPS worked
 ```
-Copy `kubernetes/apps/media/komf/` as a template — it is the smallest complete example.
+Copy `kubernetes/apps/apps/wealthfolio/` as a template — it is the smallest complete example.
 
 ---
 
