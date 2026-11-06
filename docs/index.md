@@ -127,7 +127,7 @@ you (age private key on the Arch box)  ──sops -e──►  <app>-secret.enc.
                                                    a real Kubernetes Secret → the pod
 ```
 A value is either `ENC[...]` in git or not in git. Today, while testing: one template is a placeholder
-(qbittorrent), Karakeep's secret is applied as cleartext, and Suwayomi's login and the Bark
+(qbittorrent), and Suwayomi's login and the Bark
 device key (placeholders) are inline. The checks WARN until `STRICT_SECRETS=1` — the full list is the known-debt
 section of `platform/secrets.md`.
 → `platform/secrets.md` (day-to-day), `platform/secrets-architecture.md` (deep dive)
