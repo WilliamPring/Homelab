@@ -4,7 +4,7 @@
 sources, a library you "subscribe" series into, update checks, server-side downloads.
 **Paperback** on the iPhone connects to that same server, so phone and computer share one
 library. Everything Suwayomi downloads lands in Kavita's manga folder, so it is also in Kavita
-(with Komf metadata) and readable offline through either app.
+and readable offline through either app.
 
 ```
                     iPhone: Paperback  (Suwayomi extension)        computer: https://suwayomi.williampring.ca
@@ -16,7 +16,7 @@ library. Everything Suwayomi downloads lands in Kavita's manga folder, so it is 
           NFS /data/library/manga/<Source>/<Series>/<Chapter>.cbz   ◄── also where you hand-copy manga
                       │
                       ▼
-                 Kavita (Manga library) ──► Komf metadata ──► read in Kavita / Paperback
+                 Kavita (Manga library) ──► read in Kavita / Paperback
 ```
 
 | Argo app | Path | Deploys |
@@ -76,7 +76,7 @@ read; each extension is code from a third-party repo running on your server.
 
 Tailscale must be ON on the phone (same as every other hostname).
 
-#### Reading the Kavita library on the phone (books, Komf metadata, hand-copied manga)
+#### Reading the Kavita library on the phone (books, hand-copied manga)
 | Option | Status | Notes |
 |---|---|---|
 | **Kavita web app** → Safari → Share → *Add to Home Screen* | always works | native progress sync; no offline |
@@ -92,7 +92,7 @@ Kavita) so its read state stays coherent.
 series name, so Kavita may show **the source folder as a series** with a random cover. If that
 happens, add each source folder as its own library folder in Kavita (Administration → Libraries →
 Manga → Folders → `/library/manga/<Source>`) so the series folders sit directly under a root.
-Komf matches series from all folders.
+Kavita picks series up from all folders.
 
 ### 7. Your existing (hand-copied) manga
 Suwayomi does **not** list the downloads folder as a library, so hand-copied series under

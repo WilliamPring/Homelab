@@ -5,7 +5,7 @@
 #   config  → local-path PVC (Kavita's embedded DB: index + reading progress)           — node disk
 #
 # Kavita wants one folder per "library", each with a TYPE. Organize like:
-#   /data/library/manga   → add as a "Manga" library    (Komf fills in the metadata)
+#   /data/library/manga   → add as a "Manga" library
 #   /data/library/comics  → add as a "Comic" library    (optional)
 #   /books                → add as a "Book" library     (= /data/books, the Calibre library;
 #                           drop new books in /data/books-ingest → CWA imports + tags them)

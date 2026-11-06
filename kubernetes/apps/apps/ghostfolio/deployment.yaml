@@ -4,7 +4,7 @@
 # of the software, not a setting: you enter transactions yourself or import a broker CSV.
 #
 #   DB     → the EXTERNAL Postgres LXC (192.168.68.7), db/user `ghostfolio`
-#            (scripts/postgres-ghostfolio-setup.sh, same shape as RomM's)
+#            (scripts/postgres-ghostfolio-setup.sh)
 #   Cache  → a DEDICATED Valkey in this pod's namespace — see valkey.yaml for WHY it is not the
 #            shared one at .103. Short version: Ghostfolio cannot send a Redis ACL username.
 #   State  → all of it is in Postgres. This container is stateless; no PVC, no NFS.

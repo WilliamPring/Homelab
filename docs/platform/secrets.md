@@ -28,8 +28,6 @@ git at all.** Plaintext never gets committed.
 |---|---|---|---|
 | `kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
 | `kubernetes/apps/apps/degoog/degoog-secret.enc.yaml` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS` | degoog |
-| `kubernetes/apps/media/komf/komf-secret.enc.yaml` | `komf-secret` → media | `KAVITA_API_KEY` | Komf ⚠️ **template, not yet encrypted** |
-| `kubernetes/apps/media/romm/romm-secret.enc.yaml` | `romm-secret` → media | `ROMM_AUTH_SECRET_KEY`, `DB_PASSWD`, `REDIS_PASSWORD`, 6 optional provider keys | RomM ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml` | `qbittorrent-secret` → media | `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_ADDRESSES` | Gluetun (Mullvad) ⚠️ **template, not yet encrypted** |
 | `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep ⚠️ **template, not yet encrypted** |
 Each one has a sibling `<app>-secret.sops.yaml` (the KSOPS *generator*, not a secret — it just
@@ -166,13 +164,13 @@ sops -d --extract '["stringData"]["REDIS_PASSWORD"]' kubernetes/apps/media/immic
 sops kubernetes/apps/apps/degoog/degoog-secret.enc.yaml
 
 # ENCRYPT — a plaintext template, in place, first time only
-sops -e -i kubernetes/apps/media/komf/komf-secret.enc.yaml
+sops -e -i kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml
 
 # VERIFY — before every commit. sops refuses to decrypt a file that was never encrypted,
 # so a clean round-trip proves the file is ciphertext:
-sops -d kubernetes/apps/media/komf/komf-secret.enc.yaml > /dev/null && echo "ENCRYPTED - safe to commit"
+sops -d kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml > /dev/null && echo "ENCRYPTED - safe to commit"
 #   "sops metadata not found"  → still plaintext, do NOT commit
-grep -c 'ENC\[' kubernetes/apps/media/komf/komf-secret.enc.yaml      # should equal the number of values (+1 for the mac line)
+grep -c 'ENC\[' kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml      # should equal the number of values (+1 for the mac line)
 ```
 
 After changing a secret: push → Argo → Sync. **Pods do not restart on Secret changes**, so:
@@ -188,11 +186,10 @@ Secrets are per-app on purpose, but sometimes the *same* credential is genuinely
 Valkey host, one Postgres LXC). Pattern: extract → paste into the other app's template → encrypt.
 
 ```bash
-# example: give RomM the same Valkey password Immich uses
+# example: give another app the same Valkey password Immich uses
 sops -d --extract '["stringData"]["REDIS_PASSWORD"]' kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml
-#  → paste into REDIS_PASSWORD in kubernetes/apps/media/romm/romm-secret.enc.yaml
-#  → in kubernetes/apps/media/romm/deployment.yaml set REDIS_USERNAME to "redis" (the shared user) instead of "romm"
-sops -e -i kubernetes/apps/media/romm/romm-secret.enc.yaml
+#  → paste into REDIS_PASSWORD in kubernetes/apps/<ns>/<app>/<app>-secret.enc.yaml
+sops -e -i kubernetes/apps/<ns>/<app>/<app>-secret.enc.yaml
 ```
 Do **not** do this with the Valkey password until the debt in §1 is fixed — you would be
 spreading a password that is already public in git history. Prefer a fresh ACL user per app
@@ -255,7 +252,7 @@ sops -e -i kubernetes/apps/<namespace>/myapp/myapp-secret.enc.yaml     # 5. encr
 # 6. VERIFY (see §3) → commit → push → kubectl apply the Argo app → Sync
 sudo k3s kubectl get secret myapp-secret -n media  # 7. exists → KSOPS worked
 ```
-Copy `kubernetes/apps/media/komf/` as a template — it is the smallest complete example.
+Copy `kubernetes/apps/apps/wealthfolio/` as a template — it is the smallest complete example.
 
 ---
 
@@ -266,7 +263,7 @@ Copy `kubernetes/apps/media/komf/` as a template — it is the smallest complete
 ```
 
 ⚠️ **The script only changes the value in git.** That is the whole job for a *self-contained*
-value — one the app invents for itself, like `NEXTAUTH_SECRET`, `ROMM_AUTH_SECRET_KEY` or
+value — one the app invents for itself, like `NEXTAUTH_SECRET`, `ACCESS_TOKEN_SALT` or
 `MEILI_MASTER_KEY`. For anything that also exists somewhere else, change it **there first**, or
 you have broken the app rather than rotated it:
 

@@ -340,7 +340,7 @@ one edge check (do DNS, the cert and Traefik work?):
 ```
 Both red → the app is down. Only `edge` red → the app is fine; look at DNS, TLS or Traefik.
 
-**Doc** — `docs/apps/<app>.md` (copy the shape of [`apps/romm.md`](../apps/romm.md)) plus a line in
+**Doc** — `docs/apps/<app>.md` (copy the shape of [`apps/ghostfolio.md`](../apps/ghostfolio.md)) plus a line in
 [`../index.md`](../index.md). **Renovate** — nothing to do: the pinned tag is already tracked. A stateless app can
 join the `stateless patch updates` group in `renovate.json`; one that migrates a database belongs in the
 `db-migration` rule.
@@ -371,8 +371,8 @@ whoami skipped the hard parts. Each of these changes the files, and each has a r
 | Kind of data | Put it on | In `storage.yaml` | Copy from |
 |---|---|---|---|
 | precious — can't be recreated (photos, budget, archives) | NFS `192.168.68.50:/data/<folder>` | static PV (`Retain`) + a PVC bound to it by `volumeName`, `storageClassName: ""` | `apps/actual/storage.yaml` |
-| rebuildable (indexes, caches, thumbnails) | local-path = the node's disk | a PVC with `storageClassName: local-path`, ReadWriteOnce | `media/komf/pvc.yaml` |
-| a database | the Postgres LXC `.7` / Valkey `.103` | nothing — env vars plus a secret | `media/romm/` |
+| rebuildable (indexes, caches, thumbnails) | local-path = the node's disk | a PVC with `storageClassName: local-path`, ReadWriteOnce | `media/kavita/storage.yaml` |
+| a database | the Postgres LXC `.7` / Valkey `.103` | nothing — env vars plus a secret | `apps/ghostfolio/` |
 
 What follows from that choice:
 - The NFS folder must exist and be owned `1000:1000` before Sync (`mkdir -p` + `chown -R 1000:1000` on `.50`), and
@@ -423,7 +423,7 @@ changes — `sudo k3s kubectl rollout restart deploy/myapp -n apps`. → [`../pl
 
 ### 3.5 A database or Redis
 
-One Postgres role + database per app on the LXC (template: `scripts/postgres-romm-setup.sh`) and one Valkey ACL user
+One Postgres role + database per app on the LXC (template: `scripts/postgres-ghostfolio-setup.sh`) and one Valkey ACL user
 per app ([`../platform/redis.md`](../platform/redis.md)). The passwords go in the app's SOPS secret. Create them
 **before** the first Sync, or the pod crash-loops on connect. The full walk-through is
 [`../runbooks/deploy-ghostfolio.md`](../runbooks/deploy-ghostfolio.md).

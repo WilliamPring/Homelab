@@ -125,7 +125,7 @@ k get applications -n argocd -o name | sed 's|application.argoproj.io/||' | sort
 ls -d kubernetes/apps/*/* | xargs -n1 basename | sort > /tmp/git.txt   # run from the repo (one dir per app)
 comm -23 /tmp/live.txt /tmp/git.txt                             # live but NOT in git
 ```
-Expect: `vaultwarden` (until item 4), nothing else. Anything else listed is a leftover.
+Expect: `vaultwarden` (until item 4), `komf` (until item 8), `romm` (until item 9), nothing else. Anything else listed is a leftover.
 
 **DELETE** (per name from the output)
 ```bash
@@ -156,6 +156,61 @@ k delete secret -n <ns> <name>
 git stash list                      # expect: stash@{0}: On main: stash kube pro stk  (old homepage + monitoring files)
 git stash drop stash@{0}
 ```
+- [ ] done
+
+## 8. Komf — removed from the repo Nov 2026
+
+Nothing in it is precious: its config PVC is a cache, and the metadata it already wrote stays in
+Kavita's database.
+
+**LOOK**
+```bash
+k get application -n argocd komf
+k get deploy,svc,ingress,configmap,pvc,secret -n media | grep -i komf
+k get certificate -n media | grep -i komf
+```
+**DELETE**
+```bash
+k delete application -n argocd komf                             # Argo record only (no finalizer)
+k delete deploy/komf svc/komf ingress/komf configmap/komf-config -n media
+k delete pvc/komf-config secret/komf-secret -n media
+k delete secret komf-tls -n media 2>/dev/null; k delete certificate komf-tls -n media 2>/dev/null
+```
+Also, by hand:
+- Cloudflare DNS: delete the `komf` A record.
+- Kavita → Settings → 3rd Party Clients: the API key Komf used still works — reset it if you like.
+- Browser: remove the komf extension, if installed.
+- [ ] done
+
+## 9. RomM — removed from the repo Nov 2026
+
+⚠️ **The ROMs and saves are NOT deleted by any of this.** `/data/roms` and `/data/romm-assets` on the
+file server (192.168.68.50) stay where they are: both NFS PersistentVolumes are `Retain`, and deleting
+a PV object never touches the folder. Delete the folders by hand only if you really want them gone.
+
+**LOOK**
+```bash
+k get application -n argocd romm
+k get deploy,svc,ingress,pvc,secret -n media | grep -i romm
+k get pv romm-library-nfs romm-assets-nfs
+k get certificate -n media | grep -i romm
+```
+**DELETE**
+```bash
+k delete application -n argocd romm                             # Argo record only (no finalizer)
+k delete deploy/romm svc/romm ingress/romm -n media
+k delete pvc/romm-library pvc/romm-assets pvc/romm-resources secret/romm-secret -n media
+k delete pv romm-library-nfs romm-assets-nfs                    # Retain: the NFS folders stay
+k delete secret romm-tls -n media 2>/dev/null; k delete certificate romm-tls -n media 2>/dev/null
+```
+Also, by hand:
+- Cloudflare DNS: delete the `roms` A record.
+- Valkey LXC (192.168.68.103): `ACL DELUSER romm`, then `ACL SAVE` (or `CONFIG REWRITE`, see `platform/redis.md`).
+- Postgres LXC (192.168.68.7): the `romm` database and role are **left as the backup** (play history,
+  collections). When sure: `su postgres -c "psql -c 'DROP DATABASE romm;' -c 'DROP ROLE romm;'"` and remove
+  its `pg_hba.conf` line.
+- OpenBao: delete `homelab/romm` if you ever created it.
+- GitHub: close Renovate's open `rommapp/romm` PR (branch `renovate/rommapp-romm-5.x`).
 - [ ] done
 
 ---

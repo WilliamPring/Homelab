@@ -48,9 +48,9 @@ it. Pin it.
 ### How PRs are shaped (no automerge, by decision)
 | Group | Behaviour | Label |
 |---|---|---|
-| homepage, searxng, degoog, komf, busybox — **patch + digest** | **one grouped PR** "stateless patch updates" — a single thing to read on Monday | `low-risk` |
+| homepage, searxng, degoog, busybox — **patch + digest** | **one grouped PR** "stateless patch updates" — a single thing to read on Monday | `low-risk` |
 | the same apps — minor/major | own PR | |
-| immich (chart, app, postgres), romm, kavita, calibre | own PR — read the release notes, back up, then merge | `⚠️ db-migration` |
+| immich (chart, app, postgres), kavita, calibre | own PR — read the release notes, back up, then merge | `⚠️ db-migration` |
 | anything in `kubernetes/bootstrap/argocd/**` | own PR — merge, then re-apply `kubernetes/bootstrap/argocd/` by hand | `argocd` |
 | any major bump | own PR | `⚠️ major` |
 
@@ -132,7 +132,7 @@ make check          # lint + validate + conventions
 **Full details, including the conventions check and why `main` is not yet protected:
 [`ci.md`](ci.md).**
 
-**Secrets check is warn-only today** because the komf / romm / qbittorrent templates are still
+**Secrets check is warn-only today** because the qbittorrent template is still
 plaintext. Once you fill + `sops -e -i` them (`docs/platform/secrets.md` §3), set
 `STRICT_SECRETS: "1"` in the workflow so a plaintext secret can never merge again.
 

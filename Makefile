@@ -20,7 +20,7 @@ conventions:     ## check THIS repo's rules (appset depth, nodeports, secretrefs
 check:           ## everything CI runs: lint + validate + conventions
 	$(MAKE) lint && $(MAKE) validate && $(MAKE) conventions
 
-render:          ## render one kustomize app dir: make render APP=kubernetes/apps/media/komf
+render:          ## render one kustomize app dir: make render APP=kubernetes/apps/apps/wealthfolio
 	@test -n "$(APP)" || { echo "usage: make render APP=<dir with kustomization.yaml>"; exit 2; }
 	kubectl kustomize $(APP)
 
