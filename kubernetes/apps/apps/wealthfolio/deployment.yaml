@@ -2,7 +2,8 @@
 # One Rust binary that serves the web UI and the API; one SQLite file; no database server, no cache.
 #
 #   data   → local-path PVC (storage.yaml explains why it CANNOT be NFS: SQLite WAL mode)
-#   secret → wealthfolio-secret: WF_SECRET_KEY + WF_AUTH_PASSWORD_HASH (fill + encrypt before Sync)
+#   secret → wealthfolio-secret: WF_SECRET_KEY + WF_AUTH_PASSWORD_HASH, from OpenBao homelab/wealthfolio
+#            (externalsecret.yaml) — create that entry before the first Sync
 #   quotes → Yahoo Finance, fetched by the server. Canadian tickers need the suffix: XEQT.TO, VFV.TO
 #
 # Settings below follow upstream's production compose.yml (github.com/wealthfolio/wealthfolio).
@@ -45,8 +46,8 @@ spec:
             # shows up as a login that silently fails (CORS), not as an error page.
             - name: WF_CORS_ALLOW_ORIGINS
               value: "https://wealthfolio.williampring.ca"
-            # Encrypts secrets at rest AND signs login tokens. Must be 32 bytes: generate it with
-            # `openssl rand -base64 32` — NOT `secrets.sh set … =-`, which makes a 48-char value.
+            # Encrypts secrets at rest AND signs login tokens. Must be 32 bytes, base64: OpenBao UI
+            # Tools → Random → 32 bytes, base64 (or `openssl rand -base64 32`). Not 48 chars.
             # Changing it later logs you out and makes stored secrets (e.g. API keys) unreadable.
             - name: WF_SECRET_KEY
               valueFrom:
