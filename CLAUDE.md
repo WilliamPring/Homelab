@@ -12,7 +12,7 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 - **Secrets**: SOPS + age via KSOPS. Pattern = `<app>-secret.enc.yaml` (encrypted) + `<app>-secret.sops.yaml`
   (generator) + `generators:` in `kustomization.yaml`. Target state: a value is either `ENC[...]` in git or not in git.
   **Current state (by the owner's choice while testing):** placeholder templates (komf, qbittorrent, romm), Karakeep's
-  secret applied as cleartext, and a few inline values (Suwayomi's login, degoog's Valkey URL, the Bark device key
+  secret applied as cleartext, and a few inline values (Suwayomi's login, the Bark device key
   placeholders); the checks WARN rather than block (`STRICT_SECRETS=0`). Do not "fix" this unasked — see
   `docs/platform/secrets.md` known debt.
   **Pilot (Nov 2026):** OpenBao (`https://192.168.68.91:8200`, Proxmox LXC) + External Secrets Operator now run
