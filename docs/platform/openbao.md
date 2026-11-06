@@ -336,10 +336,35 @@ On the master: `KUBECTL="sudo k3s kubectl" ./scripts/openbao-import.sh grafana`.
 to overwrite — the old version stays in history), and never prints a value. Check it landed:
 `bao kv get homelab/grafana` (in the LXC, or anywhere `bao` is logged in).
 
+- **`ERROR kubectl couldn't read …`** — kubectl itself failed (no kubeconfig / not root). On the master,
+  prefix `KUBECTL="sudo k3s kubectl"`. (Older copies of the script printed this as `MISSING` too.)
+- **`MISSING … not in the cluster`** — the Secret really doesn't exist, e.g. KSOPS never managed to
+  build it, so the app isn't running either (this is what happened to Grafana in the pilot). Nothing to
+  copy — create it in OpenBao instead, in the web UI or the CLI:
+
+  **Web UI:** `https://192.168.68.91:8200` → sign in with *Username* `william` → **Secrets Engines** →
+  `homelab/` → **Create secret** → path `grafana` → keys **exactly** as the ExternalSecret names them
+  (`admin-user` = `admin`, `admin-password` = a new strong password, kept in your password manager) →
+  **Save**.
+  **CLI:** `bao kv put homelab/grafana admin-user=admin admin-password='…'`
+
+  Grafana reads the password only on its FIRST start (then it lives in its database). If it had started
+  before with another one: `kubectl -n monitoring exec deploy/kube-prometheus-stack-grafana -c grafana --
+  grafana cli admin reset-admin-password '<new>'`.
+
 **7. Sync `kube-prometheus-stack`** **with Prune ticked**. Check it:
 ```bash
 kubectl -n monitoring get externalsecret      # kube-prometheus-stack-secret: SecretSynced, READY True
 ```
+**`No resources found`** here means Argo hasn't applied the commit that adds `externalsecret.yaml` —
+it's still on an older revision, or the last sync failed. Check which:
+```bash
+kubectl -n argocd get application kube-prometheus-stack \
+  -o jsonpath='{.status.sync.status}{"  rev="}{.status.sync.revision}{"\n"}{.status.operationState.phase}{": "}{.status.operationState.message}{"\n"}'
+```
+Old `rev=` → in the Argo UI **Refresh** (or Hard Refresh) the app, then **Sync** with Prune. `Failed` →
+the message says why. Pods "Running" doesn't prove the new version is live — they may be from before.
+
 What happens to the old Secret: it has the same name, so ESO takes it over. If Argo still lists it as
 "requires pruning" (it carries Argo's tracking label from the KSOPS days), the pruned Secret is
 re-created by ESO within seconds. Running pods are unaffected either way; a pod that happened to restart
@@ -408,6 +433,9 @@ Karakeep's two values (they were cleartext in git history) — just `bao kv patc
 | `x509: certificate is valid for …, not 192.168.68.91` | the cert's SANs don't include the IP. Regenerate it (§5 step 6) |
 | ClusterSecretStore: `secrets "openbao-approle" not found` | §7 step 4 not done (or done in the wrong namespace — it must be `external-secrets`) |
 | ExternalSecret: `cannot find secret data for key` / `property … not found` | that path or key isn't in OpenBao. `bao kv get homelab/<path>`; run the import, or `bao kv patch` the key |
+| `kubectl get clustersecretstore openbao` → `not found` | the CRD is there but `external-secrets-store` hasn't synced (or its sync failed — often the ESO webhook pods weren't Ready yet). `kubectl -n argocd get application external-secrets-store`; `kubectl -n external-secrets get pods` (3× `1/1`), then Sync it again |
+| `openbao-import.sh` says `MISSING` for a Secret you know exists | an old copy of the script hid kubectl errors. Re-run with `KUBECTL="sudo k3s kubectl"`; the current script prints kubectl's real error |
+| `get externalsecret` → `No resources found` after a Sync | Argo synced an older revision or the sync failed — §7 step 7 |
 | alert `ExternalSecretNotSynced` | `kubectl -n <ns> describe externalsecret <name>` says why; usually one of the three rows above, or OpenBao sealed |
 | ESO: `invalid role or secret ID` | wrong or destroyed secret-id in `openbao-approle`. Mint a new one (§5 step 4) |
 | a value changed in OpenBao but the app still has the old one | ESO hasn't refreshed yet (wait, or annotate the ExternalSecret to force it), and env-var consumers need a pod restart |

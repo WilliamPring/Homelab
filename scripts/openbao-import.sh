@@ -91,8 +91,13 @@ while read -r src path; do
   [ -n "$src" ] || continue
   [ -z "$ONLY" ] || case "$ONLY" in *" $path "*) ;; *) continue ;; esac
   ns=${src%%/*}; name=${src#*/}
-  if ! $KUBECTL -n "$ns" get secret "$name" -o json > "$TMP/secret" 2>/dev/null; then
-    echo "  MISSING  $src — not in the cluster; set homelab/$path by hand (bao kv put)"; missing=$((missing+1)); continue
+  if ! $KUBECTL -n "$ns" get secret "$name" -o json > "$TMP/secret" 2> "$TMP/kerr"; then
+    if grep -q NotFound "$TMP/kerr"; then
+      echo "  MISSING  $src — not in the cluster; set homelab/$path by hand (bao kv put)"; missing=$((missing+1)); continue
+    fi
+    # anything else (no kubeconfig, permission denied, wrong context) is NOT "missing" — say what kubectl said
+    echo "  ERROR    kubectl couldn't read $src:"; sed 's/^/           /' "$TMP/kerr"
+    echo "           (on the master, run with KUBECTL=\"sudo k3s kubectl\")"; exit 1
   fi
   keys=$(jq -r '.data // {} | keys | join(", ")' "$TMP/secret")
   placeholder=$(jq -r '[.data // {} | to_entries[] | select(.value | @base64d | test("REPLACE_ME")) | .key] | join(", ")' "$TMP/secret")
