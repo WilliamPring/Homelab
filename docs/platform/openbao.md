@@ -4,8 +4,8 @@
 > External Secrets Operator is deployed and the cluster's connection to OpenBao is `Valid`.
 > **On OpenBao:** Grafana (`kube-prometheus-stack` ← `homelab/grafana`, working) and Wealthfolio
 > (`wealthfolio` ← `homelab/wealthfolio`; create the entry first — `docs/apps/wealthfolio.md` step 2).
-> **Still on SOPS** (`secrets.md`), unchanged: degoog, ghostfolio, karakeep, immich, qbittorrent,
-> romm (Komf was removed). Both systems run side by side. Their conversions are ready on branch `feat/migration-test-bao`
+> **Still on SOPS** (`secrets.md`), unchanged: degoog, ghostfolio, karakeep, immich, qbittorrent
+> (Komf and RomM were removed). Both systems run side by side. Their conversions are ready on branch `feat/migration-test-bao`
 > (§7, "after the pilot").
 >
 > **New here? Read §11 "How it works, end to end" first**: diagrams plus one value followed from
@@ -153,7 +153,7 @@ bao secrets enable -path=homelab -version=2 kv
 - **`kv` version 2:** the version history (§3). Overwrite a password by mistake and you can still read
   the old one with `bao kv get -version=N homelab/grafana`.
 - **`-path=homelab`:** one mount for the whole homelab, one entry per app: `homelab/grafana`,
-  `homelab/romm`, `homelab/karakeep`, … Each entry holds that app's keys, mirroring today's one-Secret-per-app layout.
+  `homelab/ghostfolio`, `homelab/karakeep`, … Each entry holds that app's keys, mirroring today's one-Secret-per-app layout.
 
 ### Step 3 — a read-only login for the cluster
 ```bash
@@ -317,7 +317,7 @@ catches a Deployment asking for a key the ExternalSecret doesn't provide, before
 
 Secret → OpenBao path: converted = `grafana` (monitoring, `kube-prometheus-stack-secret`) and
 `wealthfolio` (apps). Still to do, same pattern: `degoog`, `ghostfolio`, `karakeep` (apps), `immich`,
-`qbittorrent`, `romm` (media) — the import script knows all eight.
+`qbittorrent` (media) — the import script knows all seven.
 
 ### Rollout — in this order
 Each step depends on the one before it. Nothing in the cluster changes until you Sync.

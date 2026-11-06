@@ -22,7 +22,7 @@ decide ──► write the directory ──► validate locally ──► push �
 | **Who reaches it** | Tailscale devices (Ingress + hostname) · LAN devices (NodePort too) · the internet (**no** — the only internet-facing paths are the Immich share proxy, and Argo CD + Bark through NPMplus) | decides `ingress.yaml` and whether `service.yaml` gets a `nodePort` |
 | **Secrets** | none · SOPS-encrypted (`<app>-secret.enc.yaml`) · (while testing: inline, flagged in `secrets.md` debt) | decides whether `kustomization.yaml` has a `generators:` block |
 
-Pick a **hostname**: `<app>.williampring.ca` (taken: library, books, roms, suwayomi, status, search,
+Pick a **hostname**: `<app>.williampring.ca` (taken: library, books, suwayomi, status, search,
 private, home, immich, qbittorrent, karakeep, actual, portfolio, wealthfolio, grafana — plus share, deploy and bark, which don't go through
 Traefik). Pick a **NodePort** if LAN access is wanted: a free `30xxx` from the README's Addresses table.
 
@@ -105,7 +105,7 @@ If the app needs a sync option the default lacks (e.g. `ServerSideApply` for hug
   except through the Cloudflare tunnel pattern the Immich share proxy uses.
 - **File server** (if NFS): `mkdir -p /data/<folder> && chown -R 1000:1000 /data/<folder> && chmod -R 775 /data/<folder>`
   on `192.168.68.50`. The export of `/data` already covers subfolders.
-- **Database** (if any): a role + database on the Postgres LXC (`scripts/postgres-romm-setup.sh` is the
+- **Database** (if any): a role + database on the Postgres LXC (`scripts/postgres-ghostfolio-setup.sh` is the
   template), a dedicated ACL user on Valkey (`platform/redis.md`). Passwords → the app's SOPS secret.
 - **Secrets**: fill the template, `sops -e -i`, verify with `sops -d … >/dev/null` (`platform/secrets.md` §3).
 
@@ -126,7 +126,7 @@ Your phone gets "<app>: deployed" (Argo → Bark).
 |---|---|---|
 | **Homepage tile** | `kubernetes/apps/apps/homepage/configmap.yaml` → `services.yaml` block; icon names from the dashboard-icons set | the front door lists everything |
 | **Gatus check** | `kubernetes/apps/monitoring/gatus/configmap.yaml` → an `apps` endpoint (in-cluster Service URL) and an `edge` endpoint (the hostname, with cert-expiry) | you find out it is down before you need it |
-| **Doc** | `docs/apps/<app>.md` — architecture, first-time setup, day-to-day, troubleshooting, quick reference (copy the shape of `apps/romm.md`) | the setup steps you'll forget |
+| **Doc** | `docs/apps/<app>.md` — architecture, first-time setup, day-to-day, troubleshooting, quick reference (copy the shape of `apps/ghostfolio.md`) | the setup steps you'll forget |
 | **README** | add the NodePort to the Addresses table if you added one; add the doc to `docs/index.md` | one place for ports and hostnames |
 | **Renovate** | nothing — if the image/chart is pinned it is already tracked. Stateless app? add it to the `stateless patch updates` group in `renovate.json`. Runs migrations? add it to the `db-migration` rule | PRs arrive with the right label and grouping |
 

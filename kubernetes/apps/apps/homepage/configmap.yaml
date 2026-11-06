@@ -94,13 +94,6 @@ data:
             namespace: media
             podSelector: app=suwayomi
 
-        - Games:
-            href: https://roms.williampring.ca
-            description: ROM library & in-browser play (RomM)
-            icon: romm.png
-            siteMonitor: http://romm.media.svc.cluster.local:8080/
-            namespace: media
-            podSelector: app=romm
 
         - Downloads:
             href: https://qbittorrent.williampring.ca
@@ -301,7 +294,7 @@ data:
     #
     # ⚠️ .63 = k3s-master-01, .62 = k3s-worker-01. Use http://192.168.68.62:<port> if .63 is down.
     #
-    # ℹ️ WHY THE MASTER IP WORKS EVEN FOR APPS PINNED TO THE WORKER. Immich, RomM, Suwayomi and
+    # ℹ️ WHY THE MASTER IP WORKS EVEN FOR APPS PINNED TO THE WORKER. Immich, Suwayomi and
     #    qBittorrent all carry `nodeSelector: immich-node: "true"`, so their pods only ever run
     #    on .62 — yet .63:<port> still reaches them. That is because NO Service in this repo sets
     #    `externalTrafficPolicy: Local`; the default is `Cluster`, so kube-proxy on ANY node
@@ -359,10 +352,6 @@ data:
         - Actual:
             - abbr: "ACT"
               href: http://192.168.68.63:30506
-
-        - RomM:
-            - abbr: "ROM"
-              href: http://192.168.68.63:30808
 
         - SearXNG:
             - abbr: "SRX"

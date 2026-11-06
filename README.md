@@ -30,7 +30,6 @@ Argo CD  →  deploys the apps from this git repo    (declarative; shows the dif
 | | **Kavita** | manga, comics and ebooks | `library` |
 | | **Calibre-Web-Automated** | ebook library, auto-import, send to Kindle | `books` |
 | | **Suwayomi** | manga sources and downloads | `suwayomi` |
-| | **RomM** | ROM library, play in the browser | `roms` |
 | | **qBittorrent** + Gluetun | torrents, through Mullvad | `qbittorrent` |
 | `apps` | **SearXNG** · **degoog** | private metasearch · search aggregator | `private` · `search` |
 | | **Karakeep** | bookmarks with archived copies | `karakeep` |
@@ -87,13 +86,13 @@ New to it? Onboard a throwaway app with the guided lab: [`docs/learn/onboarding-
 | What | IP | Notes |
 |---|---|---|
 | k3s master — `k3s-master-01` | `192.168.68.63` | Argo/Traefik entry; any NodePort also answers here |
-| k3s worker (32GB) — `k3s-worker-01` | `192.168.68.62` | Immich, RomM, Suwayomi, qBittorrent are pinned here |
+| k3s worker (32GB) — `k3s-worker-01` | `192.168.68.62` | Immich, Suwayomi, qBittorrent are pinned here |
 | file server (NFS `/data`) | `192.168.68.50` | photos, manga, books, ROMs, downloads |
-| Postgres LXC | `192.168.68.7` | RomM, Ghostfolio (and formerly Vaultwarden) |
-| Valkey / Redis | `192.168.68.103` | Immich, degoog, RomM (Ghostfolio runs its own — see its doc) |
+| Postgres LXC | `192.168.68.7` | Ghostfolio (and formerly RomM, Vaultwarden) |
+| Valkey / Redis | `192.168.68.103` | Immich, degoog (Ghostfolio runs its own — see its doc) |
 
 LAN NodePorts (plain http, same WiFi — e.g. for the Kindle): Kavita `:30500` · Calibre-Web `:30083` ·
-Suwayomi `:30456` · RomM `:30808` · Immich `:30041` · Immich share proxy `:30042` · SearXNG `:30880` · Gatus `:30881` · degoog `:30882` · Bark `:30889` (fronted by NPMplus) · qBittorrent `:30080` · Karakeep `:30300` · Actual `:30506` · Argo CD `:30443`. Hostnames (`*.williampring.ca`) resolve to the
+Suwayomi `:30456` · Immich `:30041` · Immich share proxy `:30042` · SearXNG `:30880` · Gatus `:30881` · degoog `:30882` · Bark `:30889` (fronted by NPMplus) · qBittorrent `:30080` · Karakeep `:30300` · Actual `:30506` · Argo CD `:30443`. Hostnames (`*.williampring.ca`) resolve to the
 master's **Tailscale** IP and need Tailscale on the device.
 
 ## Working in this repo
@@ -118,7 +117,7 @@ Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: 
 Start at **[`docs/index.md`](docs/index.md)**. Grouped by purpose:
 
 - `docs/learn/` — **[onboard an app: a guided lab](docs/learn/onboarding-an-app.md)** (start here to learn the workflow)
-- `docs/apps/` — one guide per app (Immich, Kavita + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, Ghostfolio, Wealthfolio, SearXNG, degoog, Homepage, Gatus, Bark, Grafana stack)
+- `docs/apps/` — one guide per app (Immich, Kavita + Calibre, Suwayomi, Kindle, qBittorrent + Gluetun, Karakeep, Actual, Ghostfolio, Wealthfolio, SearXNG, degoog, Homepage, Gatus, Bark, Grafana stack)
 - `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, CI, Valkey
 - `docs/runbooks/` — **rebuild from zero**, deploying Ghostfolio (a full worked example), cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
 - `docs/architecture/` — the plan docs (partly historical) and the learning roadmap
