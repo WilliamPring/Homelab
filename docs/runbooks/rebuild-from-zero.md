@@ -5,13 +5,15 @@ each other*. Everything in **bold** is a thing that is NOT in git and must be re
 
 ```
 0 Proxmox + VMs/LXCs   →  1 Ansible (nodes)  →  2 Argo CD  →  3 the age key  →  4 ApplicationSet
-→  5 platform apps (cert-manager → issuer)  →  6 out-of-git secrets & folders  →  7 apps, in order  →  8 phone
+→  5 platform apps (cert-manager → issuer, external-secrets → store)  →  6 out-of-git secrets & folders
+→  7 apps, in order  →  8 phone
 ```
 
 ## 0. Hosts
 Proxmox on both boxes (`proxmox-install.md`). VMs: `k3s-master-01` `.63`, `k3s-worker-01` `.62` (Debian, SSH key for `sysadmin`).
 LXCs that must exist with their data: **file server `.50`** (NFS export of `/data`), **Postgres `.7`**,
-**Valkey `.103`**. These hold the precious data — restore them from backups first if they were lost.
+**Valkey `.103`**, **OpenBao `.91`** (every app secret — unsealed, see `platform/openbao.md`). These hold the
+precious data — restore them from backups first if they were lost.
 
 ## 1. Nodes — Ansible
 ```bash
@@ -31,12 +33,15 @@ sudo k3s kubectl -n argocd rollout status deploy/argocd-server
 `platform/argocd.md` for the password and the UI hostname (needs the `argocd` DNS record and, for TLS,
 step 5 to have happened — port-forward works meanwhile).
 
-## 3. The age key (before anything with a secret can sync)
+## 3. The age key (until the KSOPS cleanup)
 ```bash
 sudo k3s kubectl create secret generic sops-age -n argocd --from-file=keys.txt=$HOME/.config/sops/age/keys.txt
 sudo k3s kubectl -n argocd rollout restart deploy/argocd-repo-server
 ```
-**This key is the master key.** It lives on the Arch box, in your password manager, and offline. `platform/secrets.md`.
+No app decrypts anything with it any more — app secrets come from OpenBao (step 5). It is still needed
+because Argo's repo-server patch (`bootstrap/argocd/`) mounts `sops-age`, and the repo-server won't start
+without it, until the KSOPS machinery is removed. It lives on the Arch box, in your password manager, and
+offline. `platform/secrets.md`.
 
 ## 4. Register every app
 ```bash
@@ -48,7 +53,10 @@ sudo k3s kubectl -n argocd get applications          # all listed, OutOfSync —
 Sync in this order, waiting for Healthy each time:
 1. `cert-manager` (CRDs + controller) → 2. **`cloudflare-api-token` Secret** in `cert-manager`
    (`platform/tls.md`) → 3. `cert-manager-issuer` → `kubectl get clusterissuer letsencrypt` READY.
-4. `bark` (so step 7 can page you) → 5. `gatus` (watches everything that follows).
+4. `external-secrets` (ESO + CRDs) → 5. **`openbao-approle` Secret** in `external-secrets` (ESO's login —
+   `platform/openbao.md` §7 step 4) → 6. `external-secrets-store` → `kubectl get clustersecretstore openbao` READY.
+   Every app with an `externalsecret.yaml` needs this before its pods can start.
+7. `bark` (so the app syncs in section 7 can page you) → 8. `gatus` (watches everything that follows).
 
 ## 6. Out-of-git things the apps reference (check they exist)
 | Thing | Where | Recreate |
@@ -56,10 +64,12 @@ Sync in this order, waiting for Healthy each time:
 | NFS folders | file server `/data/{images,library,library/manga,books,books-ingest,roms,romm-assets}` owned 1000:1000 | `mkdir -p … && chown -R 1000:1000 …` |
 | `immich-db` Secret, node label | step 1 | re-run Ansible |
 | `cloudflare-api-token` | step 5 | by hand |
+| `openbao-approle` | step 5 | by hand (`platform/openbao.md` §7) — the app secrets themselves are in OpenBao, not here |
 | Postgres roles/DBs | LXC `.7`: `romm` | `scripts/postgres-romm-setup.sh` |
 | Valkey ACL users | LXC `.103`: `immich`, `romm`, (`degoog`) | `platform/redis.md` |
 | DNS records | Cloudflare: one A per hostname → master Tailscale IP, grey cloud | by hand (README Addresses table) |
-| Suwayomi login, Komf/RomM secrets | inline / templates — see `platform/secrets.md` known debt | fill → `sops -e -i` |
+| Suwayomi login | inline in `deployment.yaml` — see `platform/secrets.md` known debt | edit the manifest |
+| any `REPLACE_ME` left in OpenBao (Komf/RomM/qBittorrent/Wealthfolio may have one) | OpenBao `homelab/<app>` | `bao kv patch homelab/<app> KEY=…` (`platform/openbao.md`) |
 
 ## 7. Apps, in dependency order
 ```

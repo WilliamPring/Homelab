@@ -1,0 +1,26 @@
+# External Secrets Operator (ESO) — copies values from OpenBao into ordinary Kubernetes Secrets.
+# Each app has an `externalsecret.yaml` naming the Secret it wants and where each key lives in OpenBao;
+# ESO reads it, logs in to OpenBao (../external-secrets-store), and writes the Secret.
+# Helm chart rendered through kustomize; the pin lives here, values beside it. Docs: docs/platform/openbao.md
+#
+# ⚠️ Needs ServerSideApply: ESO's CRDs (SecretStore/ClusterSecretStore ~700 KB each) exceed the
+#    client-side annotation limit. That option is in the ApplicationSet's templatePatch, so RE-APPLY
+#    apps.yaml once before the first Sync:  sudo k3s kubectl apply -f kubernetes/bootstrap/apps.yaml
+#
+# Sync order: external-secrets (CRDs + controller) → external-secrets-store (the OpenBao connection)
+#             → each app. Same split as cert-manager → cert-manager-issuer: a CRD and the objects of
+#             that kind can't be in the same first Sync.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: external-secrets
+    repo: https://charts.external-secrets.io
+    version: 2.14.0              # chart and app are released together with the same number
+    releaseName: external-secrets
+    namespace: external-secrets  # baked into the webhook's Service reference — must match the Argo namespace
+    valuesFile: values.yaml
+    includeCRDs: true
+
+resources:
+  - rules.yaml                   # alert when an app's Secret can't be refreshed from OpenBao

@@ -80,7 +80,7 @@ grafana:
     repository: grafana/grafana
     tag: 13.3.0-distroless
   admin:
-    existingSecret: kube-prometheus-stack-secret   # SOPS: kube-prometheus-stack-secret.enc.yaml
+    existingSecret: kube-prometheus-stack-secret   # from OpenBao homelab/grafana (externalsecret.yaml)
     userKey: admin-user
     passwordKey: admin-password
   defaultDashboardsTimezone: browser

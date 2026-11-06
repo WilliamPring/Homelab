@@ -22,7 +22,7 @@ https://roms.williampring.ca  (Tailscale)  ·  http://<node-ip>:30808  (LAN)
 
 | Argo app | Path | Deploys |
 |---|---|---|
-| `romm` | `kubernetes/apps/media/romm` | Deployment, NFS PV/PVCs, resources PVC, NodePort Service, Ingress, KSOPS secret |
+| `romm` | `kubernetes/apps/media/romm` | Deployment, NFS PV/PVCs, resources PVC, NodePort Service, Ingress, ExternalSecret (`romm-secret` ← OpenBao `homelab/romm`) |
 
 **Why k3s and not an LXC:** RomM is a stateless web app whose state is a DB + files, and both
 already live outside the cluster. Playing is client-side, so the pod does nothing heavy. See the
@@ -79,16 +79,22 @@ ACL SETUSER romm on resetpass >ROMM_REDIS_PASSWORD ~* &* +@all
 ACL SAVE
 ```
 
-### 3. Secrets → SOPS (Arch box)
+### 3. Secrets → OpenBao (any machine logged in to OpenBao)
+The values live in OpenBao at `homelab/romm`; `externalsecret.yaml` tells External Secrets to build
+`romm-secret` from them. See [`../platform/openbao.md`](../platform/openbao.md).
 ```bash
+bao login -method=userpass username=william            # once per session
 openssl rand -hex 32                                   # → ROMM_AUTH_SECRET_KEY
-$EDITOR kubernetes/apps/media/romm/romm-secret.enc.yaml               # fill auth key, DB_PASSWD (step 1), REDIS_PASSWORD (step 2)
-sops --encrypt --in-place kubernetes/apps/media/romm/romm-secret.enc.yaml
-git diff kubernetes/apps/media/romm/romm-secret.enc.yaml              # every value must be ENC[AES256_GCM,...]
+bao kv patch homelab/romm ROMM_AUTH_SECRET_KEY=… DB_PASSWD=… REDIS_PASSWORD=…   # DB_PASSWD (step 1), REDIS_PASSWORD (step 2)
+bao kv get homelab/romm                                # no REPLACE_ME left in the keys you need
 ```
+Use `kv patch`, not `kv put` — `put` replaces **all** keys at the path with only the ones you typed.
 Provider keys are optional. Hasheous and PlayMatch are free and already on. For box art on
 retro systems make a free **ScreenScraper** account; for broad metadata make an **IGDB** (Twitch
-dev) app. Add them to the secret any time → `sops` edit → push → sync → `rollout restart`.
+dev) app. Add them any time → `bao kv patch homelab/romm IGDB_CLIENT_ID=… …` → force-sync
+(`kubectl -n media annotate externalsecret romm-secret force-sync=$(date +%s) --overwrite`, or wait ≤1h) →
+`rollout restart`. The provider keys are already listed in `externalsecret.yaml`; a brand-new key would also need
+an entry there.
 
 ### 4. DNS + deploy
 ```
@@ -139,7 +145,7 @@ sudo k3s kubectl logs -n media deploy/romm --tail=50  # no DB / Redis connection
 | Platform shows as "unknown" | folder name isn't a known slug → rename, or map it in Settings → Platforms |
 | Play button greyed / "BIOS missing" | put the BIOS files in `/data/roms/bios/<platform>/` and rescan |
 | Game loads slowly / tab crashes | the whole ROM loads into browser memory (PS1 ≈ 700 MB, PSP 1–2 GB). Expected; use a desktop for big ISOs |
-| `secret romm-secret not found` on sync | `romm-secret.enc.yaml` still plaintext or Argo can't decrypt → `docs/platform/secrets.md` |
+| `secret romm-secret not found` | External Secrets couldn't build it (key missing in `homelab/romm`, or OpenBao sealed/unreachable) → `kubectl -n media describe externalsecret romm-secret`; `docs/platform/openbao.md` |
 
 ### Handy checks
 ```bash
@@ -158,5 +164,5 @@ ROMs:       192.168.68.50:/data/roms/roms/<platform>/
 BIOS:       192.168.68.50:/data/roms/bios/<platform>/
 Saves:      192.168.68.50:/data/romm-assets/
 DB:         192.168.68.7:5432/romm   (pg_dump -U romm romm)
-Secrets:    sops kubernetes/apps/media/romm/romm-secret.enc.yaml
+Secrets:    bao kv get homelab/romm   ·   bao kv patch homelab/romm KEY=…   (never kv put)
 ```

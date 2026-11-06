@@ -6,6 +6,4 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-
-generators:
-  - romm-secret.sops.yaml      # KSOPS → romm-secret (auth key, DB/Redis passwords, provider keys)
+  - externalsecret.yaml  # romm-secret ← OpenBao (was KSOPS/SOPS)

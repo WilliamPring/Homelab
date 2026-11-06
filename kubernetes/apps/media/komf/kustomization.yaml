@@ -7,6 +7,4 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-
-generators:
-  - komf-secret.sops.yaml      # KSOPS → komf-secret (Kavita API key)
+  - externalsecret.yaml  # komf-secret ← OpenBao (was KSOPS/SOPS)

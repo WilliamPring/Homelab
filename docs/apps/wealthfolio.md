@@ -10,7 +10,7 @@ compare the two on the same transactions. Pick a winner, then remove the other.
 | **Namespace** | `apps` |
 | **Image** | `wealthfolio/wealthfolio` (pinned; Renovate PRs carry the `⚠️ db-migration` label) |
 | **Storage** | one SQLite file on a **local-path** PVC — **not backed up** (see below) |
-| **Secret** | `wealthfolio-secret`: `WF_SECRET_KEY`, `WF_AUTH_PASSWORD_HASH` |
+| **Secret** | `wealthfolio-secret`: `WF_SECRET_KEY`, `WF_AUTH_PASSWORD_HASH` — from OpenBao `homelab/wealthfolio` via `externalsecret.yaml` |
 
 ---
 
@@ -38,19 +38,23 @@ trial (re-import the broker CSV). It is not fine for your real records: see [Bac
 ### 1. DNS
 Cloudflare → `wealthfolio` → A → the master's Tailscale IP, **grey cloud**.
 
-### 2. The secret (on the Arch box, which has the age key)
-Both values are required: the server refuses to listen on `0.0.0.0` without a password.
+### 2. The secret (in OpenBao, `homelab/wealthfolio`)
+Both values are required: the server refuses to listen on `0.0.0.0` without a password. They live in OpenBao,
+not git; `externalsecret.yaml` copies them into `wealthfolio-secret` ([`../platform/openbao.md`](../platform/openbao.md)).
+From any machine logged in to OpenBao (`bao login -method=userpass username=william`):
 
 ```bash
-# 32-byte key. Not '=-': the helper's generator makes 48 chars, which the app rejects.
-./scripts/secrets.sh set wealthfolio WF_SECRET_KEY="$(openssl rand -base64 32)"
+# 32-byte key (base64 of 32 random bytes — the app rejects other lengths).
+bao kv patch homelab/wealthfolio WF_SECRET_KEY="$(openssl rand -base64 32)"
 
 # Argon2id hash of your login password (pacman -S argon2). Single quotes keep the shell off the $ signs.
 printf '%s' 'your-password' | argon2 "$(openssl rand -hex 8)" -id -e
-./scripts/secrets.sh set wealthfolio WF_AUTH_PASSWORD_HASH='$argon2id$v=19$m=…'
+bao kv patch homelab/wealthfolio WF_AUTH_PASSWORD_HASH='$argon2id$v=19$m=…'
 
-./scripts/secrets.sh encrypt wealthfolio
+# ESO refreshes within 1h — or now:
+sudo k3s kubectl -n apps annotate externalsecret wealthfolio-secret force-sync=$(date +%s) --overwrite
 ```
+Use `kv patch`, not `kv put` — `put` replaces **all** keys at the path with only the ones you typed.
 ℹ️ Upstream's docs tell you to write `$$argon2id$$…`. That doubling is for **Docker Compose** only. In a
 Kubernetes Secret the hash goes in exactly as `argon2` prints it.
 
@@ -112,9 +116,9 @@ of the backup work in [`../index.md`](../index.md) §9.
 
 | Symptom | Cause / fix |
 |---|---|
-| Pod CrashLoops right after the first Sync | the secret is still `REPLACE_ME`, or `WF_SECRET_KEY` isn't 32 bytes → `sudo k3s kubectl -n apps logs deploy/wealthfolio` |
+| Pod CrashLoops right after the first Sync | a value in `homelab/wealthfolio` is still `REPLACE_ME`, or `WF_SECRET_KEY` isn't 32 bytes → `sudo k3s kubectl -n apps logs deploy/wealthfolio` |
 | Login page loads, but logging in does nothing | `WF_CORS_ALLOW_ORIGINS` doesn't match the URL in the address bar exactly (`https://`, no trailing slash) |
-| Password rejected | the hash was mangled on its way into the secret (a shell ate the `$` parts): `./scripts/secrets.sh get wealthfolio WF_AUTH_PASSWORD_HASH` must start with `$argon2id$` |
+| Password rejected | the hash was mangled on its way into the secret (a shell ate the `$` parts): `bao kv get -field=WF_AUTH_PASSWORD_HASH homelab/wealthfolio` must start with `$argon2id$` |
 | A holding has no price | wrong symbol: needs `.TO` for the TSX, `.V` for the TSXV |
 | Data gone after a node rebuild | expected: local-path is not backed up (see above) |
 

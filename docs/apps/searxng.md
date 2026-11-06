@@ -53,8 +53,9 @@ After editing the ConfigMap: push → Sync → `sudo k3s kubectl rollout restart
 ## Known gaps
 - **`server.secret_key` is the placeholder string from the template**, in a public repo. Anyone who
   knows it can sign image-proxy URLs, i.e. use the instance as an image proxy. Tailscale-only limits
-  that. The fix is listed in [`../platform/secrets.md`](../platform/secrets.md) known debt (a SOPS
-  secret passed as `SEARXNG_SECRET`, which overrides the file).
+  that. The fix is listed in [`../platform/secrets.md`](../platform/secrets.md) known debt (a secret
+  from OpenBao — [`../platform/openbao.md`](../platform/openbao.md) — passed as `SEARXNG_SECRET`, which
+  overrides the file).
 
 ## Using it as the browser's search engine
 Settings → Search engine → add `https://private.williampring.ca/search?q=%s`. It only works on

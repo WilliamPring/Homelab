@@ -12,7 +12,7 @@
 # Auth: basic_auth (the Paperback extension speaks Basic; Suwayomi's newer ui_login/JWT
 # mode would break it). Credentials are HARD-CODED below for now (user's choice — host is
 # Tailscale-only). ⚠️ Anything committed is in git history forever: use a password you would
-# not mind rotating, and move it to a SOPS secret later (docs/platform/secrets.md §5).
+# not mind rotating, and move it to OpenBao + an ExternalSecret later (docs/platform/openbao.md).
 # State (H2 DB, thumbnails, extensions, daily backups) → local-path PVC. Not irreplaceable:
 # the daily backup lives in the data dir and the CBZs are on NFS.
 #

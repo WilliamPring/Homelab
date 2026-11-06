@@ -6,6 +6,4 @@ resources:
   - valkey.yaml        # dedicated cache — see the header there for why it is not the shared .103
   - service.yaml
   - ingress.yaml
-
-generators:
-  - ghostfolio-secret.sops.yaml   # KSOPS → ghostfolio-secret (DATABASE_URL, REDIS_PASSWORD, salts)
+  - externalsecret.yaml  # ghostfolio-secret ← OpenBao (was KSOPS/SOPS)

@@ -1,0 +1,18 @@
+# The cluster's connection to OpenBao: the ClusterSecretStore and the CA it trusts.
+# Sync AFTER the external-secrets app (that one installs the ClusterSecretStore CRD).
+# Docs: docs/platform/openbao.md §7
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - clustersecretstore.yaml
+
+configMapGenerator:
+  # OpenBao's PUBLIC certificate (self-signed), so ESO can verify it's really talking to OpenBao.
+  # Public on purpose — a certificate is not a secret; the private key never leaves the LXC.
+  - name: openbao-ca
+    namespace: external-secrets
+    files:
+      - ca.crt=openbao-ca.crt
+    options:
+      disableNameSuffixHash: true   # the ClusterSecretStore refers to it by this exact name

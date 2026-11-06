@@ -13,7 +13,7 @@ data:
   application.yml: |
     kavita:
       baseUri: "http://kavita.media.svc.cluster.local:5000"   # overridden by env anyway
-      # apiKey: ← comes from env KOMF_KAVITA_API_KEY (SOPS secret). Do not put it here.
+      # apiKey: ← comes from env KOMF_KAVITA_API_KEY (komf-secret ← OpenBao). Do not put it here.
       eventListener:
         enabled: true                 # auto-match series as Kavita's scanner adds them
         metadataLibraryFilter: [ ]    # empty = every Kavita library. Fill with library IDs

@@ -7,8 +7,8 @@
 #   assets    → NFS /data/romm-assets  (saves, states, screenshots you upload — irreplaceable)
 #   resources → local-path PVC         (covers/screenshots fetched from providers — re-fetchable)
 #
-# Secrets (auth key, DB + Redis passwords, provider API keys) come from the SOPS-encrypted
-# romm-secret (romm-secret.enc.yaml). Image is pinned; Renovate bumps it.
+# Secrets (auth key, DB + Redis passwords, provider API keys) come from romm-secret,
+# filled from OpenBao homelab/romm (externalsecret.yaml). Image is pinned; Renovate bumps it.
 # Docs: https://docs.romm.app   Releases: https://github.com/rommapp/romm/releases
 apiVersion: apps/v1
 kind: Deployment

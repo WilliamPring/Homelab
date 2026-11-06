@@ -15,7 +15,7 @@ you ──► https://portfolio.williampring.ca (Tailscale) ──► Traefik �
 
 | Argo app | Path | Deploys |
 |---|---|---|
-| `ghostfolio` | `kubernetes/apps/apps/ghostfolio` | Deployment, a dedicated Valkey, ClusterIP Service, Ingress, SOPS secret |
+| `ghostfolio` | `kubernetes/apps/apps/ghostfolio` | Deployment, a dedicated Valkey, ClusterIP Service, Ingress, ExternalSecret (`ghostfolio-secret` ← OpenBao `homelab/ghostfolio`) |
 
 | Thing | Where |
 |---|---|
@@ -63,14 +63,19 @@ sh postgres-ghostfolio-setup.sh
 ```
 It prints the password and the exact `DATABASE_URL` to use next.
 
-### 2. Secrets — **on the Arch box** (it has the age key)
+### 2. Secrets — **in OpenBao** (`homelab/ghostfolio`), from a machine logged in to it
 ```bash
-./scripts/secrets.sh set ghostfolio REDIS_PASSWORD=- ACCESS_TOKEN_SALT=- JWT_SECRET_KEY=-
-./scripts/secrets.sh set ghostfolio DATABASE_URL='postgresql://ghostfolio:<PG_PASS>@192.168.68.7:5432/ghostfolio?connect_timeout=300'
-./scripts/secrets.sh encrypt ghostfolio
+bao login -method=userpass username=william          # once per session
+bao kv put homelab/ghostfolio \
+  REDIS_PASSWORD="$(openssl rand -hex 32)" \
+  ACCESS_TOKEN_SALT="$(openssl rand -hex 32)" \
+  JWT_SECRET_KEY="$(openssl rand -hex 32)" \
+  DATABASE_URL='postgresql://ghostfolio:<PG_PASS>@192.168.68.7:5432/ghostfolio?connect_timeout=300'
 ```
-`-` generates a strong random value. ⚠️ **Do not fill these in on a machine that cannot
-encrypt** — this repo is public and a plaintext push is permanent.
+⚠️ `kv put` **replaces every key** at the path — fine for a first fill with all four, wrong for changing
+one. To change one value later: `bao kv patch homelab/ghostfolio KEY=…`. The values never touch git;
+`externalsecret.yaml` tells External Secrets which keys to copy into `ghostfolio-secret`
+([`../platform/openbao.md`](../platform/openbao.md)).
 
 `REDIS_PASSWORD` is used twice on purpose: the Valkey pod starts with `--requirepass` from it and
 Ghostfolio connects with it. One value, two consumers.
@@ -164,7 +169,7 @@ the way Bark has one.
 | Add a transaction | Activities → + |
 | Import a CSV | Activities → ⋮ → Import |
 | Force a quote refresh | Admin Control → Data gatherer |
-| Change a secret | `./scripts/secrets.sh edit ghostfolio` → Sync → `rollout restart` |
+| Change a secret | `bao kv patch homelab/ghostfolio KEY=…` → `kubectl -n apps annotate externalsecret ghostfolio-secret force-sync=$(date +%s) --overwrite` (or wait ≤1h) → `rollout restart` |
 
 ## Troubleshooting
 

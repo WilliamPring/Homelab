@@ -21,7 +21,7 @@ reading progress, OPDS and a web reader. Two helpers feed it good metadata:
                     │     └─ manga/<Series>/*.cbz            └─ /cwa-book-ingest ← NFS /data/books-ingest
                     └─ /books    ← NFS /data/books (RO)  ◄──── same folder, CWA writes, Kavita reads
                             ▲
-                            │ Kavita API (key in SOPS secret)
+                            │ Kavita API (key in OpenBao → komf-secret)
                     komf (media ns)  https://komf.williampring.ca  (its own web UI)
                     └─ MangaUpdates · AniList · MangaDex
 ```
@@ -29,7 +29,7 @@ reading progress, OPDS and a web reader. Two helpers feed it good metadata:
 | Argo app | Path | Deploys |
 |---|---|---|
 | `kavita` | `kubernetes/apps/media/kavita` | Kavita + NFS library PV/PVC + config PVC + Ingress |
-| `komf` | `kubernetes/apps/media/komf` | Komf + seed ConfigMap + config PVC + Ingress + KSOPS secret |
+| `komf` | `kubernetes/apps/media/komf` | Komf + seed ConfigMap + config PVC + Ingress + ExternalSecret (`komf-secret` ← OpenBao `homelab/komf`) |
 | `calibre` | `kubernetes/apps/media/calibre` | CWA + the `calibre-books` / `calibre-ingest` NFS claims Kavita reuses |
 
 Both Kavita and Komf keep their state on `local-path` PVCs. Neither holds anything
@@ -72,20 +72,21 @@ Web UI → **Server Settings → Libraries → Add Library**:
 Book type reads the EPUB's own metadata (title/author/series that CWA embedded), so the
 Calibre `Author/Title` folder layout is fine.
 
-### 2. Komf: give it Kavita's API key (SOPS)
+### 2. Komf: give it Kavita's API key (OpenBao)
 Komf talks to Kavita as **your user**, using your API key.
 
 ```
 Kavita → avatar (top-right) → Settings → "3rd Party Clients" → API Key   (copy it)
 ```
-Then on the Arch box (it has the age key):
+Then, from any machine logged in to OpenBao (`bao login -method=userpass username=william`):
 ```bash
-# paste the key into the template, then encrypt in place
-$EDITOR kubernetes/apps/media/komf/komf-secret.enc.yaml            # replace REPLACE_ME_WITH_KAVITA_API_KEY
-sops --encrypt --in-place kubernetes/apps/media/komf/komf-secret.enc.yaml
-git add kubernetes/apps/media/komf && git commit -m "feat: komf" && git push
+# the key lives in OpenBao, not git — replace the REPLACE_ME placeholder there
+bao kv patch homelab/komf KAVITA_API_KEY='<the key>'
+kubectl -n media annotate externalsecret komf-secret force-sync=$(date +%s) --overwrite   # or wait ≤1h
+sudo k3s kubectl rollout restart deploy/komf -n media      # if Komf is already running
 ```
-Check the file before pushing: `stringData.KAVITA_API_KEY` must read `ENC[AES256_GCM,...]`.
+Use `kv patch`, not `kv put` (`put` replaces **all** keys at the path). Nothing to commit for the key itself —
+`externalsecret.yaml` already maps `KAVITA_API_KEY`. More: [`../platform/openbao.md`](../platform/openbao.md).
 
 ### 3. DNS + deploy
 ```
@@ -145,8 +146,8 @@ BOOKS:   drop epub   → /data/books-ingest/    →  CWA import + metadata  → 
 
 | Symptom | Cause / fix |
 |---|---|
-| Komf pod `Init:Error` / CrashLoop, log says `failed to decrypt` or secret missing | `komf-secret.enc.yaml` not encrypted, or Argo can't decrypt → redo step 2; check `kubectl get secret komf-secret -n media` |
-| Komf log `401` / `Unauthorized` from Kavita | wrong/rotated API key → update with `sops kubernetes/apps/media/komf/komf-secret.enc.yaml`, push, sync, `rollout restart deploy/komf -n media` |
+| Komf pod `CreateContainerConfigError` / secret missing | External Secrets couldn't build `komf-secret` (key missing in `homelab/komf`, or OpenBao sealed/unreachable) → `kubectl -n media describe externalsecret komf-secret`; redo step 2 |
+| Komf log `401` / `Unauthorized` from Kavita | wrong/rotated API key (or still `REPLACE_ME`) → `bao kv patch homelab/komf KAVITA_API_KEY=…`, force-sync the ExternalSecret, `rollout restart deploy/komf -n media` |
 | komf.williampring.ca unreachable | DNS record missing, `komf-tls` not issued (`kubectl get certificate -n media`), or Tailscale off |
 | Series matched to the wrong thing | Komf UI (or extension) → Identify → pick the right one. Rename the folder to the common English title to help future matches |
 | Nothing happens when new manga is added | `eventListener.enabled` false in the LIVE config on the PVC, or Kavita hasn't scanned yet (Library → Scan) |

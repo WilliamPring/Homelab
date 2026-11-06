@@ -43,7 +43,7 @@ kubernetes/apps/apps/actual/
 └── ingress.yaml         actual.williampring.ca + Let's Encrypt cert
 ```
 
-**Why no secret file.** Most apps here have an `<app>-secret.enc.yaml`. Actual doesn't, because it has
+**Why no secret.** Most apps here have an `externalsecret.yaml` (values in OpenBao). Actual doesn't, because it has
 no password in its configuration — you set the server password *in the browser* the first time you open
 it, and it's stored hashed inside `/data`. Nothing sensitive ever goes near git.
 

@@ -10,7 +10,7 @@ gets OOMKilled, or stops being Ready.
 | **Manifests** | `kubernetes/apps/monitoring/{kube-prometheus-stack,loki,alloy}/` — three Argo apps |
 | **Charts** | `kube-prometheus-stack` (prometheus-community) · `loki` + `alloy` (Grafana Labs) — pinned in each `kustomization.yaml` |
 | **Storage** | local-path on the worker: Prometheus 20Gi (15 days), Loki 10Gi (14 days), Grafana 2Gi, Alertmanager 1Gi — **all rebuildable, none backed up** |
-| **Secret** | `kube-prometheus-stack-secret`: `admin-user`, `admin-password` (Grafana login) |
+| **Secret** | `kube-prometheus-stack-secret`: `admin-user`, `admin-password` (Grafana login) — built by `externalsecret.yaml` from OpenBao `homelab/grafana` |
 | **Alerts** | Alertmanager → `bark-relay` → Bark (same phone, same `homelab` group as Gatus) |
 
 ---
@@ -77,12 +77,15 @@ Anything named `prometheus-*`, `storage-loki-*`, `alertmanager-*` or `kube-prome
 ### 1. DNS
 Cloudflare → `grafana` → A → the master's Tailscale IP, **grey cloud**.
 
-### 2. The secret (on the Arch box)
+### 2. The secret (in OpenBao, `homelab/grafana`)
+From any machine logged in to OpenBao (`bao login -method=userpass username=william`):
 ```bash
-./scripts/secrets.sh set kube-prometheus-stack admin-password=-    # generates a strong one
-./scripts/secrets.sh get kube-prometheus-stack admin-password      # note it for the first login
-./scripts/secrets.sh encrypt kube-prometheus-stack
+bao kv patch homelab/grafana admin-password="$(openssl rand -base64 24)"   # patch, not put — put replaces ALL keys
+bao kv get -field=admin-password homelab/grafana                            # note it for the first login
+sudo k3s kubectl -n monitoring annotate externalsecret kube-prometheus-stack-secret force-sync=$(date +%s) --overwrite
 ```
+External Secrets copies it into `kube-prometheus-stack-secret` (within 1h, or right away with the annotate).
+See [`../platform/openbao.md`](../platform/openbao.md).
 ⚠️ Grafana reads this only on its **first** start. After that the password lives in Grafana's database:
 change it under *profile → Change password*. Editing the secret later does nothing.
 

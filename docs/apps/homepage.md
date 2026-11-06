@@ -185,7 +185,8 @@ sudo k3s kubectl top nodes            # must work before the widget can
   Calibre-web, Karakeep, RomM, Suwayomi, Gatus, ArgoCD, Ghostfolio, Gluetun, Proxmox and
   Pulse — they show actual data (library counts, VPN exit IP, out-of-sync app count) instead
   of a dot. Every one needs an API key or password, and **this repo is public**, so they are
-  blocked on a SOPS-encrypted `homepage-secret` + `{{HOMEPAGE_VAR_*}}` substitution.
+  blocked on a `homepage-secret` (from OpenBao via an ExternalSecret, see
+  [`../platform/openbao.md`](../platform/openbao.md)) + `{{HOMEPAGE_VAR_*}}` substitution.
   Note that substitution is community-documented, not official — prove it with one throwaway
   variable before wiring several credentials through it, and set `hideErrors: true` so a
   broken widget does not paint the dashboard with API errors.

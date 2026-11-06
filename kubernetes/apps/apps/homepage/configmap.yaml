@@ -237,6 +237,13 @@ data:
             description: Proxmox VMs, LXCs & backups (Pulse)
             icon: mdi-server-network
 
+        - OpenBao:
+            # Like Pulse, not in this cluster — an LXC on Proxmox, LAN/Tailscale only (never the
+            # tunnel). Gatus's `infra` group watches /sys/health, which also catches "sealed".
+            href: https://192.168.68.91:8200/ui/
+            description: Secrets for every app (log in as william)
+            icon: mdi-safe-square-outline
+
   kubernetes.yaml: |
     # `cluster` = read the API with the projected ServiceAccount token mounted in this pod
     # (see rbac.yaml). `default` would look for a kubeconfig, which a pod does not have.

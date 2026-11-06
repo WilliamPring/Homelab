@@ -1,8 +1,10 @@
 # OpenBao — where secrets live (replacing SOPS)
 
-> **Status (Nov 2026): migration in progress.** OpenBao runs on a Proxmox LXC and has had its one-time
-> setup (§5). The cluster side (External Secrets Operator, §7) is next. Until that ships, apps still get
-> their secrets the SOPS way described in `secrets.md`.
+> **Status (Nov 2026): cut-over in progress.** OpenBao runs on a Proxmox LXC (`192.168.68.91`) and has
+> had its one-time setup (§5). The cluster side is **in the repo**: External Secrets Operator, the
+> OpenBao connection, and an `externalsecret.yaml` in every app that had a SOPS secret (§7). Roll it out
+> with the steps in §7. KSOPS stays installed in Argo until every app has been synced the new way; then
+> it gets removed (§7, "after").
 
 This doc explains **what** was set up and **why each piece is the way it is**, in enough detail that you
 could rebuild it from nothing, or decide to change it, without guessing.
@@ -45,7 +47,7 @@ Researched Nov 2026 (sources in the conversation that produced this doc):
 
 ```
 ┌─ Proxmox ─────────────────────────────────┐        ┌─ k3s ──────────────────────────────────────┐
-│  LXC "openbao"  https://<LXC-IP>:8200     │        │  External Secrets Operator (ESO)           │
+│  LXC "openbao"  https://192.168.68.91:8200│        │  External Secrets Operator (ESO)           │
 │    /opt/openbao  storage (encrypted)      │◄─HTTPS─┤    logs in with AppRole (read-only)        │
 │    unlock key + root token: openbao.env   │  LAN   │    reads homelab/<app> → writes a normal   │
 │    backed up by Proxmox (vzdump)          │        │    Kubernetes Secret → the pod, as today   │
@@ -58,13 +60,25 @@ rebuilt, and it has secrets of its own. You'd be hand-creating secrets to start 
 Outside the cluster it's like the Postgres (.7) and Valkey (.103) LXCs: **things the cluster depends on
 live outside it**, survive a rebuild untouched, and get Proxmox backups for free.
 
+### Access: LAN and Tailscale, never the tunnel
+| Who | How | Why |
+|---|---|---|
+| the cluster (ESO) | `https://192.168.68.91:8200`, straight over the LAN | secrets must not depend on DNS, Traefik, Cloudflare or the tunnel being up — the same rule that keeps Bark alerts in-cluster |
+| you, at home | the same address in a browser (accept the self-signed cert) | — |
+| you, away | Tailscale (the community scripts' `add-tailscale-lxc.sh` add-on, run on the Proxmox host, then `tailscale up` in the LXC) | reach it from anywhere with no public exposure |
+
+**Not through the Cloudflare tunnel / NPMplus.** The tunnel is for things that must work from the
+internet (Argo's webhook path, Bark registration, Immich share links). Nothing about secrets needs that,
+and publishing the login page would let anyone try passwords against the one box that holds every key.
+If it ever has to be public, put a Cloudflare Access policy in front — never the raw port.
+
 **Installed with the community script** (`community-scripts/ProxmoxVE` → `ct/openbao.sh`): a Debian 13
 unprivileged LXC, 1 CPU / 1 GB / 4 GB, OpenBao from its official GitHub release `.deb`.
 
 ### What the install script did for you (and why it matters)
 | It did | Consequence |
 |---|---|
-| started OpenBao with a **self-signed TLS** certificate on `:8200` | your browser warns. ESO must be told to trust that cert (§6), or connect fails |
+| started OpenBao with a **self-signed TLS** certificate on `:8200` | your browser warns. ESO must be told to trust that cert (§7), or connect fails. Replaced in §5 step 6 with one that names the IP |
 | ran `bao operator init -key-shares=1 -key-threshold=1` | created the storage's master key, split into **1** unlock key (more on this in §3) and a **root token** |
 | wrote `BAO_UNSEAL_KEY` and `BAO_ROOT_TOKEN` to `/etc/openbao/openbao.env` (mode 600, root) | both are on the box's disk. See §4 for why that's an acceptable trade here, and what it costs |
 | added a systemd drop-in: `ExecStartPost=bao operator unseal ${BAO_UNSEAL_KEY}` | OpenBao **unlocks itself on every start**. Without this, every reboot of the LXC would leave it locked until you typed the key |
@@ -196,22 +210,29 @@ bao write auth/userpass/users/william password="$PW" token_policies=admin; unset
 - `read -rs` asks for the password without echoing it, and keeps it out of shell history and the screen.
   `unset PW` clears it from the shell afterwards.
 
-### Step 6 — find out what the TLS certificate covers
+### Step 6 — a certificate that names the IP (done 2026-11-05)
+ESO connects to `https://192.168.68.91:8200`. TLS verification passes only if the certificate **names
+that IP** in its Subject Alternative Names (SANs) **and** ESO trusts the certificate. Rather than inspect
+what the script generated, it was replaced with one that is known-good:
 ```bash
-grep -A8 'listener' /etc/openbao/openbao.hcl
 CERT=$(grep -oP 'tls_cert_file\s*=\s*"\K[^"]+' /etc/openbao/openbao.hcl)
-openssl x509 -in "$CERT" -noout -subject -enddate -ext subjectAltName
-hostname -I
+KEY=$(grep -oP 'tls_key_file\s*=\s*"\K[^"]+' /etc/openbao/openbao.hcl)
+cp -p "$CERT" "$CERT.bak"; cp -p "$KEY" "$KEY.bak"
+openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=openbao" \
+  -addext "subjectAltName=IP:192.168.68.91,IP:127.0.0.1,DNS:openbao,DNS:localhost" \
+  -keyout "$KEY" -out "$CERT"
+chown --reference="$CERT.bak" "$CERT"; chmod --reference="$CERT.bak" "$CERT"
+chown --reference="$KEY.bak" "$KEY";   chmod --reference="$KEY.bak" "$KEY"
+systemctl restart openbao && sleep 3 && bao status | grep -E 'Sealed|Initialized'
 ```
-ESO will connect to `https://<LXC-IP>:8200`. TLS verification passes only if the certificate
-**names that IP** in its Subject Alternative Names (SANs) **and** ESO trusts the certificate. Step 6
-shows the SANs and the expiry date:
-- **SANs include the LXC's IP:** ESO is given this exact cert as its trust anchor (`caBundle`) and
-  everything verifies.
-- **They don't** (e.g. only `localhost`): we generate a replacement self-signed cert that includes the
-  IP, point `openbao.hcl` at it, and restart. That's a one-off, documented here once done.
-- **The expiry date** matters too: a self-signed cert that expires breaks ESO's connection on that date.
-  We'll pick a long lifetime and add a Gatus certificate-expiry check.
+- **SANs:** the LAN IP (what ESO uses), `openbao` (its Tailscale name, if added), localhost (the CLI in
+  the LXC).
+- **10 years**, so it doesn't quietly expire and cut the cluster off. Gatus warns 30 days before it does
+  (`[CERTIFICATE_EXPIRATION] > 720h`), which is the reminder to re-run this.
+- **Self-signed is fine here:** ESO doesn't trust "any valid cert", it trusts *this exact cert*, pinned in
+  git as `kubernetes/apps/external-secrets/external-secrets-store/openbao-ca.crt`. Regenerate it → replace
+  that file → Sync `external-secrets-store`.
+- If OpenBao won't start after this, put the `.bak` files back and restart.
 
 ---
 
@@ -228,25 +249,106 @@ bao kv rollback -version=2 homelab/grafana                         # make versio
 ⚠️ `put` replaces the whole entry. Forgetting a key in a `put` deletes it from the new version (it's
 still in history). Use `patch` to change one value.
 
-ESO notices the change within its refresh interval (we'll set ~1h, with a forced refresh possible), and
-updates the Kubernetes Secret. Pods that read the Secret as **env vars** need a restart to see it,
-exactly as today.
+ESO notices the change within an hour (`refreshInterval: 1h`) and updates the Kubernetes Secret. To make
+it happen now:
+```bash
+kubectl -n <ns> annotate externalsecret <app>-secret force-sync=$(date +%s) --overwrite
+```
+Pods that read the Secret as **env vars** need a restart to see it, exactly as with SOPS.
+
+**A new key** for an app = put it in OpenBao **and** add it to the app's `externalsecret.yaml`:
+```yaml
+    - secretKey: NEW_KEY
+      remoteRef: { key: <app>, property: NEW_KEY }
+```
+Key names are in git on purpose (values aren't): CI's secretrefs check (`check-conventions.sh` D) then
+catches a Deployment asking for a key the ExternalSecret doesn't provide, before Sync does.
+
+**A new app with a secret:** `bao kv put homelab/<app> KEY=…`, copy `externalsecret.yaml` from any app
+(e.g. `kubernetes/apps/apps/ghostfolio/`), change name / namespace / path / keys, list it in
+`resources:`.
 
 ---
 
-## 7. The cluster side — External Secrets Operator (next, not done yet)
+## 7. The cluster side — External Secrets Operator
 
-What gets added to the repo:
-- **`kubernetes/apps/external-secrets/external-secrets/`**: ESO itself (Helm chart, pinned), a new Argo app.
-- **A `ClusterSecretStore`**: "OpenBao is at `https://<LXC-IP>:8200`, KV v2 at `homelab`, log in with
-  AppRole using the Secret `openbao-approle`, and trust this certificate."
-- **The one hand-made Secret** (`openbao-approle` holding the role-id and secret-id), created once with
-  `kubectl create secret …`. It's listed in `secrets.md` under "hand-created" with the rebuild steps.
-- **Per app, an `ExternalSecret`** replacing `<app>-secret.enc.yaml` + `<app>-secret.sops.yaml`: "build
-  the Secret `<app>-secret` from `homelab/<app>`". The resulting Secret has the **same name and keys** as
-  today, so no Deployment changes.
-- **Then removal:** the KSOPS repo-server patch, the `sops-age` secret, `.sops.yaml`, `scripts/secrets.sh`,
-  and the SOPS checks in CI. Plus Gatus (OpenBao health + cert expiry) and a Homepage tile.
+### What's in the repo
+| Path | What | Why this way |
+|---|---|---|
+| `kubernetes/apps/external-secrets/external-secrets/` | ESO itself (Helm chart 2.14.0, pinned) + `rules.yaml` | the controller that turns "this Secret comes from homelab/x" into a real Secret. Needs ServerSideApply (its CRDs are ~700 KB), so it's in the ApplicationSet's `templatePatch` |
+| `…/external-secrets/rules.yaml` | alert `ExternalSecretNotSynced` → Bark | fires when a Secret can't be refreshed for 15 min (OpenBao down/sealed, login revoked, key missing). Existing Secrets keep working meanwhile |
+| `kubernetes/apps/external-secrets/external-secrets-store/` | the `ClusterSecretStore` named `openbao` + ConfigMap `openbao-ca` | the ONE place that says where OpenBao is, how to log in and which cert to trust. A separate app because its kind is defined by the CRDs above (same split as cert-manager → cert-manager-issuer) |
+| `…/openbao-ca.crt` | OpenBao's **public** certificate | pinned trust. Public on purpose; the key never leaves the LXC |
+| `<app>/externalsecret.yaml` (9 apps) | "build Secret `<app>-secret` from `homelab/<path>`, these keys" | same Secret **name and keys** as SOPS made, so no Deployment changed |
+| `scripts/openbao-import.sh` | copies the **live** Secrets from the cluster into OpenBao | no age key needed, no typing values, can't import a stale file. Values go through pipes only, never printed |
+| `openbao-approle` Secret (namespace `external-secrets`) | ESO's role-id + secret-id | **made by hand, not in git** — it's the key to OpenBao, so it can't come from OpenBao |
+
+Secret → OpenBao path: `degoog`, `ghostfolio`, `karakeep`, `wealthfolio` (namespace apps), `immich`,
+`komf`, `qbittorrent`, `romm` (media), and `grafana` (monitoring, `kube-prometheus-stack-secret`).
+
+### Rollout — in this order
+Each step depends on the one before it. Nothing in the cluster changes until you Sync.
+
+**1. Put the certificate in git.** In the LXC console, print the *public* cert:
+```bash
+cat "$(grep -oP 'tls_cert_file\s*=\s*"\K[^"]+' /etc/openbao/openbao.hcl)"
+```
+Paste the whole `-----BEGIN CERTIFICATE-----` … `-----END CERTIFICATE-----` block into
+`kubernetes/apps/external-secrets/external-secrets-store/openbao-ca.crt`, replacing the placeholder. Then
+commit + push everything.
+
+**2. Re-apply the ApplicationSet** (adds ServerSideApply for `external-secrets`):
+```bash
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps.yaml
+```
+
+**3. Sync `external-secrets`** in Argo. Wait for 3 pods Ready in namespace `external-secrets`.
+
+**4. Give ESO its login.** In the LXC console (as root, step 1 of §5), print the role-id and mint a fresh
+secret-id:
+```bash
+bao read -field=role_id auth/approle/role/eso/role-id; echo
+bao write -f -field=secret_id auth/approle/role/eso/secret-id; echo
+```
+Then, where kubectl works, paste each when asked (nothing echoes, nothing lands in shell history):
+```bash
+read -rs -p "role-id: " RID; echo; read -rs -p "secret-id: " SID; echo
+kubectl -n external-secrets create secret generic openbao-approle \
+  --from-literal=role-id="$RID" --from-literal=secret-id="$SID"; unset RID SID
+```
+(On the master: `sudo k3s kubectl …`.)
+
+**5. Sync `external-secrets-store`**, then check the connection:
+```bash
+kubectl get clustersecretstore openbao        # STATUS Valid, READY True
+```
+Not ready? `kubectl describe clustersecretstore openbao` — the message names the problem (§10).
+
+**6. Copy the secrets into OpenBao.** From a machine with kubectl, curl, jq and a route to `.91`:
+```bash
+./scripts/openbao-import.sh --dry-run     # lists what it would copy: key NAMES only
+./scripts/openbao-import.sh               # asks for your OpenBao password, then copies
+```
+On the master: `KUBECTL="sudo k3s kubectl" ./scripts/openbao-import.sh`. It skips paths that already
+exist (`--force` to overwrite — the old version stays in history), and flags any value that's still a
+`REPLACE_ME` placeholder (wealthfolio, komf, qbittorrent, romm may be): fix those in OpenBao with
+`bao kv patch homelab/<path> KEY=…`.
+
+**7. Sync each app**, one at a time, **with Prune ticked**. Check it:
+```bash
+kubectl get externalsecret -A                 # every row: SecretSynced, READY True
+```
+What happens to the old Secret: it has the same name, so ESO takes it over. If Argo still lists it as
+"requires pruning" (it carries Argo's tracking label from the KSOPS days), the pruned Secret is
+re-created by ESO within seconds. Running pods are unaffected either way; a pod that happened to restart
+in those seconds retries on its own.
+
+### After every app is synced (the cleanup — a separate change)
+Then SOPS can go: the KSOPS repo-server patch (`bootstrap/argocd/repo-server-ksops-patch.yaml`, needs a
+`kubectl apply -k` of the bootstrap), the `sops-age` Secret in `argocd`, `.sops.yaml`,
+`scripts/secrets.sh`, `scripts/ci/check-sops.sh`, validate.sh's section 1, the pre-commit hook and the
+Makefile `secrets*` targets, and `secrets.md` / `secrets-architecture.md`. Also worth doing once: rotate
+Karakeep's two values (they were cleartext in git history) — just `bao kv patch` + restart.
 
 ---
 
@@ -259,7 +361,7 @@ What gets added to the repo:
 | the unlock key everywhere | **the data is gone for good.** That's the point of encryption, and why it lives in the password manager |
 | ESO's secret-id | mint a new one (§5 step 4), update the `openbao-approle` Secret |
 | your admin password | log in with the root token (or regenerate one, §9) and reset it: `bao write auth/userpass/users/william password=…` |
-| the whole k3s cluster | nothing to do on OpenBao. Re-create `openbao-approle`, Sync ESO, and every app's Secret comes back |
+| the whole k3s cluster | nothing to do on OpenBao. Sync `external-secrets`, re-create `openbao-approle` (§7 step 4), Sync `external-secrets-store`, and every app's Secret comes back |
 
 ---
 
@@ -271,8 +373,9 @@ What gets added to the repo:
   casual misuse, not a determined attacker.
 - **Audit log:** `bao audit enable file file_path=/var/log/openbao/audit.log` records who read or changed
   what. Free in OpenBao (paid in Infisical).
-- **A real certificate** (e.g. through NPMplus as `vault.williampring.ca`) so the browser stops warning.
-  Not needed for the cluster.
+- **A browser-trusted certificate** (e.g. `tailscale serve`, or NPMplus as a LAN-only proxy host) so the
+  browser stops warning. Not needed for the cluster — ESO keeps using the pinned cert on the IP. Never via
+  the Cloudflare tunnel (§2 "Access").
 
 ---
 
@@ -282,7 +385,10 @@ What gets added to the repo:
 |---|---|
 | UI/CLI says "Vault is sealed" | `bao status`. If sealed, the auto-unseal drop-in didn't run: `systemctl status openbao`, `journalctl -u openbao`, or unseal by hand with the key |
 | `permission denied` in the CLI | the shell's token lacks a policy for that path. Re-run step 1 (root), or log in as yourself: `bao login -method=userpass username=william` |
-| `x509: certificate signed by unknown authority` (from ESO) | ESO doesn't have the cert in `caBundle`, or the cert was regenerated. See §5 step 6 |
-| `x509: certificate is valid for …, not <IP>` | the cert's SANs don't include the IP ESO connects to. Regenerate it (§5 step 6) |
+| `x509: certificate signed by unknown authority` (from ESO) | `openbao-ca.crt` in git isn't the cert OpenBao is serving (still the placeholder, or the cert was regenerated). Paste the current one, Sync `external-secrets-store` |
+| `x509: certificate is valid for …, not 192.168.68.91` | the cert's SANs don't include the IP. Regenerate it (§5 step 6) |
+| ClusterSecretStore: `secrets "openbao-approle" not found` | §7 step 4 not done (or done in the wrong namespace — it must be `external-secrets`) |
+| ExternalSecret: `cannot find secret data for key` / `property … not found` | that path or key isn't in OpenBao. `bao kv get homelab/<path>`; run the import, or `bao kv patch` the key |
+| alert `ExternalSecretNotSynced` | `kubectl -n <ns> describe externalsecret <name>` says why; usually one of the three rows above, or OpenBao sealed |
 | ESO: `invalid role or secret ID` | wrong or destroyed secret-id in `openbao-approle`. Mint a new one (§5 step 4) |
 | a value changed in OpenBao but the app still has the old one | ESO hasn't refreshed yet (wait, or annotate the ExternalSecret to force it), and env-var consumers need a pod restart |

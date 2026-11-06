@@ -3,7 +3,7 @@
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
 from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Komf, Calibre-Web), games
 (RomM), torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
-copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio, with Wealthfolio on trial), and the glue (cert-manager, Gatus, Bark, Homepage, and Grafana with Prometheus + Loki).
+copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio, with Wealthfolio on trial), and the glue (cert-manager, External Secrets + OpenBao, Gatus, Bark, Homepage, and Grafana with Prometheus + Loki).
 
 New here? Learn the workflow hands-on first: **[`learn/onboarding-an-app.md`](learn/onboarding-an-app.md)**.
 
@@ -19,6 +19,7 @@ This page is the mental model. Each section ends with where to read more.
 │   ├─ VM  k3s-master-01 192.168.68.63      ├─ LXC file server  .50   NFS /data (photos, manga, books, ROMs)
 │   ├─ VM  k3s-worker-01 192.168.68.62 (32GB — Immich, RomM, Suwayomi, qBittorrent pinned here)│
 │   ├─ LXC Postgres   .7   (RomM, Ghostfolio)        ├─ LXC Valkey/Redis .103 (Immich, degoog, RomM)
+│   ├─ LXC OpenBao    .91  (every app's secret values → External Secrets)
 └──────────────────────────────────────────────────────────────────────────────────────────┘
           │  Ansible (ansible/)  — Tailscale, k3s, nfs-common, the few out-of-git secrets/labels
           ▼
@@ -30,6 +31,7 @@ This page is the mental model. Each section ends with where to read more.
 │           apps: searxng · degoog · homepage · karakeep · actual · ghostfolio · wealthfolio
 │           monitoring: gatus · bark · kube-prometheus-stack · loki · alloy
 │           cert-manager: cert-manager · cert-manager-issuer                               │
+│           external-secrets: external-secrets · external-secrets-store                    │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -62,8 +64,9 @@ Argo shows diffs, the phone tells you something is waiting — and a human click
 ```
 
 - **Rendering** happens in Argo's *repo-server*: `kustomize build --enable-alpha-plugins --enable-helm`.
-  That one command handles raw manifests, `helmCharts:` (immich, cert-manager) and the KSOPS
-  generator that decrypts secrets. The same command is what `scripts/ci/validate.sh` runs locally.
+  That one command handles raw manifests and `helmCharts:` (immich, cert-manager, external-secrets). Secrets are
+  no longer rendered here — they arrive from OpenBao at runtime (§6); the KSOPS plugin is still installed until a
+  cleanup, unused. The same command is what `scripts/ci/validate.sh` runs locally.
 - **"Hard Refresh"** in Argo re-renders ignoring its cache — needed after fixing a render error.
 - **Argo's own config** (`bootstrap/argocd/`) is NOT synced by Argo. Change it → re-apply by hand.
 → `platform/argocd.md`, `platform/updates-and-notifications.md`, `scripts/ci/validate.sh`
@@ -113,6 +116,7 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
 | RomM database | external Postgres LXC `.7` | yes | ⚠️ |
 | Kavita/Komf/Calibre/Suwayomi/qBittorrent/Gatus/Bark state, Karakeep's search index, metrics (Prometheus) + logs (Loki) | local-path PVCs | rebuildable (rescan/re-index) or cheap to lose | no, by design |
 | Redis/Valkey data | external LXC `.103` | cache | no |
+| app secrets (passwords, API keys) | OpenBao LXC `.91`, KV mount `homelab` | **yes** | `platform/openbao.md` §8 |
 
 Rule of thumb in every `storage.yaml`: **NFS for anything you'd cry about, local-path for anything a rescan rebuilds.**
 Backups are the biggest open item (see §9).
@@ -121,17 +125,19 @@ Backups are the biggest open item (see §9).
 ## 6. Secrets
 
 ```
-you (age private key on the Arch box)  ──sops -e──►  <app>-secret.enc.yaml  (values are ENC[...], safe in git)
-                                                              │
-                                   Argo repo-server + KSOPS + the same age key (Secret `sops-age`)
-                                                              ▼
-                                                   a real Kubernetes Secret → the pod
+you ──bao kv put/patch──►  OpenBao LXC .91  (KV mount `homelab`, one path per app; LAN/Tailscale only)
+                                  │
+             External Secrets Operator (namespace external-secrets) + the app's externalsecret.yaml
+             (git holds only the key NAMES; ClusterSecretStore `openbao`, refreshed hourly)
+                                  ▼
+                       a real Kubernetes Secret → the pod (same name and keys as the old SOPS one)
 ```
-A value is either `ENC[...]` in git or not in git. Today, while testing: three templates are placeholders (komf,
-qbittorrent, romm), Karakeep's secret is applied as cleartext, and Suwayomi's login, degoog's Valkey URL and the Bark
-device key (placeholders) are inline. The checks WARN until `STRICT_SECRETS=1` — the full list is the known-debt
-section of `platform/secrets.md`.
-→ `platform/secrets.md` (day-to-day), `platform/secrets-architecture.md` (deep dive)
+Secret values are not in git. Change one: `bao kv patch homelab/<app> KEY=…` (`put` replaces **all** keys), then
+force-sync the ExternalSecret or wait ≤1h, then restart the pod. A new key also needs an entry in the app's
+`externalsecret.yaml`. Still inline while testing: Suwayomi's login, degoog's Valkey URL and the Bark device key
+(placeholders); some OpenBao values may still be `REPLACE_ME`. The checks WARN until `STRICT_SECRETS=1`.
+→ `platform/openbao.md` (how it works + day-to-day). `platform/secrets.md` / `platform/secrets-architecture.md`
+describe the old SOPS/KSOPS setup, being retired.
 
 ## 7. Notifications
 
@@ -180,8 +186,8 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 - [`platform/argocd.md`](platform/argocd.md) — Argo CD: install, how it renders, the ApplicationSet, gotchas
 - [`platform/adding-an-app.md`](platform/adding-an-app.md) — **onboarding a new app, step by step**
 - [`platform/tls.md`](platform/tls.md) — cert-manager + Let's Encrypt (Cloudflare DNS-01)
-- [`platform/secrets.md`](platform/secrets.md) · [`platform/secrets-architecture.md`](platform/secrets-architecture.md)
-- [`platform/openbao.md`](platform/openbao.md) — **replacing SOPS (in progress)**: OpenBao on Proxmox + External Secrets Operator, every step explained
+- [`platform/openbao.md`](platform/openbao.md) — **secrets**: OpenBao on Proxmox + External Secrets Operator — day-to-day, setup, every step explained
+- [`platform/secrets.md`](platform/secrets.md) · [`platform/secrets-architecture.md`](platform/secrets-architecture.md) — the old SOPS/KSOPS setup, being retired (its known-debt list still applies)
 - [`platform/updates-and-notifications.md`](platform/updates-and-notifications.md) — Renovate, Argo → phone, Proxmox → phone
 - [`platform/ci.md`](platform/ci.md) — the GitHub Actions gate, the conventions check, the PR render-diff
 - [`platform/redis.md`](platform/redis.md) — the shared Valkey and per-app ACL users

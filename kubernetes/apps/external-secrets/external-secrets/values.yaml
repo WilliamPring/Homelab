@@ -1,0 +1,39 @@
+# External Secrets Operator values. Chart pin: kustomization.yaml. Docs: docs/platform/openbao.md
+#
+# Three Deployments come out of this chart:
+#   external-secrets                  the controller: watches ExternalSecrets, reads OpenBao, writes Secrets
+#   external-secrets-webhook          rejects a malformed ExternalSecret/SecretStore at Sync time
+#   external-secrets-cert-controller  makes and rotates the webhook's own TLS cert (no cert-manager needed)
+#
+# Version: the image tag rides with the CHART version on purpose — ESO releases chart and app together
+# with the same number (chart 2.14.0 = image v2.14.0), and its CRDs must match the controller.
+
+installCRDs: true
+
+# Light: it only wakes up to refresh ~9 Secrets once an hour.
+resources:
+  requests: { cpu: 10m, memory: 64Mi }
+  limits: { memory: 256Mi }
+
+# Off upstream by default; every container in this repo gets one (Argo health and Gatus trust readiness).
+readinessProbe:
+  enabled: true
+
+# Metrics → Prometheus, so rules.yaml can alert on a Secret that stopped refreshing.
+# alwaysRender: Argo renders offline, so the chart's "is the CRD there?" check would always say no.
+# honorLabels: keep ESO's own `namespace` label (the ExternalSecret's namespace) instead of
+# Prometheus overwriting it with the operator's namespace.
+serviceMonitor:
+  enabled: true
+  renderMode: alwaysRender
+  honorLabels: true
+
+webhook:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+certController:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }

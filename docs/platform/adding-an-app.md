@@ -3,8 +3,8 @@
 How every app in `kubernetes/apps/` was added. Follow it top to bottom; each step says *why* it exists.
 **First time?** Do the guided lab first: [`../learn/onboarding-an-app.md`](../learn/onboarding-an-app.md) walks a
 throwaway app through every step below and back out again. This page is the checklist you use after that.
-Reference app to copy from: **`kubernetes/apps/media/komf/`** (raw manifests + secret wiring + a doc — its secret is
-still a placeholder; `kubernetes/apps/apps/ghostfolio/` has a real encrypted one).
+Reference app to copy from: **`kubernetes/apps/media/komf/`** (raw manifests + secret wiring + a doc — its value in
+OpenBao may still be the `REPLACE_ME` placeholder; `kubernetes/apps/apps/ghostfolio/` has a real one).
 A blank skeleton lives in **`kubernetes/templates/app/`**.
 
 ```
@@ -20,7 +20,7 @@ decide ──► write the directory ──► validate locally ──► push �
 | **Namespace** | `media` (content), `apps` (tools), `monitoring`, `notifications`, `cert-manager` | the directory path *is* the namespace: `kubernetes/apps/<namespace>/<app>/` |
 | **State** | NFS (precious: files you can't recreate) · local-path (rebuildable: caches, indexes, thumbnails) · external DB (Postgres LXC `.7`, Valkey `.103`) | NFS survives a cluster rebuild, local-path does not, external DBs survive everything |
 | **Who reaches it** | Tailscale devices (Ingress + hostname) · LAN devices (NodePort too) · the internet (**no** — the only internet-facing paths are the Immich share proxy, and Argo CD + Bark through NPMplus) | decides `ingress.yaml` and whether `service.yaml` gets a `nodePort` |
-| **Secrets** | none · SOPS-encrypted (`<app>-secret.enc.yaml`) · (while testing: inline, flagged in `secrets.md` debt) | decides whether `kustomization.yaml` has a `generators:` block |
+| **Secrets** | none · in OpenBao (`homelab/<app>`) + an `externalsecret.yaml` · (while testing: inline, flagged in `secrets.md` debt) | decides whether `kustomization.yaml` lists an `externalsecret.yaml` |
 
 Pick a **hostname**: `<app>.williampring.ca` (taken: library, books, roms, suwayomi, komf, status, search,
 private, home, immich, qbittorrent, karakeep, actual, portfolio, wealthfolio, grafana — plus share, deploy and bark, which don't go through
@@ -30,14 +30,13 @@ Traefik). Pick a **NodePort** if LAN access is wanted: a free `30xxx` from the R
 
 ```
 kubernetes/apps/<namespace>/<app>/
-├── kustomization.yaml     ← REQUIRED. Lists the files; `generators:` only if there is a secret.
+├── kustomization.yaml     ← REQUIRED. Lists the files (`externalsecret.yaml` only if there is a secret).
 ├── deployment.yaml        ← pinned image, env, probes, resources, volumeMounts, nodeSelector if heavy
 ├── service.yaml           ← ClusterIP (+ nodePort when LAN access is wanted)
 ├── ingress.yaml           ← Traefik + cert-manager annotation (omit only if something else fronts it, e.g. Bark/NPMplus)
 ├── storage.yaml           ← PV/PVC for NFS, PVC for local-path (omit if stateless)
 ├── configmap.yaml         ← app config files, if any
-├── <app>-secret.enc.yaml  ← SOPS-encrypted Secret (if any)       ─┐ see platform/secrets.md §5
-└── <app>-secret.sops.yaml ← the KSOPS generator pointing at it    ─┘
+└── externalsecret.yaml    ← builds the Secret from OpenBao homelab/<app> (if any) — see platform/openbao.md
 ```
 Start from the skeleton: `cp -r kubernetes/templates/app kubernetes/apps/<namespace>/<app>` and replace every
 `example` and `EXAMPLE`. Or copy a similar real app.
@@ -71,7 +70,7 @@ plus the "Immich APP version" manager in `renovate.json` are the pattern.
 | `ingress.yaml` | `ingressClassName: traefik`, `cert-manager.io/cluster-issuer: letsencrypt`, `tls.secretName: <app>-tls` | one pattern → one place to debug TLS (`platform/tls.md`) |
 | `storage.yaml` | NFS: static `PersistentVolume` (`Retain`) + `PersistentVolumeClaim` with `volumeName`, `storageClassName: ""` | binding by name = predictable; Retain = deleting the claim never deletes files |
 | | local-path PVC: `storageClassName: local-path`, RWO | node disk, fast, disposable |
-| secrets | `<app>-secret.enc.yaml` encrypted with `sops -e -i`; referenced via `secretKeyRef` | a value is either `ENC[...]` in git or not in git |
+| secrets | values in OpenBao (`homelab/<app>`); `externalsecret.yaml` maps each key into `<app>-secret`; referenced via `secretKeyRef` | secret values are never in git — only the key names are |
 | everywhere | a header comment: what the app is, where data lives, what to do before syncing | the next reader is you in six months |
 
 ## 3. Validate locally — before pushing
@@ -106,8 +105,12 @@ If the app needs a sync option the default lacks (e.g. `ServerSideApply` for hug
 - **File server** (if NFS): `mkdir -p /data/<folder> && chown -R 1000:1000 /data/<folder> && chmod -R 775 /data/<folder>`
   on `192.168.68.50`. The export of `/data` already covers subfolders.
 - **Database** (if any): a role + database on the Postgres LXC (`scripts/postgres-romm-setup.sh` is the
-  template), a dedicated ACL user on Valkey (`platform/redis.md`). Passwords → the app's SOPS secret.
-- **Secrets**: fill the template, `sops -e -i`, verify with `sops -d … >/dev/null` (`platform/secrets.md` §3).
+  template), a dedicated ACL user on Valkey (`platform/redis.md`). Passwords → the app's OpenBao path.
+- **Secrets**: from a machine logged in to OpenBao (`bao login -method=userpass username=william`):
+  `bao kv put homelab/<app> KEY=… KEY2=…` (⚠️ `put` replaces **all** keys at the path — use `bao kv patch` to
+  change one later). Then copy an `externalsecret.yaml` from an existing app (e.g. `apps/apps/ghostfolio/`), adjust
+  name, namespace, path (`key:`) and the key list, and add it to `resources:`. A key that exists in OpenBao but
+  isn't listed in `externalsecret.yaml` never reaches the pod. → [`openbao.md`](openbao.md)
 
 ## 6. Sync and verify
 
@@ -146,9 +149,10 @@ Your phone gets "<app>: deployed" (Argo → Bark).
    (Kavita API key).
 2. Wrote `kubernetes/apps/media/komf/`: `deployment.yaml` (pinned `sndxr/komf`, seed-config init container,
    probes, 1Gi limit), `pvc.yaml`, `configmap.yaml` (its `application.yml`), `service.yaml` (ClusterIP),
-   `ingress.yaml` (`komf.williampring.ca`), `komf-secret.enc.yaml` + `komf-secret.sops.yaml`,
-   `kustomization.yaml` with `generators:`.
+   `ingress.yaml` (`komf.williampring.ca`), `kustomization.yaml`, and the secret wiring (then SOPS files +
+   a `generators:` block; today an `externalsecret.yaml` reading OpenBao `homelab/komf`).
 3. `make validate` green → push → appeared in Argo as `komf` in `media`.
-4. DNS record `komf` → Tailscale IP. Secret filled + encrypted (still a placeholder today — see secrets debt).
+4. DNS record `komf` → Tailscale IP. Secret filled (the Kavita key may still be `REPLACE_ME` — fix it with
+   `bao kv patch homelab/komf KAVITA_API_KEY=…`, see `apps/kavita.md`).
 5. Sync → pod Ready → cert issued → opened the UI.
 6. Wired: Gatus endpoint `Komf`, doc section in `apps/kavita.md`, no Homepage tile (no UI of its own).

@@ -312,6 +312,16 @@ data:
         interval: 1m
         conditions: ["[CONNECTED] == true"]
         alerts: [{ type: custom }]
+      - name: OpenBao (secrets)
+        group: infra
+        # /sys/health: 200 = unsealed + serving; 503 = SEALED (after a reboot whose auto-unseal
+        # failed) — every app's Secret stops refreshing then. Cert: self-signed, made 2026-11-05 for
+        # 10 years; the expiry condition is the reminder to regenerate it (docs/platform/openbao.md).
+        url: "https://192.168.68.91:8200/v1/sys/health"
+        interval: 1m
+        client: { insecure: true }     # self-signed; ESO itself pins the cert (openbao-ca.crt)
+        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 720h"]
+        alerts: [{ type: custom }]
       - name: Proxmox pve (.96)
         group: infra
         url: "https://192.168.68.96:8006/"

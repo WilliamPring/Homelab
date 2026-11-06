@@ -9,13 +9,15 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 - **Pin everything.** Image tags, chart versions, tool versions. `latest` and `"*"` are invisible to Renovate.
   A Helm chart that also picks the APP version (its `appVersion`) gets the app's image tag pinned in `values.yaml`
   too, with a Renovate custom manager — `kubernetes/apps/media/immich/values.yaml` is the example.
-- **Secrets**: SOPS + age via KSOPS. Pattern = `<app>-secret.enc.yaml` (encrypted) + `<app>-secret.sops.yaml`
-  (generator) + `generators:` in `kustomization.yaml`. Target state: a value is either `ENC[...]` in git or not in git.
-  **Current state (by the owner's choice while testing):** placeholder templates (komf, qbittorrent, romm), Karakeep's
-  secret applied as cleartext, and a few inline values (Suwayomi's login, degoog's Valkey URL, the Bark device key
-  placeholders); the checks WARN rather than block (`STRICT_SECRETS=0`). Do not "fix" this unasked — see
-  `docs/platform/secrets.md` known debt.
+- **Secrets**: OpenBao (Proxmox LXC, `https://192.168.68.91:8200`) + External Secrets Operator. An app's values
+  live in OpenBao at `homelab/<app>`; git holds only `externalsecret.yaml` (Secret name + KEY NAMES, never values),
+  listed in `resources:`. Docs: `docs/platform/openbao.md`. Never write a secret value into git, and never put
+  OpenBao behind the Cloudflare tunnel. **Cut-over state (Nov 2026):** the 9 former SOPS secrets are ExternalSecrets;
+  KSOPS is still installed in Argo until every app has been synced, then removed (openbao.md §7). Inline values
+  the owner chose to keep (Suwayomi's login, degoog's Valkey URL, the Bark device key placeholders) stay inline —
+  do not "fix" them unasked.
 - **One owner per thing.** Ansible = nodes (Tailscale, k3s, the few out-of-git secrets/labels). Argo = every app.
+  OpenBao = every secret value (its one hand-made bootstrap credential: `external-secrets/openbao-approle`).
 - **Hostnames** are `*.williampring.ca` → the master's Tailscale IP (DNS-only). Internet-facing exceptions:
   `public-immich.` (Immich share proxy), and `deploy.` (Argo CD) + `bark.` via a Cloudflare tunnel → NPMplus (no Ingress here).
 
@@ -52,5 +54,5 @@ registers any new `kubernetes/apps/<namespace>/<app>/` directory — never hand-
 Learning the workflow from scratch: `docs/learn/onboarding-an-app.md` (a guided lab with a throwaway app).
 
 ## When unsure
-Check how `kubernetes/apps/media/komf/` does it — it is the smallest complete example (manifests + secret wiring +
-docs/apps/kavita.md). Its secret is still a placeholder template; for a real encrypted one see `kubernetes/apps/apps/ghostfolio/`.
+Check how `kubernetes/apps/media/komf/` does it — it is the smallest complete example (manifests + ExternalSecret +
+docs/apps/kavita.md).

@@ -15,7 +15,7 @@ throwaway app. Every step says what to run, what you should see, and what just h
 
 **Tools on your laptop** (macOS shown; Arch has the same packages):
 ```bash
-brew install kubectl helm kubeconform yamllint pre-commit sops age
+brew install kubectl helm kubeconform yamllint pre-commit openbao   # openbao = the `bao` CLI (secrets)
 make hooks          # once per clone: cheap checks on commit, the full render on push
 ```
 `make validate` needs `kubectl`, `helm`, `kubeconform` and `ruby`; `make lint` needs `yamllint`.
@@ -79,7 +79,7 @@ Every app starts here ([`adding-an-app.md`](../platform/adding-an-app.md) §0):
 | Namespace | `apps` | it's a tool, not media |
 | State | none | no `storage.yaml`, no NFS folder, no `strategy: Recreate` |
 | Who reaches it | Tailscale devices, at `whoami.williampring.ca` | an Ingress; no NodePort (nothing on the LAN needs it) |
-| Secrets | none | no `generators:` block |
+| Secrets | none | no `externalsecret.yaml`, nothing in OpenBao |
 
 ### Step 2 — Write the directory
 
@@ -412,19 +412,25 @@ What follows from that choice:
 
 ### 3.4 Secrets
 
+Secret values live in **OpenBao** (`https://192.168.68.91:8200`, LAN/Tailscale only), never in git. External
+Secrets copies them into a normal Kubernetes Secret, so the Deployment still uses `secretKeyRef` as usual.
 ```bash
-./scripts/secrets.sh new apps/myapp API_KEY DB_PASSWORD     # .enc.yaml + .sops.yaml + the generator, in one go
-./scripts/secrets.sh set myapp API_KEY=abc123 DB_PASSWORD=-  # '-' generates a strong value
-./scripts/secrets.sh encrypt myapp                           # encrypts, then proves it decrypts
-make conventions                                             # D: every secretKeyRef points at a real key
+bao login -method=userpass username=william                                    # once per session
+bao kv put homelab/myapp API_KEY=abc123 DB_PASSWORD="$(openssl rand -hex 32)"  # ⚠️ put replaces ALL keys —
+                                                                               #    use `bao kv patch` to change one
+cp kubernetes/apps/apps/ghostfolio/externalsecret.yaml kubernetes/apps/apps/myapp/
+#   edit it: metadata.name + target.name → myapp-secret, namespace, and one `- secretKey: K /
+#   remoteRef: { key: myapp, property: K }` entry per key; then add `- externalsecret.yaml` to resources:
+make conventions                                                               # D: every secretKeyRef points at a listed key
 ```
-Encrypt before the first commit: git history is forever and this repo is public. Pods don't restart when a Secret
-changes — `sudo k3s kubectl rollout restart deploy/myapp -n apps`. → [`../platform/secrets.md`](../platform/secrets.md) §3 and §5.
+Only the key *names* go in git. A value changed in OpenBao reaches the Secret within an hour (or now:
+`sudo k3s kubectl -n apps annotate externalsecret myapp-secret force-sync=$(date +%s) --overwrite`). Pods don't restart
+when a Secret changes — `sudo k3s kubectl rollout restart deploy/myapp -n apps`. → [`../platform/openbao.md`](../platform/openbao.md) §6.
 
 ### 3.5 A database or Redis
 
 One Postgres role + database per app on the LXC (template: `scripts/postgres-romm-setup.sh`) and one Valkey ACL user
-per app ([`../platform/redis.md`](../platform/redis.md)). The passwords go in the app's SOPS secret. Create them
+per app ([`../platform/redis.md`](../platform/redis.md)). The passwords go in the app's OpenBao path. Create them
 **before** the first Sync, or the pod crash-loops on connect. The full walk-through is
 [`../runbooks/deploy-ghostfolio.md`](../runbooks/deploy-ghostfolio.md).
 
@@ -458,7 +464,7 @@ do the Ingress, cert and DNS work?
 |---|---|---|
 | The app never shows up in Argo | not pushed; directory at the wrong depth | `git log origin/main -1`; `make conventions` (A); the refresh annotation above |
 | `ComparisonError`, "kustomize build failed" | the directory doesn't render | `make render APP=…`; after fixing, Argo → **Hard Refresh** |
-| `ComparisonError` mentioning `ksops`/`sops` | the secret file isn't encrypted, or was encrypted to another age key | `./scripts/secrets.sh status`; [`../platform/secrets.md`](../platform/secrets.md) troubleshooting |
+| `CreateContainerConfigError`, ExternalSecret not `Ready` | the OpenBao path or a key is missing, or OpenBao is sealed/unreachable | `sudo k3s kubectl -n <ns> describe externalsecret <app>-secret`; [`../platform/openbao.md`](../platform/openbao.md) troubleshooting |
 | Sync fails: "provided port is already allocated" | NodePort collision | `make conventions` (B) |
 | Pod `Pending` | PVC not bound (`volumeName` typo), `nodeSelector` matches no node, not enough memory for `requests` | `sudo k3s kubectl describe pod …` → Events |
 | `ImagePullBackOff` | the tag doesn't exist | `describe pod`; look the tag up in the registry |
@@ -497,7 +503,7 @@ A rolling update starts the new pod before stopping the old one. Both want the s
 pod can't mount it and hangs in `ContainerCreating`.
 </details>
 
-<details><summary>4. You changed an encrypted secret, pushed and synced, but the app still uses the old value. Why?</summary>
+<details><summary>4. You changed a secret in OpenBao and the Kubernetes Secret now shows it, but the app still uses the old value. Why?</summary>
 
 Environment variables are read when the container starts, and a changed Secret doesn't restart anything.
 `sudo k3s kubectl rollout restart deploy/<app> -n <ns>`.
@@ -557,7 +563,7 @@ to make the probe send a Host the app allows (`httpHeaders`) — copied from the
 | **cert-manager · ClusterIssuer · Certificate · DNS-01** | issues TLS certs · how to reach Let's Encrypt (`letsencrypt`) · one cert request · proving domain ownership with a DNS TXT record |
 | **PV · PVC · StorageClass** | a piece of storage · a claim on one · a way to create them on demand (`local-path`); the NFS PVs are written by hand |
 | **RWO / RWX** | ReadWriteOnce — one node mounts it / ReadWriteMany — many nodes can |
-| **SOPS · age · KSOPS** | encrypts the values in a YAML file · the key type · the kustomize plugin that decrypts inside Argo |
+| **OpenBao · ExternalSecret · ESO** | where secret values live (outside git) · the git object naming which keys to copy · External Secrets Operator, which copies them into a Kubernetes Secret |
 | **readiness / liveness / startup probe** | may it get traffic? / should it be restarted? / still booting — don't judge yet |
 | **requests / limits** | reserved for scheduling / the ceiling (memory over the limit = OOM-kill) |
 | **nodeSelector** | run only on nodes with this label (`immich-node=true` = the 32GB worker) |
