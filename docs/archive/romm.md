@@ -1,4 +1,9 @@
-# RomM — ROM library + play in the browser
+# RomM — ROM library + play in the browser (REMOVED Nov 2026)
+
+> **Archived.** RomM was removed from the homelab in Nov 2026. Its ROMs (`/data/roms`) and saves
+> (`/data/romm-assets`) were left on the file server, and its `romm` database / Valkey user until you
+> drop them — `docs/runbooks/cluster-cleanup.md` §9. The manifests and `scripts/postgres-romm-setup.sh`
+> are in git history (the commit before "remove romm") if it ever comes back; this doc is how it was set up.
 
 **RomM** scans your ROM collection, pulls metadata and artwork (IGDB, ScreenScraper, Hasheous…),
 and lets you play most retro platforms directly in the browser via EmulatorJS. The emulator

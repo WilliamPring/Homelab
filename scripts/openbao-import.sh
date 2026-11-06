@@ -33,7 +33,6 @@ apps/karakeep-secret                      karakeep
 apps/wealthfolio-secret                   wealthfolio
 media/immich-secret                       immich
 media/qbittorrent-secret                  qbittorrent
-media/romm-secret                         romm
 monitoring/kube-prometheus-stack-secret   grafana
 "
 MOUNT=homelab

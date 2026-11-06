@@ -131,7 +131,7 @@ su postgres -c "psql -tAc \"SELECT datname FROM pg_database WHERE datname='ghost
 - [ ] ① done, DATABASE_URL copied
 
 > **Why a URL and not separate host/user/password fields?** Most apps here take them separately
-> (see RomM's `DB_HOST`, `DB_USER`, `DB_PASSWD`). Ghostfolio only accepts one connection string.
+> (e.g. separate `DB_HOST`, `DB_USER`, `DB_PASSWD`). Ghostfolio only accepts one connection string.
 > Since that string contains the password, the whole thing has to be a secret — which is why
 > `deployment.yaml` has no database host written in it at all.
 

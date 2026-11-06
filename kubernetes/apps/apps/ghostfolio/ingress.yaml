@@ -1,7 +1,7 @@
 # https://portfolio.williampring.ca — Tailscale-only (DNS: portfolio → A → master Tailscale IP,
 # grey cloud / DNS-only). This is the ONLY way in: there is no NodePort (see service.yaml).
 #
-# The hostname says what it DOES, like library (Kavita) and roms (RomM) — the app/directory keeps
+# The hostname says what it DOES, like library (Kavita) and books (Calibre) — the app/directory keeps
 # the product name `ghostfolio` so the image, the Argo app and the docs all agree.
 #
 # ⚠️ On your phone this is a PWA — it has to REACH the server to load, like the old ntfy app did.

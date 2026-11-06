@@ -1,8 +1,8 @@
 # Start here — how the whole thing works
 
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
-from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Calibre-Web), games
-(RomM), torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
+from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Calibre-Web),
+torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
 copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio, with Wealthfolio on trial), and the glue (cert-manager, Gatus, Bark, Homepage, and Grafana with Prometheus + Loki).
 
 New here? Learn the workflow hands-on first: **[`learn/onboarding-an-app.md`](learn/onboarding-an-app.md)**.
@@ -17,8 +17,8 @@ This page is the mental model. Each section ends with where to read more.
 ┌─ Hardware ──────────────────────────────────────────────────────────────────────────────┐
 │ Proxmox pve-a (.96) + pve-b (.89)                                                       │
 │   ├─ VM  k3s-master-01 192.168.68.63      ├─ LXC file server  .50   NFS /data (photos, manga, books, ROMs)
-│   ├─ VM  k3s-worker-01 192.168.68.62 (32GB — Immich, RomM, Suwayomi, qBittorrent pinned here)│
-│   ├─ LXC Postgres   .7   (RomM, Ghostfolio)        ├─ LXC Valkey/Redis .103 (Immich, degoog, RomM)
+│   ├─ VM  k3s-worker-01 192.168.68.62 (32GB — Immich, Suwayomi, qBittorrent pinned here)      │
+│   ├─ LXC Postgres   .7   (Ghostfolio)              ├─ LXC Valkey/Redis .103 (Immich, degoog)
 └──────────────────────────────────────────────────────────────────────────────────────────┘
           │  Ansible (ansible/)  — Tailscale, k3s, nfs-common, the few out-of-git secrets/labels
           ▼
@@ -26,7 +26,7 @@ This page is the mental model. Each section ends with where to read more.
 │  Traefik (ingress, bundled)   cert-manager (Let's Encrypt via Cloudflare DNS-01)        │
 │  Argo CD  ◄── kubernetes/bootstrap/   (applied by hand, twice, ever)                     │
 │     └─ ApplicationSet ──► one Application per  kubernetes/apps/<namespace>/<app>/        │
-│           media: immich · immich-prereqs · immich-public-proxy · kavita · calibre · suwayomi · romm · qbittorrent
+│           media: immich · immich-prereqs · immich-public-proxy · kavita · calibre · suwayomi · qbittorrent
 │           apps: searxng · degoog · homepage · karakeep · actual · ghostfolio · wealthfolio
 │           monitoring: gatus · bark · kube-prometheus-stack · loki · alloy
 │           cert-manager: cert-manager · cert-manager-issuer                               │
@@ -110,7 +110,6 @@ Pins are what make this work: a `:latest` image or a `"*"` chart is invisible to
 | photos, manga, books, ROMs, saves, downloads | NFS `192.168.68.50:/data/...` | **yes** | ⚠️ not automated yet |
 | budget files (Actual), bookmarks + archived pages (Karakeep) | NFS `192.168.68.50:/data/{actual,karakeep}` | **yes** | ⚠️ not automated yet |
 | Immich database | in-cluster Postgres (VectorChord image), **local-path** PVC on the worker | **yes** | ⚠️ not automated yet |
-| RomM database | external Postgres LXC `.7` | yes | ⚠️ |
 | Kavita/Calibre/Suwayomi/qBittorrent/Gatus/Bark state, Karakeep's search index, metrics (Prometheus) + logs (Loki) | local-path PVCs | rebuildable (rescan/re-index) or cheap to lose | no, by design |
 | Redis/Valkey data | external LXC `.103` | cache | no |
 
@@ -127,8 +126,8 @@ you (age private key on the Arch box)  ──sops -e──►  <app>-secret.enc.
                                                               ▼
                                                    a real Kubernetes Secret → the pod
 ```
-A value is either `ENC[...]` in git or not in git. Today, while testing: two templates are placeholders
-(qbittorrent, romm), Karakeep's secret is applied as cleartext, and Suwayomi's login and the Bark
+A value is either `ENC[...]` in git or not in git. Today, while testing: one template is a placeholder
+(qbittorrent), Karakeep's secret is applied as cleartext, and Suwayomi's login and the Bark
 device key (placeholders) are inline. The checks WARN until `STRICT_SECRETS=1` — the full list is the known-debt
 section of `platform/secrets.md`.
 → `platform/secrets.md` (day-to-day), `platform/secrets-architecture.md` (deep dive)
@@ -172,7 +171,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 
 **Apps** — one guide per app: setup, how it fits, troubleshooting
 - [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
-- [`apps/romm.md`](apps/romm.md) · [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/searxng.md`](apps/searxng.md) · [`apps/degoog.md`](apps/degoog.md)
+- [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/searxng.md`](apps/searxng.md) · [`apps/degoog.md`](apps/degoog.md)
 - [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/ghostfolio.md`](apps/ghostfolio.md) · [`apps/wealthfolio.md`](apps/wealthfolio.md) · [`apps/homepage.md`](apps/homepage.md)
 - [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md) · [`apps/grafana.md`](apps/grafana.md) (Prometheus, Loki, Alloy, Alertmanager)
 
