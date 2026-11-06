@@ -1,0 +1,21 @@
+# OpenBao's PUBLIC certificate (self-signed, made 2026-11-05 — openbao.md §5 step 6), so ESO can verify
+# it's really talking to OpenBao. Public on purpose: a certificate is not a secret; the private key
+# never leaves the LXC.
+#
+# A YAML ConfigMap, not a .crt file beside it, because .gitignore ignores *.crt / *.pem / *.key
+# (a good rule for this repo — it just doesn't apply to a public cert).
+#
+# Fill it in: in the LXC console run
+#   cat "$(grep -oP 'tls_cert_file\s*=\s*"\K[^"]+' /etc/openbao/openbao.hcl)"
+# and paste the whole block below, replacing the REPLACE_ME lines, indented 4 spaces under `ca.crt: |`.
+# Regenerated the cert? Paste the new one and Sync external-secrets-store.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openbao-ca
+  namespace: external-secrets
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    REPLACE_ME_WITH_OPENBAO_CERT
+    -----END CERTIFICATE-----

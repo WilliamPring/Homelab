@@ -22,6 +22,7 @@ helmCharts:
 resources:
   - rules.yaml           # homelab alert rules on top of the chart's defaults (OOMKilled, restart loops)
   - bark-relay.yaml      # Alertmanager webhook → Bark's /push format (Deployment + Service)
+  - externalsecret.yaml  # kube-prometheus-stack-secret ← OpenBao (was KSOPS/SOPS)
 
 # The relay's code and the "App logs" dashboard as ConfigMaps. Generated names carry a content
 # hash: edit the file, Sync, and the relay pod restarts with the new code (no manual bump).
@@ -41,6 +42,3 @@ configMapGenerator:
       disableNameSuffixHash: true    # nothing references it by name; Grafana's sidecar finds it by label
       labels:
         grafana_dashboard: "1"
-
-generators:
-  - kube-prometheus-stack-secret.sops.yaml

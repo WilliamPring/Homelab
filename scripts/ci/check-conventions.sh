@@ -12,9 +12,9 @@
 #   B. nodeports       unique, and inside the 30000–32767 range (a clash = "already allocated"
 #                      at Sync time, which looks like an Argo bug and isn't)
 #   C. images          every image has an explicit tag; no bare :latest (Renovate is blind to it)
-#   D. secretrefs      every secretKeyRef points at a key that the Secret in this repo declares.
-#                      SOPS encrypts VALUES, not KEY NAMES, so this works with no age key — and it
-#                      is the check that catches "secret not found"/wrong-key before Sync does.
+#   D. secretrefs      every secretKeyRef points at a key that the Secret in this repo declares —
+#                      a plain Secret, or an ExternalSecret's spec.data[].secretKey (values live in
+#                      OpenBao, KEY NAMES live in git). Catches "secret not found"/wrong-key before Sync.
 #   E. placeholders    REPLACE_ME anywhere, not just in *.enc.yaml (WARN — see the secrets stance
 #                      in CLAUDE.md). The Bark device key lives in a plain Deployment, so the
 #                      existing *.enc.yaml-only check cannot see it.
@@ -103,13 +103,19 @@ pass("#{imgs.uniq.size} image references, all pinned") if bad_imgs.zero?
 
 # ── D. secretKeyRef → the Secret's declared keys ───────────────────────────────────────
 puts "== D. secretrefs: every secretKeyRef key exists in the Secret this repo declares =="
-# SOPS with encrypted_regex ^(data|stringData)$ leaves KEY NAMES in cleartext, so an encrypted
-# file still tells us which keys it provides — no age key needed.
 declared = {}
 DOCS.each do |f, d|
   next unless d["kind"] == "Secret"
   keys = ((d["stringData"] || {}).keys + (d["data"] || {}).keys).uniq
   (declared[d.dig("metadata", "name")] ||= { keys: [], file: f })[:keys].concat(keys)
+end
+# An ExternalSecret (OpenBao → Secret) declares its target Secret's keys in spec.data[].secretKey,
+# so the same check works for it. (dataFrom: would hide the key names — this repo lists them.)
+DOCS.each do |f, d|
+  next unless d["kind"] == "ExternalSecret"
+  name = d.dig("spec", "target", "name") || d.dig("metadata", "name")
+  keys = (d.dig("spec", "data") || []).map { |e| e["secretKey"] }.compact
+  (declared[name] ||= { keys: [], file: f })[:keys].concat(keys)
 end
 refs = []
 DOCS.each do |f, d|

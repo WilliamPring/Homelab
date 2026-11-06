@@ -15,6 +15,10 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
   secret applied as cleartext, and a few inline values (Suwayomi's login, degoog's Valkey URL, the Bark device key
   placeholders); the checks WARN rather than block (`STRICT_SECRETS=0`). Do not "fix" this unasked — see
   `docs/platform/secrets.md` known debt.
+  **Pilot (Nov 2026):** OpenBao (`https://192.168.68.91:8200`, Proxmox LXC) + External Secrets Operator now run
+  beside SOPS. Only Grafana's secret (`kube-prometheus-stack/externalsecret.yaml` ← `homelab/grafana`) uses it so
+  far; every other app stays on SOPS until the owner says otherwise. Docs: `docs/platform/openbao.md`. Never put
+  OpenBao behind the Cloudflare tunnel.
 - **One owner per thing.** Ansible = nodes (Tailscale, k3s, the few out-of-git secrets/labels). Argo = every app.
 - **Hostnames** are `*.williampring.ca` → the master's Tailscale IP (DNS-only). Internet-facing exceptions:
   `public-immich.` (Immich share proxy), and `deploy.` (Argo CD) + `bark.` via a Cloudflare tunnel → NPMplus (no Ingress here).

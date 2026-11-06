@@ -1,0 +1,30 @@
+# Alert when an app's Secret can't be refreshed from OpenBao. Routed to Bark like every other
+# warning (kube-prometheus-stack/values.yaml → bark-relay).
+#
+# Usually means one of:
+#   - OpenBao is down or sealed (all ExternalSecrets fail at once)
+#   - the ESO login expired or was revoked (the openbao-approle Secret — docs/platform/openbao.md §7)
+#   - a key the ExternalSecret asks for doesn't exist at that path in OpenBao (one app fails)
+# The Secret that already exists stays as it was, so running pods keep working — this is a
+# "fix it before the next restart" alert, not an outage.
+#
+# Picked up automatically: kube-prometheus-stack sets ruleSelectorNilUsesHelmValues: false.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: external-secrets
+  namespace: external-secrets
+spec:
+  groups:
+    - name: homelab.external-secrets
+      rules:
+        - alert: ExternalSecretNotSynced
+          expr: max by (namespace, name) (externalsecret_status_condition{condition="Ready", status="False"}) == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Secret {{ $labels.namespace }}/{{ $labels.name }} can't be refreshed from OpenBao"
+            description: >-
+              kubectl -n {{ $labels.namespace }} describe externalsecret {{ $labels.name }}
+              shows why. Check OpenBao is unsealed and the key exists at that path.
