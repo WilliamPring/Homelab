@@ -1,6 +1,7 @@
 > **Status (Nov 2026):** this is the original target-architecture write-up. Most of it was built; some
 > choices changed along the way — Gatus (uptime) instead of a Prometheus/Grafana/Loki stack, Vaultwarden
-> removed, Argo CD with manual sync, SOPS/KSOPS for secrets. The comparison table and the roadmap below now
+> removed, Argo CD with manual sync, SOPS/KSOPS for secrets (since replaced by OpenBao + External Secrets
+> Operator, `platform/openbao.md`). The comparison table and the roadmap below now
 > show where things stand; the prose around them is the original reasoning. The current truth is
 > `docs/index.md` and the app/platform docs.
 
@@ -62,7 +63,7 @@ match Git. Git is the single source of truth and the audit log.
 | **App delivery** | ✅ **GitOps** — Argo CD + an ApplicationSet; Sync is a manual click | **GitOps** — cluster pulls from Git (Argo CD/Flux) |
 | **Node provisioning** | Hand-installed Debian VMs + Ansible | Automated (preseed/cloud-init) or **immutable OS (Talos)** |
 | **Control plane** | Single master (SPOF) — fine at home | **HA** — 3+ control-plane nodes |
-| **Secrets** | ✅ **SOPS + age via KSOPS** (a few placeholders/inline values while testing) | **SOPS / Sealed Secrets / External Secrets** (encrypted in Git) |
+| **Secrets** | ✅ **OpenBao (Proxmox LXC) + External Secrets Operator** — values outside git (was SOPS + age via KSOPS until Nov 2026; a few inline values while testing) | **SOPS / Sealed Secrets / External Secrets** (encrypted in Git) |
 | **Ingress/TLS/DNS** | ✅ Traefik Ingress + **cert-manager** (DNS-01); DNS records still added by hand | Ingress + **cert-manager** + **ExternalDNS** |
 | **Observability** | ✅ kube-prometheus-stack + Loki/Alloy → Grafana, Alertmanager → Bark; Gatus for URLs; Pulse for Proxmox | **Prometheus + Grafana + Loki + Alertmanager** |
 | **Storage** | NFS (precious) + local-path (rebuildable); backups not automated yet | **CSI (Longhorn/Ceph) + Velero** |
@@ -133,7 +134,9 @@ overkill for your scale.
    Argo watches. *This is the big lesson.* Ansible installs Argo; Argo does the rest.
 3. ✅ **Real secrets** — **SOPS+age** or **Sealed Secrets**, so encrypted secrets live in the
    GitOps repo (works with Argo). Replaces plaintext/ansible-vault for app secrets.
-   (SOPS + KSOPS; the testing-stance exceptions are listed in `platform/secrets.md`.)
+   (Done first with SOPS + KSOPS; replaced in Nov 2026 by OpenBao + External Secrets Operator, so values
+   no longer live in git at all — `platform/openbao.md`. The testing-stance exceptions are listed in
+   `platform/secrets.md`.)
 4. ◐ **Ingress + TLS + DNS** — finish **cert-manager**, add **ExternalDNS** (auto Cloudflare
    records). Move apps off NodePort onto real hostnames. (cert-manager ✅; ExternalDNS not yet.)
 5. ✅ **Observability** — **kube-prometheus-stack** (Prometheus + Grafana + Alertmanager) +

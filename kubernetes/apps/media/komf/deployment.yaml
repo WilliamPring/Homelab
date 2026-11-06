@@ -13,8 +13,8 @@
 # CONFIG: /config/application.yml is SEEDED from the ConfigMap on first start only (init
 # container). After that the copy on the PVC is the live one — the extension can edit it.
 # To re-seed from git: delete /config/application.yml in the pod (or the PVC) and restart.
-# The Kavita API key never lives in the ConfigMap; it comes from the SOPS-encrypted Secret
-# via KOMF_KAVITA_API_KEY (env beats file for that key).
+# The Kavita API key never lives in the ConfigMap; it comes from komf-secret (OpenBao
+# homelab/komf, externalsecret.yaml) via KOMF_KAVITA_API_KEY (env beats file for that key).
 apiVersion: apps/v1
 kind: Deployment
 metadata:

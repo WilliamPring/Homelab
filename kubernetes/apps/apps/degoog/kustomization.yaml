@@ -6,6 +6,4 @@ resources:
   - degoog-service.yaml
   - ingress.yaml
   - pvc.yaml
-
-generators:
-  - degoog-secret.sops.yaml
+  - externalsecret.yaml  # degoog-secret ← OpenBao homelab/degoog

@@ -3,7 +3,7 @@
 # (192.168.68.7). The LXC itself was set up earlier (listen_addresses='*', LAN pg_hba);
 # on a FRESH LXC also run:  su postgres -c "psql -c \"ALTER SYSTEM SET listen_addresses = '*';\"" && rc-service postgresql restart
 # Run as ROOT inside the Postgres LXC:   sh postgres-ghostfolio-setup.sh
-# Idempotent — safe to re-run (re-running RESETS the password → update ghostfolio-secret.enc.yaml).
+# Idempotent — safe to re-run (re-running RESETS the password → update DATABASE_URL in OpenBao homelab/ghostfolio).
 set -eu
 
 DB_NAME="ghostfolio"
@@ -47,11 +47,13 @@ cat <<EOF
    host 192.168.68.7 · port 5432 · db ${DB_NAME} · user ${DB_USER}
    PASSWORD: ${DB_PASS}
 
- >>> Ghostfolio takes ONE connection URL, not separate fields. On the Arch box:
+ >>> Ghostfolio takes ONE connection URL, not separate fields. In the OpenBao UI
+     (https://192.168.68.91:8200/ui/) → homelab → ghostfolio → Create new version, set:
 
-   ./scripts/secrets.sh set ghostfolio \\
-     DATABASE_URL='postgresql://${DB_USER}:${DB_PASS}@192.168.68.7:5432/${DB_NAME}?connect_timeout=300'
-   ./scripts/secrets.sh encrypt ghostfolio
+   DATABASE_URL = postgresql://${DB_USER}:${DB_PASS}@192.168.68.7:5432/${DB_NAME}?connect_timeout=300
+
+     then force-sync: kubectl -n apps annotate externalsecret ghostfolio-secret force-sync=\$(date +%s) --overwrite
+     and restart: kubectl -n apps rollout restart deploy/ghostfolio
 
  (If the password contains characters that are special in a URL, percent-encode them.
   This script only generates A-Za-z0-9, so as written it is always URL-safe.)

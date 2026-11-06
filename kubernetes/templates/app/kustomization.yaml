@@ -7,6 +7,6 @@ resources:
   - service.yaml
   - ingress.yaml
 
-# Has a secret? add:
-# generators:
-#   - example-secret.sops.yaml     # see docs/platform/secrets.md §5
+# Has a secret? put the values in OpenBao (bao kv put homelab/example KEY=…), then add:
+#   - externalsecret.yaml          # copy one from any app, e.g. ../../apps/apps/ghostfolio/ —
+#                                  # docs/platform/openbao.md §6

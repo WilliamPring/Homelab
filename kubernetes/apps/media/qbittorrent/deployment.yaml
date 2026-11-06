@@ -20,7 +20,7 @@
 #                 tracker name you look up. Payload hidden, metadata leaked.
 #
 #   data   → NFS /data/downloads (complete/ + incomplete/) · config → local-path PVC
-#   before first Sync: Mullvad key in the SOPS secret, NFS folder, DNS record (docs/apps/qbittorrent.md)
+#   before first Sync: Mullvad key in OpenBao (homelab/qbittorrent), NFS folder, DNS record (docs/apps/qbittorrent.md)
 #   docs: https://github.com/qdm12/gluetun-wiki · docs/apps/qbittorrent.md
 apiVersion: apps/v1
 kind: Deployment

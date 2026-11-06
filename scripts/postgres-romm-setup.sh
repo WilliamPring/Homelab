@@ -3,7 +3,7 @@
 # (192.168.68.7). The LXC itself was set up earlier (listen_addresses='*', LAN pg_hba);
 # on a FRESH LXC also run:  su postgres -c "psql -c \"ALTER SYSTEM SET listen_addresses = '*';\"" && rc-service postgresql restart
 # Run as ROOT inside the Postgres LXC:   sh postgres-romm-setup.sh
-# Idempotent — safe to re-run (re-running RESETS the password → update romm-secret.enc.yaml).
+# Idempotent — safe to re-run (re-running RESETS the password → update DB_PASSWD in OpenBao homelab/romm).
 set -eu
 
 DB_NAME="romm"
@@ -46,6 +46,7 @@ cat <<EOF
  Postgres ready for RomM
    host 192.168.68.7 · port 5432 · db ${DB_NAME} · user ${DB_USER}
    PASSWORD: ${DB_PASS}
- >>> put this in kubernetes/apps/media/romm/romm-secret.enc.yaml as DB_PASSWD, then sops --encrypt
+ >>> OpenBao UI (https://192.168.68.91:8200/ui/) → homelab → romm → Create new version → DB_PASSWD,
+     then force-sync the romm-secret ExternalSecret and restart deploy/romm (docs/platform/openbao.md §6)
 ============================================================
 EOF

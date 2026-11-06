@@ -1,12 +1,10 @@
 # OpenBao — where secrets live (replacing SOPS)
 
-> **Status (Nov 2026): converting app by app.** OpenBao runs on a Proxmox LXC (`192.168.68.91`).
-> External Secrets Operator is deployed and the cluster's connection to OpenBao is `Valid`.
-> **On OpenBao:** Grafana (`kube-prometheus-stack` ← `homelab/grafana`, working) and Wealthfolio
-> (`wealthfolio` ← `homelab/wealthfolio`; create the entry first — `docs/apps/wealthfolio.md` step 2).
-> **Still on SOPS** (`secrets.md`), unchanged: degoog, ghostfolio, karakeep, immich, komf, qbittorrent,
-> romm. Both systems run side by side. Their conversions are ready on branch `feat/migration-test-bao`
-> (§7, "after the pilot").
+> **Status (Nov 2026): every app's secret is an ExternalSecret.** OpenBao runs on a Proxmox LXC
+> (`192.168.68.91`); External Secrets Operator is deployed and the cluster's connection is `Valid`.
+> Grafana and Wealthfolio were the pilot (live). The other seven (degoog, ghostfolio, karakeep, immich,
+> komf, qbittorrent, romm) are converted in git: **fill OpenBao first, then Sync each one** (§7, "The
+> remaining apps"). KSOPS stays installed until all of them are synced, then the cleanup removes it.
 >
 > **New here? Read §11 "How it works, end to end" first**: diagrams plus one value followed from
 > OpenBao to the pod.
@@ -311,13 +309,13 @@ catches a Deployment asking for a key the ExternalSecret doesn't provide, before
 | `…/external-secrets/rules.yaml` | alert `ExternalSecretNotSynced` → Bark | fires when a Secret can't be refreshed for 15 min (OpenBao down/sealed, login revoked, key missing). Existing Secrets keep working meanwhile |
 | `kubernetes/apps/external-secrets/external-secrets-store/` | the `ClusterSecretStore` named `openbao` + ConfigMap `openbao-ca` | the ONE place that says where OpenBao is, how to log in and which cert to trust. A separate app because its kind is defined by the CRDs above (same split as cert-manager → cert-manager-issuer) |
 | `…/openbao-ca.yaml` | OpenBao's **public** certificate, as a ConfigMap | pinned trust. Public on purpose; the key never leaves the LXC. YAML rather than a `.crt` file because `.gitignore` ignores `*.crt`/`*.pem` |
-| `<app>/externalsecret.yaml` (so far: `kube-prometheus-stack`, `wealthfolio`) | "build Secret `<app>-secret` from `homelab/<path>`, these keys" | same Secret **name and keys** as SOPS made, so no Deployment changed |
+| `<app>/externalsecret.yaml` (all nine apps with a secret) | "build Secret `<app>-secret` from `homelab/<path>`, these keys" | same Secret **name and keys** as SOPS made, so no Deployment changed |
 | `scripts/openbao-import.sh` | copies the **live** Secrets from the cluster into OpenBao | no age key needed, no typing values, can't import a stale file. Values go through pipes only, never printed |
 | `openbao-approle` Secret (namespace `external-secrets`) | ESO's role-id + secret-id | **made by hand, not in git** — it's the key to OpenBao, so it can't come from OpenBao |
 
-Secret → OpenBao path: converted = `grafana` (monitoring, `kube-prometheus-stack-secret`) and
-`wealthfolio` (apps). Still to do, same pattern: `degoog`, `ghostfolio`, `karakeep` (apps), `immich`,
-`komf`, `qbittorrent`, `romm` (media) — the import script already knows all nine.
+Secret → OpenBao path: `grafana` (monitoring, `kube-prometheus-stack-secret`), `degoog`, `ghostfolio`,
+`karakeep`, `wealthfolio` (apps), `immich`, `komf`, `qbittorrent`, `romm` (media). Each app's
+`<path>-secret` comes from `homelab/<path>`; the import script knows all nine.
 
 ### Rollout — in this order
 Each step depends on the one before it. Nothing in the cluster changes until you Sync.
@@ -412,13 +410,33 @@ Same value in both = OpenBao → ESO → Secret works. To roll the pilot back: r
 kube-prometheus-stack directory to its SOPS files and Sync (the SOPS secret was never deleted from git
 history).
 
-### After the pilot: the remaining apps (branch `feat/migration-test-bao`)
-**One app at a time works** (that's how Wealthfolio was done): copy that app's `externalsecret.yaml`,
-`kustomization.yaml` and doc from the branch, delete its two SOPS files, create or import its OpenBao
-entry, push, Sync with Prune. Or all at once: that branch already has an `externalsecret.yaml` for every app, the SOPS files removed and the docs
-updated — bring it up to date with `main`, run `./scripts/openbao-import.sh` (all paths), and Sync each
-app with Prune. Two fixes from the pilot must go into it first: the cert as `openbao-ca.yaml` (the
-branch still has the gitignored `openbao-ca.crt`) and the import script's path filter.
+### The remaining apps: degoog, ghostfolio, karakeep, immich, komf, qbittorrent, romm
+Their `externalsecret.yaml` files are in git and their SOPS files are gone, but **the running Secrets
+are untouched until you Sync** — Argo is manual. The order matters: OpenBao must hold the values
+*before* an app is synced, or its ExternalSecret has nothing to copy.
+
+**1. Fill OpenBao from the running Secrets** (on the master, or anywhere with kubectl + a route to .91):
+```bash
+KUBECTL="sudo k3s kubectl" ./scripts/openbao-import.sh --dry-run degoog ghostfolio karakeep immich komf qbittorrent romm
+KUBECTL="sudo k3s kubectl" ./scripts/openbao-import.sh degoog ghostfolio karakeep immich komf qbittorrent romm
+```
+The dry run lists each app's key **names**. `COPIED` = done. `MISSING` = that Secret isn't in the
+cluster (the app was never set up) — create the entry in the UI (§6) with the keys its
+`externalsecret.yaml` lists, or leave the app unsynced. `⚠️ still a placeholder` = komf, qbittorrent
+or romm still hold `REPLACE_ME`; it gets copied as-is (same as today), fix it in the UI whenever.
+Prefer clicking? Create each entry in the UI instead (§6) — the key names are in each `externalsecret.yaml`.
+
+**2. Sync one app at a time, with Prune.** Start with a small one (degoog or komf), then the rest.
+For each:
+```bash
+kubectl -n <ns> get externalsecret <app>-secret      # STATUS SecretSynced, READY True
+```
+Not `SecretSynced`? `kubectl -n <ns> describe externalsecret <app>-secret` — almost always a typo in
+the OpenBao path or a missing key (§10). The old Secret keeps working meanwhile, so the app doesn't
+go down while you fix it.
+
+**3. Nothing restarts by itself** and nothing needs to: the values are the same ones the pods already
+have. Karakeep is different only in where its old Secret came from (a cleartext file in git, now gone).
 
 ### After every app is synced (the cleanup — a separate change)
 Then SOPS can go: the KSOPS repo-server patch (`bootstrap/argocd/repo-server-ksops-patch.yaml`, needs a

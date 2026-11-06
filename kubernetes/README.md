@@ -17,10 +17,12 @@ kubernetes/
 | `apps` | searxng, degoog, homepage, karakeep, actual, ghostfolio, wealthfolio |
 | `monitoring` | gatus, bark, kube-prometheus-stack, loki, alloy |
 | `cert-manager` | cert-manager, cert-manager-issuer |
+| `external-secrets` | external-secrets, external-secrets-store |
 
 Every app directory has a `kustomization.yaml` — raw manifests and Helm charts (`helmCharts:`) alike. Sync is
 MANUAL everywhere: Argo shows the diff, you click.
 
 - **Add / change / remove an app:** `docs/platform/adding-an-app.md` — first time? `docs/learn/onboarding-an-app.md`
 - **How Argo renders and applies:** `docs/platform/argocd.md`
+- **Secrets:** values in OpenBao, copied in by External Secrets (`external-secrets` namespace): `docs/platform/openbao.md`
 - **The whole flow:** `docs/index.md` · conventions: `../CLAUDE.md`

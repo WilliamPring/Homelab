@@ -9,10 +9,10 @@ Reference for the app itself: [`../apps/ghostfolio.md`](../apps/ghostfolio.md).
 **Roughly 25 minutes**, most of it waiting for a certificate.
 
 ```
- ⓪  this machine         can it encrypt? (preflight)
+ ⓪  this machine         can it reach OpenBao? (preflight)
  ①  Postgres LXC .7      create a role + database        ← the only place your data lives
  ②  Redis                nothing to do (see why)
- ③  machine w/ age key   fill + encrypt the secrets      ← whichever box passed ⓪
+ ③  OpenBao              put the secrets in               ← whichever box passed ⓪
  ④  Cloudflare           one A record
  ⑤  push                 Argo notices the directory
  ⑥  Argo UI              Sync
@@ -24,7 +24,7 @@ Reference for the app itself: [`../apps/ghostfolio.md`](../apps/ghostfolio.md).
 | Step | Where | How you get there |
 |---|---|---|
 | ① | inside the **Postgres LXC** | Proxmox console, or `ssh root@192.168.68.7` |
-| ③ | a machine **with the age key** | `~/.config/sops/age/keys.txt`. Nowhere else can encrypt |
+| ③ | a machine **logged in to OpenBao** | `bao login -method=userpass username=william` (LAN or Tailscale) |
 | ⑥ | the **master** / Argo web UI | `sudo k3s kubectl …` |
 
 ---
@@ -32,40 +32,22 @@ Reference for the app itself: [`../apps/ghostfolio.md`](../apps/ghostfolio.md).
 ## ⓪ The machine you're working from
 
 **What you're doing:** proving this machine can finish the job *before* you start, so you don't
-discover halfway through step ③ that you can't encrypt anything.
+discover halfway through step ③ that you can't reach OpenBao.
 
-If you can, **do the whole thing on the box that has the age key** (the Arch one). Then steps ③
-and ⑤ happen in the same place and you never hand a password between machines.
+Secrets no longer live in git at all — they live in **OpenBao** (`https://192.168.68.91:8200`, LAN/Tailscale
+only), and External Secrets copies them into the cluster. So any machine with the `bao` CLI and a login can do
+step ③; nothing secret is ever written into the repo. Full background:
+[`../platform/openbao.md`](../platform/openbao.md).
 
 ```bash
 git clone git@github.com:WilliamPring/Homelab.git    # or git pull, if it's already there
 cd Homelab
-./scripts/secrets.sh setup
+bao login -method=userpass username=william          # BAO_ADDR / CA set up as in platform/openbao.md
+bao kv list homelab                                   # the preflight
 ```
 
-The last command is the preflight. You want:
-
-```
-  ok   sops  sops 3.x
-  ok   age   ...
-  ok   age key at /home/you/.config/sops/age/keys.txt
-  ok   permissions 600
-  ok   .sops.yaml present (public key: age1rvq...)
-```
-
-**If any line says `NO`:**
-
-| Missing | Fix |
-|---|---|
-| `sops` / `age` | Arch: `sudo pacman -S sops age` · macOS: `brew install sops age` · Debian/Ubuntu: download from the [sops releases](https://github.com/getsops/sops/releases) |
-| the age key | copy it from the Arch box: `mkdir -p ~/.config/sops/age && scp arch:~/.config/sops/age/keys.txt ~/.config/sops/age/keys.txt && chmod 600 ~/.config/sops/age/keys.txt` |
-| permissions | `chmod 600 ~/.config/sops/age/keys.txt` |
-
-⚠️ **Copying the age key to another machine is a real decision, not a formality.** That one file
-decrypts every secret in this repo — Mullvad, database passwords, everything. Put it only on
-machines you'd trust with all of them, and never somewhere it gets backed up to a cloud sync
-folder. If this is a temporary or shared machine, do step ③ on the Arch box instead and do the
-rest here.
+You want a list of app names (`ghostfolio`, `romm`, …). **If it fails:** no `bao` CLI, wrong `BAO_ADDR`,
+not on the LAN/Tailscale, or OpenBao is sealed — [`../platform/openbao.md`](../platform/openbao.md) covers each.
 
 You'll also want, on this machine:
 
@@ -75,7 +57,7 @@ You'll also want, on this machine:
 | git push access | `git push --dry-run` | ⑤ |
 | Tailscale up | `tailscale status` | ⑥, ⑦ |
 
-- [ ] ⓪ preflight all `ok`
+- [ ] ⓪ `bao kv list homelab` works
 
 ---
 
@@ -118,8 +100,9 @@ redo step ③.
 ============================================================
 ```
 
-📋 **Copy that whole `DATABASE_URL` line now.** You need it in step ③, and the password is not
-recoverable — re-running the script issues a new one.
+📋 **Copy that whole `DATABASE_URL` value now.** You need it in step ③, and the password is not
+recoverable — re-running the script issues a new one. (The script still prints the old
+`./scripts/secrets.sh` command around it; ignore that and use step ③'s `bao` command.)
 
 **Verify** (still in the LXC):
 
@@ -165,32 +148,30 @@ are a quote cache and a job queue, both rebuilt on demand, which is why it has n
 
 ---
 
-## ③ Secrets — on a machine with the age key
+## ③ Secrets — into OpenBao
 
-**What you're doing:** putting four values into an encrypted file that is safe to commit.
+**What you're doing:** putting four values into OpenBao at `homelab/ghostfolio`. They never go into
+git — `kubernetes/apps/apps/ghostfolio/externalsecret.yaml` (already in the repo) tells External Secrets
+to copy exactly these four keys into the `ghostfolio-secret` Secret.
 
-⚠️ **This step needs the machine that passed step ⓪** — the one holding
-`~/.config/sops/age/keys.txt`. Without that key `sops` cannot encrypt. **Do not paste real values
-on a machine that can't encrypt** — this repo is public, and a plaintext push is permanent.
+⚠️ **This step needs the machine that passed step ⓪** (logged in to OpenBao). **Never paste these
+values into a file in the repo** — it is public, and a plaintext push is permanent.
 
-If you skipped ⓪ or switched machines since, re-check now:
-
-```bash
-./scripts/secrets.sh setup
-```
-
-Any line showing **NO** means this machine can't do this step — go back to ⓪.
-
-Now fill in the values:
+Fill in the values:
 
 ```bash
-# three self-contained secrets — '-' generates a strong random value for each
-./scripts/secrets.sh set ghostfolio REDIS_PASSWORD=- ACCESS_TOKEN_SALT=- JWT_SECRET_KEY=-
-
-# the database URL from step ①  (single quotes: the password may contain shell characters)
-./scripts/secrets.sh set ghostfolio \
+# three self-contained secrets (random) + the database URL from step ①
+# (single quotes on the URL: the password may contain shell characters)
+bao kv put homelab/ghostfolio \
+  REDIS_PASSWORD="$(openssl rand -hex 32)" \
+  ACCESS_TOKEN_SALT="$(openssl rand -hex 32)" \
+  JWT_SECRET_KEY="$(openssl rand -hex 32)" \
   DATABASE_URL='postgresql://ghostfolio:PASTE_PASSWORD@192.168.68.7:5432/ghostfolio?connect_timeout=300'
 ```
+
+⚠️ `bao kv put` **replaces every key** at that path with only the ones on the command line — right for
+this first fill (all four at once), wrong for changing one later. To change a single value, always use
+`bao kv patch homelab/ghostfolio KEY=…`.
 
 **What these four are:**
 
@@ -201,37 +182,23 @@ Now fill in the values:
 | `ACCESS_TOKEN_SALT` | hashes your login token | ⚠️ **invalidates every token** — you'd lose the account |
 | `JWT_SECRET_KEY` | signs session cookies | harmless, just logs you out |
 
-Now encrypt:
+**Verify:**
 
 ```bash
-./scripts/secrets.sh encrypt ghostfolio
+bao kv get homelab/ghostfolio
 ```
 
-Expect:
+Expect exactly four keys, no `REPLACE_ME`. After the Sync in step ⑥, External Secrets builds the
+Secret within seconds (and re-reads OpenBao every hour). If you change a value later, force it with
+`sudo k3s kubectl -n apps annotate externalsecret ghostfolio-secret force-sync=$(date +%s) --overwrite`
+and `rollout restart` — env vars are read at start.
 
-```
-  ok   kubernetes/apps/apps/ghostfolio/ghostfolio-secret.enc.yaml encrypted and verified
-```
+- [ ] ③ four values in `homelab/ghostfolio`
 
-"and verified" matters — the script decrypts the file again afterwards to prove it's really
-ciphertext. `sops` refuses to decrypt a file that was never encrypted, so a clean round-trip is
-the only honest check.
-
-**Verify before you commit:**
-
-```bash
-./scripts/secrets.sh status | grep -A3 ghostfolio
-```
-
-Expect `ok`, four key names, and `wiring: KSOPS generator`. If it says **PLAINTEXT**, stop —
-do not commit.
-
-- [ ] ③ secret encrypted and verified
-
-> **Why key names are readable but values aren't:** `.sops.yaml` sets
-> `encrypted_regex: ^(data|stringData)$`, which encrypts *values* only. That's deliberate — it's
-> how `make conventions` can check that every `secretKeyRef` points at a key that exists, with
-> no age key in CI.
+> **Why key names are in git but values aren't:** `externalsecret.yaml` lists the key *names* (which
+> OpenBao property becomes which Secret key). That's deliberate — it's how `make conventions` can check
+> that every `secretKeyRef` points at a key that exists, with no access to OpenBao in CI. Adding a new key
+> later means both: the value in OpenBao **and** a new entry in `externalsecret.yaml`.
 
 ---
 
@@ -403,7 +370,7 @@ reasonable book value and let it accumulate forward.
 | Pod `CrashLoopBackOff`, logs mention Prisma or `ECONNREFUSED` | DB unreachable. From the master: `nc -zv 192.168.68.7 5432`. Then check the `pg_hba` line from step ① exists |
 | Logs say `NOAUTH` / `WRONGPASS` | the Valkey pod and Ghostfolio disagree on `REDIS_PASSWORD`. They read the *same* secret key, so re-Sync and `rollout restart deploy/ghostfolio -n apps` |
 | Pod killed after ~5 min of starting | migrations exceeded the `startupProbe` budget. Raise `failureThreshold` in `deployment.yaml` — don't shorten the probe |
-| Argo: `secret "ghostfolio-secret" not found` | the `.enc.yaml` was committed still plaintext. KSOPS refuses it. Redo step ③ |
+| Pod `CreateContainerConfigError`: `secret "ghostfolio-secret" not found` | External Secrets couldn't build it — a key missing in `homelab/ghostfolio`, or OpenBao sealed/unreachable. `sudo k3s kubectl -n apps describe externalsecret ghostfolio-secret`, then redo step ③ |
 | Certificate stuck `READY False` | orange cloud on the DNS record, or the record is missing. `kubectl describe certificate ghostfolio-tls -n apps` |
 | Site loads on laptop, not phone | Tailscale is off on the phone. This is a PWA — it has to *reach* the server, unlike Bark which is pushed |
 | Prices blank for everything | the data gatherer hasn't run. Admin Control → Data gatherer → refresh |
@@ -416,8 +383,8 @@ Full troubleshooting table: [`../apps/ghostfolio.md`](../apps/ghostfolio.md).
 
 - **One role + one database per app** on the shared Postgres LXC, created by a small idempotent
   script. Copy `scripts/postgres-ghostfolio-setup.sh` for the next one.
-- **Secrets are filled in and encrypted on the machine with the age key**, verified by a
-  round-trip, and only then committed.
+- **Secret values go into OpenBao, never into git.** The repo only carries an `externalsecret.yaml`
+  naming which keys to copy; External Secrets does the rest.
 - **A new directory is a new app.** No Application file, no `kubectl apply` — but the *push* is
   what triggers it.
 - **Sync is always manual**, and the first sync of a database-backed app is slow because of

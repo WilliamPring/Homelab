@@ -20,7 +20,8 @@ Argo CD  →  deploys the apps from this git repo    (declarative; shows the dif
 | Ingress / TLS | Traefik (bundled) + cert-manager + Let's Encrypt (Cloudflare DNS-01) |
 | GitOps | Argo CD |
 | Provisioning | Ansible |
-| Data (external to cluster) | Postgres LXC · NFS file-server LXC |
+| Secrets | OpenBao (Proxmox LXC) + External Secrets Operator |
+| Data (external to cluster) | Postgres LXC · NFS file-server LXC · OpenBao LXC (secrets) |
 
 ## Apps
 
@@ -41,6 +42,7 @@ Argo CD  →  deploys the apps from this git repo    (declarative; shows the dif
 | `monitoring` | **Gatus** · **Bark** | uptime checks · iOS push alerts | `status` · `bark` |
 | | **Grafana** + Prometheus · Loki · Alloy | per-app CPU/memory, logs, alerts on crash loops and OOMKills | `grafana` |
 | `cert-manager` | **cert-manager** | Let's Encrypt certificates (Cloudflare DNS-01) | — |
+| `external-secrets` | **External Secrets** (+ store) | copies app secrets from OpenBao into Kubernetes Secrets | — |
 
 Everything is reachable over **Tailscale** with **Let's Encrypt** certs (issued via Cloudflare DNS-01, so
 nothing has to be public). The deliberate exceptions reach the internet: `public-immich` (Immich share links), and
@@ -61,7 +63,8 @@ kubernetes/       Apps as code — Argo CD watches this
   README.md         the tree + which apps live in which namespace
 
 docs/             Start at docs/index.md — apps/, platform/, runbooks/, learn/, architecture/
-scripts/          ci/ (validate, conventions, render-diff), secrets.sh (the SOPS helper), LXC setup scripts
+scripts/          ci/ (validate, conventions, render-diff), openbao-import.sh (cluster Secrets → OpenBao),
+                  secrets.sh (the old SOPS helper, being retired), LXC setup scripts
 ```
 
 ## How it works
@@ -91,6 +94,7 @@ New to it? Onboard a throwaway app with the guided lab: [`docs/learn/onboarding-
 | file server (NFS `/data`) | `192.168.68.50` | photos, manga, books, ROMs, downloads |
 | Postgres LXC | `192.168.68.7` | RomM, Ghostfolio (and formerly Vaultwarden) |
 | Valkey / Redis | `192.168.68.103` | Immich, degoog, RomM (Ghostfolio runs its own — see its doc) |
+| OpenBao | `192.168.68.91` | every app's secret values; `https://…:8200`, LAN/Tailscale only |
 
 LAN NodePorts (plain http, same WiFi — e.g. for the Kindle): Kavita `:30500` · Calibre-Web `:30083` ·
 Suwayomi `:30456` · RomM `:30808` · Immich `:30041` · Immich share proxy `:30042` · SearXNG `:30880` · Gatus `:30881` · degoog `:30882` · Bark `:30889` (fronted by NPMplus) · qBittorrent `:30080` · Karakeep `:30300` · Actual `:30506` · Argo CD `:30443`. Hostnames (`*.williampring.ca`) resolve to the
@@ -108,8 +112,10 @@ Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: 
 ## Design principles
 
 - **One owner per thing.** Infra lives in Ansible; apps live in GitOps. Nothing is deployed twice.
-- **Secrets live in git only as ciphertext.** SOPS + age encrypts the values; KSOPS decrypts them inside
-  Argo. The few bootstrap secrets (the age key, `immich-db`, the Cloudflare token) are created by hand.
+- **Secret values don't live in git.** They live in OpenBao; External Secrets copies them into the cluster, and
+  git holds only which keys each app gets (`externalsecret.yaml`). The few bootstrap secrets (ESO's
+  `openbao-approle` login, `immich-db`, the Cloudflare token, and the age key until the old KSOPS setup is
+  removed) are created by hand.
 - **Stateful data stays out of the cluster.** NFS and the Postgres/Valkey LXCs survive a cluster rebuild.
 - **Manual sync by default.** Argo shows drift but waits for a click — no surprise upgrades.
 
@@ -119,7 +125,7 @@ Start at **[`docs/index.md`](docs/index.md)**. Grouped by purpose:
 
 - `docs/learn/` — **[onboard an app: a guided lab](docs/learn/onboarding-an-app.md)** (start here to learn the workflow)
 - `docs/apps/` — one guide per app (Immich, Kavita + Komf + Calibre, Suwayomi, Kindle, RomM, qBittorrent + Gluetun, Karakeep, Actual, Ghostfolio, Wealthfolio, SearXNG, degoog, Homepage, Gatus, Bark, Grafana stack)
-- `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, CI, Valkey
+- `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (OpenBao; the old SOPS docs until retired), updates & notifications, CI, Valkey
 - `docs/runbooks/` — **rebuild from zero**, deploying Ghostfolio (a full worked example), cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
 - `docs/architecture/` — the plan docs (partly historical) and the learning roadmap
 - `docs/archive/` — removed/superseded setups

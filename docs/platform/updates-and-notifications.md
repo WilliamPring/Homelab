@@ -74,7 +74,7 @@ Every Application is subscribed by default — no annotations to maintain.
 |---|---|---|---|
 | `on-out-of-sync` | sync status OutOfSync, once per git revision | 3 | **an update is waiting for your click** |
 | `on-deployed` | sync Succeeded + Healthy, once per synced revision | 3 | the Sync you clicked worked |
-| `on-sync-failed` | operation phase Error/Failed | 5 🚨 | bad manifest, KSOPS decrypt, missing secret, image pull |
+| `on-sync-failed` | operation phase Error/Failed | 5 🚨 | bad manifest, missing secret / ExternalSecret, image pull |
 | `on-health-degraded` | health Degraded | 5 ⚠️ | crash-loop / failing probes |
 
 Each notification's tap-target opens the app in Argo (`https://deploy.williampring.ca`, set as
@@ -132,9 +132,11 @@ make check          # lint + validate + conventions
 **Full details, including the conventions check and why `main` is not yet protected:
 [`ci.md`](ci.md).**
 
-**Secrets check is warn-only today** because the komf / romm / qbittorrent templates are still
-plaintext. Once you fill + `sops -e -i` them (`docs/platform/secrets.md` §3), set
-`STRICT_SECRETS: "1"` in the workflow so a plaintext secret can never merge again.
+**Secrets check is warn-only today** (`STRICT_SECRETS: "0"` in the workflow). It checks that every
+`*.enc.yaml` is encrypted — and since the app secrets moved to OpenBao there are none left in git, so it
+has nothing to catch. The old komf / romm / qbittorrent placeholders now live in OpenBao and are fixed
+there with `bao kv patch homelab/<app> KEY=…` (`docs/platform/openbao.md`); no commit involved. Whether
+the check stays is a question for the KSOPS cleanup.
 
 ---
 

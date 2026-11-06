@@ -1,9 +1,9 @@
 # Secrets — the working guide
 
-> **Being replaced (Nov 2026).** SOPS is on its way out in favour of OpenBao (on a Proxmox LXC) +
-> External Secrets Operator, so secret values stop living in git at all. Why, and the setup:
-> [`openbao.md`](openbao.md). **Already on OpenBao:** Grafana (`kube-prometheus-stack-secret`) and
-> Wealthfolio (`wealthfolio-secret`); for every other app, everything below still applies.
+> **Being retired (Nov 2026).** Every app's secret now comes from OpenBao (on a Proxmox LXC) through
+> External Secrets Operator — see [`openbao.md`](openbao.md). No app uses a SOPS file any more; KSOPS
+> stays installed in Argo only until every app has been synced (then `openbao.md` §7's cleanup removes
+> it). What follows describes the old setup, kept for that window and for history.
 
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day
 reference. For the *why* and the full architecture, see `docs/platform/secrets-architecture.md` (deep dive) and
@@ -22,25 +22,19 @@ git at all.** Plaintext never gets committed.
 
 ## 1. What exists today
 
-### Encrypted in git (SOPS + age, decrypted by Argo via KSOPS)
-
-| File | Secret → namespace | Keys | Used by |
-|---|---|---|---|
-| `kubernetes/apps/media/immich-prereqs/immich-secret.enc.yaml` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
-| `kubernetes/apps/apps/degoog/degoog-secret.enc.yaml` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS` | degoog |
-| `kubernetes/apps/media/komf/komf-secret.enc.yaml` | `komf-secret` → media | `KAVITA_API_KEY` | Komf ⚠️ **template, not yet encrypted** |
-| `kubernetes/apps/media/romm/romm-secret.enc.yaml` | `romm-secret` → media | `ROMM_AUTH_SECRET_KEY`, `DB_PASSWD`, `REDIS_PASSWORD`, 6 optional provider keys | RomM ⚠️ **template, not yet encrypted** |
-| `kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml` | `qbittorrent-secret` → media | `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_ADDRESSES` | Gluetun (Mullvad) ⚠️ **template, not yet encrypted** |
-| `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep ⚠️ **template, not yet encrypted** |
-Each one has a sibling `<app>-secret.sops.yaml` (the KSOPS *generator*, not a secret — it just
-says "decrypt that file") and is listed under `generators:` in the app's `kustomization.yaml`.
-
-### Moved to OpenBao (no SOPS files any more — see `openbao.md`)
+### On OpenBao (every app — no SOPS files any more, see `openbao.md`)
 
 | OpenBao path | Secret → namespace | Keys | Used by |
 |---|---|---|---|
 | `homelab/grafana` | `kube-prometheus-stack-secret` → monitoring | `admin-user`, `admin-password` | Grafana login |
 | `homelab/wealthfolio` | `wealthfolio-secret` → apps | `WF_SECRET_KEY`, `WF_AUTH_PASSWORD_HASH` | Wealthfolio |
+| `homelab/degoog` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS` | degoog |
+| `homelab/ghostfolio` | `ghostfolio-secret` → apps | `DATABASE_URL`, `REDIS_PASSWORD`, `ACCESS_TOKEN_SALT`, `JWT_SECRET_KEY` | Ghostfolio |
+| `homelab/karakeep` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep (values were cleartext in git history — rotate) |
+| `homelab/immich` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
+| `homelab/komf` | `komf-secret` → media | `KAVITA_API_KEY` | Komf |
+| `homelab/qbittorrent` | `qbittorrent-secret` → media | `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_ADDRESSES` | Gluetun (Mullvad) |
+| `homelab/romm` | `romm-secret` → media | `ROMM_AUTH_SECRET_KEY`, `DB_PASSWD`, `REDIS_PASSWORD`, 6 provider keys | RomM |
 
 Each is built by the app's `externalsecret.yaml`. Change a value in OpenBao, not here (`openbao.md` §6).
 
@@ -55,21 +49,15 @@ Each is built by the app's `externalsecret.yaml`. Change a value in OpenBao, not
 | `grafana-admin` | monitoring | **orphan** from the August stack; delete it. Not used by the Nov 2026 stack, which reads `kube-prometheus-stack-secret` (from OpenBao) | `docs/runbooks/cluster-cleanup.md` §1 |
 | `cloudflare-api-token` | cert-manager | DNS-01 token — **all TLS depends on it** | `docs/platform/tls.md` |
 
-Migrating these into `.enc.yaml` files is the open item (§5 below is the recipe).
+These stay hand-made by design (`openbao-approle` can't come from OpenBao — it's the key to it).
 
 ### Known debt ⚠️
-- **`kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` is cleartext in a PUBLIC repo.**
-  `NEXTAUTH_SECRET` signs Karakeep's login cookies, so anyone holding it can forge a session —
-  gated only by Karakeep being reachable on Tailscale/LAN and not the internet. Accepted for now,
-  deliberately. **Fix when ready — two commands, on the Arch box:**
-  ```bash
-  ./scripts/secrets.sh rotate karakeep NEXTAUTH_SECRET MEILI_MASTER_KEY
-  ./scripts/secrets.sh encrypt karakeep
-  # then in karakeep/kustomization.yaml: move the file out of `resources:` and
-  # uncomment the `generators:` block (both lines are already there, ready to swap)
-  ```
-  Then Sync + `kubectl rollout restart deploy/karakeep -n apps`. You get logged out of Karakeep
-  once. Rotating is the fix, not deleting: the old values are in git history permanently.
+- **Karakeep's two values were cleartext in a PUBLIC repo** (the old `karakeep-secret.enc.yaml`, now
+  deleted but still in git history). `NEXTAUTH_SECRET` signs Karakeep's login cookies, so anyone holding
+  it can forge a session — gated only by Karakeep being reachable on Tailscale/LAN. They now live in
+  OpenBao (`homelab/karakeep`). **Fix = rotate them there:** OpenBao UI → `homelab` → `karakeep` → Create
+  new version, new random values (Tools → Random, `openbao.md` §6), then force-sync the ExternalSecret and
+  `kubectl rollout restart deploy/karakeep -n apps`. You get logged out of Karakeep once.
 - `kubernetes/apps/media/suwayomi/deployment.yaml` carries Suwayomi's Basic-auth username/password **inline**
   (chosen for now; host is Tailscale-only). Move to a SOPS secret with the §5 recipe when ready,
   then rotate the password since the old one stays in git history.
