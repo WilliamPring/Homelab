@@ -101,7 +101,7 @@ spec:
         #     Karakeep publishes its own Chrome image; the flags below are upstream's compose file.
         #     The remote-debugging listener on :9222 is already in the image's entrypoint.
         - name: chrome
-          image: ghcr.io/karakeep-app/karakeep-chrome:156.0.8078.47-r2   # pinned — Renovate PRs bumps
+          image: ghcr.io/karakeep-app/karakeep-chrome:157.0.8103.38-r1   # pinned — Renovate PRs bumps
           args:
             - --disable-gpu
             - --disable-dev-shm-usage          # /dev/shm is tiny in a container; without this Chrome crashes
