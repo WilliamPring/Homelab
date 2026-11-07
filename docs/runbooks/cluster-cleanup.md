@@ -125,7 +125,7 @@ k get applications -n argocd -o name | sed 's|application.argoproj.io/||' | sort
 ls -d kubernetes/apps/*/* | xargs -n1 basename | sort > /tmp/git.txt   # run from the repo (one dir per app)
 comm -23 /tmp/live.txt /tmp/git.txt                             # live but NOT in git
 ```
-Expect: `vaultwarden` (until item 4), `komf` (until item 8), `romm` (until item 9), nothing else. Anything else listed is a leftover.
+Expect: `vaultwarden` (until item 4), `komf` (until item 8), `romm` (until item 9), `ghostfolio` (until item 10), nothing else. Anything else listed is a leftover.
 
 **DELETE** (per name from the output)
 ```bash
@@ -211,6 +211,32 @@ Also, by hand:
   its `pg_hba.conf` line.
 - OpenBao: delete `homelab/romm` if you ever created it.
 - GitHub: close Renovate's open `rommapp/romm` PR (branch `renovate/rommapp-romm-5.x`).
+- [ ] done
+
+## 10. Ghostfolio — removed from the repo Nov 2026
+
+Its data lives in the `ghostfolio` database on the Postgres LXC, which this does **not** touch. Its Valkey
+was its own pod (a cache) and goes with it.
+
+**LOOK**
+```bash
+k get application -n argocd ghostfolio
+k get deploy,svc,ingress,pvc,secret -n apps | grep -i ghostfolio
+k get certificate -n apps | grep -i ghostfolio
+```
+**DELETE**
+```bash
+k delete application -n argocd ghostfolio                       # Argo record only (no finalizer)
+k delete deploy/ghostfolio deploy/ghostfolio-valkey svc/ghostfolio svc/ghostfolio-valkey ingress/ghostfolio -n apps
+k delete secret ghostfolio-secret -n apps
+k delete secret,certificate ghostfolio-tls -n apps --ignore-not-found
+```
+Also, by hand:
+- Cloudflare DNS: delete the `portfolio` A record.
+- Postgres LXC (192.168.68.7): the `ghostfolio` database and role are **left as the backup**. Export first if
+  you want the history (`pg_dump -U ghostfolio ghostfolio > ghostfolio.sql`), then when sure:
+  `su postgres -c "psql -c 'DROP DATABASE ghostfolio;' -c 'DROP ROLE ghostfolio;'"` and remove its `pg_hba.conf` line.
+- OpenBao: delete `homelab/ghostfolio` if you ever created it.
 - [ ] done
 
 ---

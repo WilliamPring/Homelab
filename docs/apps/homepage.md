@@ -182,7 +182,7 @@ sudo k3s kubectl top nodes            # must work before the widget can
 ## Known gaps
 
 - **No API-backed widgets yet.** Homepage has real widgets for Immich, qBittorrent, Kavita,
-  Calibre-web, Karakeep, Suwayomi, Gatus, ArgoCD, Ghostfolio, Gluetun, Proxmox and
+  Calibre-web, Karakeep, Suwayomi, Gatus, ArgoCD, Gluetun, Proxmox and
   Pulse — they show actual data (library counts, VPN exit IP, out-of-sync app count) instead
   of a dot. Every one needs an API key or password, and **this repo is public**, so they are
   blocked on a SOPS-encrypted `homepage-secret` + `{{HOMEPAGE_VAR_*}}` substitution.

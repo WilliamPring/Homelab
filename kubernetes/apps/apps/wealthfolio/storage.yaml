@@ -6,7 +6,7 @@
 # documents that WAL does not work over a network filesystem — on NFS it corrupts or locks up.
 # So the data lives on node disk, and that disk is NOT backed up and does NOT survive a rebuild.
 #
-# That is acceptable while this is a TRIAL next to Ghostfolio (the data is a broker-CSV import away).
+# Acceptable because the data is a broker-CSV import away; revisit backups now that it is the only tracker.
 # Before it becomes your real tracker, add the nightly copy to NFS described in docs/apps/wealthfolio.md.
 apiVersion: v1
 kind: PersistentVolumeClaim

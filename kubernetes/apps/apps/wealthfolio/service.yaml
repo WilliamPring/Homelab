@@ -1,4 +1,4 @@
-# ClusterIP only — NO NodePort, same reasoning as Ghostfolio: account balances have no business on
+# ClusterIP only — NO NodePort, on purpose: account balances have no business on
 # plain http on the LAN. Reachable only through the Ingress, over TLS, on the tailnet.
 apiVersion: v1
 kind: Service
