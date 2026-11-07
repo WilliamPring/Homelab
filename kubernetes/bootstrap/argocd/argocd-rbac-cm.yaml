@@ -1,0 +1,11 @@
+# argocd-rbac-cm — the install ships it empty. One rule: the `homepage` API account
+# (argocd-cm-patch.yaml) gets the built-in read-only role, for the Homepage widget.
+# Nothing else changes: `policy.default` stays unset, so the admin account is unaffected and
+# any other account still gets nothing unless given a rule here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm   # no namespace on purpose: must match the install's object id (ns is set at apply time)
+data:
+  policy.csv: |
+    g, homepage, role:readonly

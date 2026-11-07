@@ -15,6 +15,7 @@ patches:
   - path: config.yaml
   - path: repo-server-ksops-patch.yaml
   - path: argocd-notifications-cm.yaml   # notifications → Bark (patches the empty CM from the install)
+  - path: argocd-rbac-cm.yaml          # read-only role for the Homepage widget's `homepage` account
   - path: argocd-cm-patch.yaml
     target:
       version: v1

@@ -6,6 +6,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  - externalsecret.yaml  # homepage-secret ← OpenBao homelab/homepage (widget API keys)
   # ServiceAccount + read-only ClusterRole/Binding for the Kubernetes widgets.
   # ⚠️ The ClusterRole and ClusterRoleBinding are CLUSTER-SCOPED — they outlive a
   #    `kubectl delete ns apps` and survive deleting this directory. See rbac.yaml.
