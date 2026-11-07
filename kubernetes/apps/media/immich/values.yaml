@@ -35,7 +35,7 @@ controllers:
         #    (docs/apps/immich.md). Downgrades are not supported.
         #    Release notes: https://github.com/immich-app/immich/releases
         image:
-          tag: v3.3.5
+          tag: v3.3.6
         env:
           DB_HOSTNAME: immich-postgres
           DB_USERNAME: immich
