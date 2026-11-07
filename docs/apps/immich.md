@@ -29,13 +29,16 @@ iPhone / browser
 
 ## Deployment (GitOps — Argo CD)
 
-Immich is deployed by **Argo CD**, split into **two Applications** (mirrors the prereqs +
-chart split, and lets Postgres sync before Immich):
+Immich is deployed by **Argo CD** as **three Applications**: the prereqs + chart split lets Postgres
+sync before Immich, and the share proxy is an app of its own. All three carry the label
+`group=immich`, so Argo UI → Applications → filter sidebar → **Labels** → `group=immich` shows just
+Immich (see "Groups" in `docs/platform/argocd.md`).
 
 | Argo Application | Source | What it deploys |
 |---|---|---|
-| `immich-prereqs` | `kubernetes/apps/media/immich-prereqs/` (raw manifests) | vector Postgres (Deployment/PVC/Service) + NFS library PV/PVC |
-| `immich` | OCI chart `ghcr.io/immich-app/immich-charts` + `kubernetes/apps/media/immich/values.yaml` | immich-server, machine-learning, valkey |
+| `immich-prereqs` | `kubernetes/apps/media/immich-prereqs/` (raw manifests) | vector Postgres (Deployment/PVC/Service) + NFS library PV/PVC + the `immich-server-local` NodePort (30041) + `immich-secret` (ExternalSecret ← OpenBao `homelab/immich`) |
+| `immich` | OCI chart `ghcr.io/immich-app/immich-charts` + `kubernetes/apps/media/immich/values.yaml` | immich-server, immich-machine-learning (Redis is the external Valkey, not the chart's) |
+| `immich-public-proxy` | `kubernetes/apps/media/immich-public-proxy/` (raw manifests) | the share-link proxy behind `public-immich.williampring.ca` (NodePort 30042) |
 
 **Chart/version:** the chart is pinned in `kustomization.yaml` (`helmCharts:` → `version:`; Renovate's
 kustomize manager bumps it). The **Immich version is pinned separately** in `values.yaml` at
@@ -58,6 +61,8 @@ top-level `image.tag` — that is silently ignored by this chart.
 # after git push, and confirming the secret + node label exist:
 # push → the ApplicationSet registers `immich-prereqs` within ~3 min → Argo UI → immich-prereqs → review → SYNC
 # push → the ApplicationSet registers `immich` within ~3 min → Argo UI → immich → review → SYNC
+# then immich-public-proxy → review → SYNC (it proxies to immich-server, so it goes last)
+# tip: filter the app list by the label group=immich to see all three side by side
 ```
 - Sync is **MANUAL** — Argo shows OutOfSync and waits for you to click Sync.
 - **OCI gotcha:** if the `immich` app errors that OCI isn't enabled, register it once —

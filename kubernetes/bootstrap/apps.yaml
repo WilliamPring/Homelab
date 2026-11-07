@@ -13,10 +13,18 @@
 # nothing deploys until you click Sync. Hand-edits to a generated Application spec are reverted by
 # the controller: change the directory, not the object.
 #
-# Per-app exceptions live in `templatePatch` (today: cert-manager, kube-prometheus-stack and
-# external-secrets need ServerSideApply — their CRDs exceed the client-side annotation limit).
-# Changing templatePatch means re-applying THIS file by hand; nothing in git reconfigures the
-# ApplicationSet itself.
+# Groups: every generated app carries a `group` label, so the apps that make up one thing show up
+# together — Argo UI → Applications → filter sidebar → Labels → `group=immich` lists immich,
+# immich-prereqs and immich-public-proxy (CLI: `kubectl -n argocd get applications -l group=immich`;
+# `-L group` adds a GROUP column). An app's group is its own name unless templatePatch maps it into a
+# family — one `if eq` line per family below. A label is metadata only: it deploys nothing and
+# never makes an app OutOfSync. (A label, not an AppProject: projects are for RBAC and allowed
+# destinations, which a one-person cluster doesn't need.)
+#
+# Per-app exceptions live in `templatePatch` (today: the group families, and cert-manager,
+# kube-prometheus-stack and external-secrets need ServerSideApply — their CRDs exceed the
+# client-side annotation limit). Changing templatePatch means re-applying THIS file by hand;
+# nothing in git reconfigures the ApplicationSet itself.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -50,6 +58,14 @@ spec:
         syncOptions:
           - CreateNamespace=true
   templatePatch: |
+    {{- $app := .path.basename }}
+    {{- $group := $app }}
+    {{- if eq $app "immich-prereqs" "immich-public-proxy" }}{{ $group = "immich" }}{{ end }}
+    {{- if eq $app "cert-manager-issuer" }}{{ $group = "cert-manager" }}{{ end }}
+    {{- if eq $app "external-secrets-store" }}{{ $group = "external-secrets" }}{{ end }}
+    metadata:
+      labels:
+        group: "{{ $group }}"
     {{- if or (eq .path.basename "cert-manager") (eq .path.basename "kube-prometheus-stack") (eq .path.basename "external-secrets") }}
     spec:
       syncPolicy:

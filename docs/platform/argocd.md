@@ -183,13 +183,44 @@ Then: Argo UI → `<app>` → **SYNC** → SYNCHRONIZE.
 A directory one level too deep or too shallow is silently ignored — the glob simply doesn't match it,
 and nothing logs a complaint. That is also why `kubernetes/templates/app/` is invisible to the set.
 
+### Groups — the `group` label
+
+Some things in this cluster are several Argo apps: Immich is `immich` + `immich-prereqs` + `immich-public-proxy`,
+cert-manager is `cert-manager` + `cert-manager-issuer`, ESO is `external-secrets` + `external-secrets-store`.
+The set stamps every generated app with a `group` label, so a family can be viewed on its own:
+
+- **UI:** Applications → filter sidebar → **Labels** → `group=immich`. The filter is kept in the page URL, so the
+  filtered view can be bookmarked.
+- **CLI:** `sudo k3s kubectl -n argocd get applications -l group=immich`, or `-L group` to list every app with a
+  GROUP column.
+
+An app's group is its own name unless the set's `templatePatch` puts it in a family, one line per family:
+
+```
+{{- if eq $app "immich-prereqs" "immich-public-proxy" }}{{ $group = "immich" }}{{ end }}
+```
+
+A new part of an existing family (say a future `immich-power-tools` directory) → add its name to that line; a new
+family → copy the line. Both are edits to `apps.yaml`, which nothing in git applies, so re-apply it by hand once
+the change is on `main`:
+
+```bash
+sudo k3s kubectl apply -f kubernetes/bootstrap/apps.yaml
+sudo k3s kubectl -n argocd get applications -L group      # every app, with its GROUP column
+```
+
+The label is metadata on the Application object only: it deploys nothing, starts no sync and never makes an app
+OutOfSync. It is a label rather than an AppProject because projects exist to limit what apps may deploy and who
+may sync them (RBAC); moving apps into projects would add hand-applied AppProject objects just to get a filter.
+
 ### The rest of the contract
 - **Bootstrap (once, after installing Argo):** `sudo k3s kubectl apply -f kubernetes/bootstrap/apps.yaml`.
   This is the *only* Application-level object ever applied by hand.
 - **Deleting a directory** removes its Application but **leaves the deployed resources running** (the
   generated apps carry no finalizer). Clean those up yourself if you want them gone.
-- **Per-app exceptions** live in the set's `templatePatch` — today only cert-manager, which needs
-  `ServerSideApply` because its CRDs blow past the client-side annotation size limit.
+- **Per-app exceptions** live in the set's `templatePatch` — the `group` families (above), and `ServerSideApply`
+  for cert-manager, kube-prometheus-stack and external-secrets, whose CRDs blow past the client-side annotation
+  size limit.
 - **Hand-edits to a generated Application are reverted** by the controller, usually within seconds.
   Change the directory (or the `templatePatch`), never the live object.
 
