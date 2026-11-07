@@ -38,6 +38,38 @@ spec:
             - name: HOMEPAGE_ALLOWED_HOSTS
               value: "home.williampring.ca,homepage.apps.svc.cluster.local:3000"
 
+            # ── widget credentials ← homepage-secret ← OpenBao homelab/homepage (externalsecret.yaml)
+            # Homepage replaces "{{HOMEPAGE_VAR_X}}" in configmap.yaml with env var HOMEPAGE_VAR_X.
+            # `optional: true` on every one: until the owner fills OpenBao the Secret does not exist,
+            # and the dashboard must still start — only the affected widget shows an error.
+            - name: HOMEPAGE_VAR_IMMICH_KEY
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_IMMICH_KEY, optional: true }
+            - name: HOMEPAGE_VAR_QBITTORRENT_KEY
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_QBITTORRENT_KEY, optional: true }
+            - name: HOMEPAGE_VAR_KAVITA_KEY
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_KAVITA_KEY, optional: true }
+            - name: HOMEPAGE_VAR_CALIBRE_USERNAME
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_CALIBRE_USERNAME, optional: true }
+            - name: HOMEPAGE_VAR_CALIBRE_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_CALIBRE_PASSWORD, optional: true }
+            - name: HOMEPAGE_VAR_SUWAYOMI_USERNAME
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_SUWAYOMI_USERNAME, optional: true }
+            - name: HOMEPAGE_VAR_SUWAYOMI_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_SUWAYOMI_PASSWORD, optional: true }
+            - name: HOMEPAGE_VAR_KARAKEEP_KEY
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_KARAKEEP_KEY, optional: true }
+            - name: HOMEPAGE_VAR_ARGOCD_KEY
+              valueFrom:
+                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_ARGOCD_KEY, optional: true }
+
           # Exactly what the image's own HEALTHCHECK does: GET /api/healthcheck as 127.0.0.1:3000.
           # The Host header is the point — a probe otherwise arrives as <pod-ip>:3000, which the
           # allowed-hosts check above rejects with 400.
