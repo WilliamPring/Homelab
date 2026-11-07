@@ -41,7 +41,7 @@ env:
   # renovate: datasource=pypi depName=yamllint
   YAMLLINT_VERSION: 1.38.0
   # renovate: datasource=npm depName=renovate
-  RENOVATE_VERSION: 44.206.2
+  RENOVATE_VERSION: 44.210.0
   # Secrets check: "0" = warn only (current — qbittorrent template not yet encrypted),
   # "1" = a plaintext *.enc.yaml FAILS the run. Flip to "1" once those are encrypted.
   STRICT_SECRETS: "0"
