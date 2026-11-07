@@ -2,8 +2,8 @@
 
 > **Status (Nov 2026): converting app by app.** OpenBao runs on a Proxmox LXC (`192.168.68.91`).
 > External Secrets Operator is deployed and the cluster's connection to OpenBao is `Valid`.
-> **On OpenBao:** Grafana (`homelab/grafana`), Wealthfolio (`homelab/wealthfolio`), degoog (`homelab/degoog`) and Immich (`homelab/immich`).
-> **Still on SOPS** (`secrets.md`): Ghostfolio, Karakeep, qBittorrent — converted one app per PR, taking that app's
+> **On OpenBao:** Grafana (`homelab/grafana`), Wealthfolio (`homelab/wealthfolio`), degoog (`homelab/degoog`), Immich (`homelab/immich`) and Karakeep (`homelab/karakeep`).
+> **Still on SOPS** (`secrets.md`): Ghostfolio, qBittorrent — converted one app per PR, taking that app's
 > files from branch `feat/openbao-remaining-apps`.
 > Komf and RomM were removed (Nov 2026).
 >
@@ -310,11 +310,11 @@ catches a Deployment asking for a key the ExternalSecret doesn't provide, before
 | `…/external-secrets/rules.yaml` | alert `ExternalSecretNotSynced` → Bark | fires when a Secret can't be refreshed for 15 min (OpenBao down/sealed, login revoked, key missing). Existing Secrets keep working meanwhile |
 | `kubernetes/apps/external-secrets/external-secrets-store/` | the `ClusterSecretStore` named `openbao` + ConfigMap `openbao-ca` | the ONE place that says where OpenBao is, how to log in and which cert to trust. A separate app because its kind is defined by the CRDs above (same split as cert-manager → cert-manager-issuer) |
 | `…/openbao-ca.yaml` | OpenBao's **public** certificate, as a ConfigMap | pinned trust. Public on purpose; the key never leaves the LXC. YAML rather than a `.crt` file because `.gitignore` ignores `*.crt`/`*.pem` |
-| `<app>/externalsecret.yaml` (so far: `kube-prometheus-stack`, `wealthfolio`, `degoog`, `immich`) | "build Secret `<app>-secret` from `homelab/<path>`, these keys" | same Secret **name and keys** as SOPS made, so no Deployment changed |
+| `<app>/externalsecret.yaml` (so far: `kube-prometheus-stack`, `wealthfolio`, `degoog`, `immich`, `karakeep`) | "build Secret `<app>-secret` from `homelab/<path>`, these keys" | same Secret **name and keys** as SOPS made, so no Deployment changed |
 | `scripts/openbao-import.sh` | copies the **live** Secrets from the cluster into OpenBao | no age key needed, no typing values, can't import a stale file. Values go through pipes only, never printed |
 | `openbao-approle` Secret (namespace `external-secrets`) | ESO's role-id + secret-id | **made by hand, not in git** — it's the key to OpenBao, so it can't come from OpenBao |
 
-Secret → OpenBao path: converted = `grafana` (monitoring), `wealthfolio` (apps), `degoog` (apps), `immich` (media). Still to do, same pattern: `ghostfolio`, `karakeep`, `qbittorrent` — the import script knows them.
+Secret → OpenBao path: converted = `grafana` (monitoring), `wealthfolio` (apps), `degoog` (apps), `immich` (media), `karakeep` (apps). Still to do, same pattern: `ghostfolio`, `qbittorrent` — the import script knows them.
 
 ### Rollout — in this order
 Each step depends on the one before it. Nothing in the cluster changes until you Sync.

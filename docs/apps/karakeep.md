@@ -48,13 +48,12 @@ knob to revisit.
 
 ```
 kubernetes/apps/apps/karakeep/
-├── kustomization.yaml            lists the resources + the KSOPS generator
+├── kustomization.yaml            lists the resources
 ├── deployment.yaml               the three containers above, all pinned
 ├── storage.yaml                  NFS PVC for /data · local-path PVC for the search index
 ├── service.yaml                  ClusterIP + NodePort 30300 (only :3000 — see below)
 ├── ingress.yaml                  karakeep.williampring.ca + Let's Encrypt cert
-├── karakeep-secret.enc.yaml      NEXTAUTH_SECRET + MEILI_MASTER_KEY (SOPS-encrypted)
-└── karakeep-secret.sops.yaml     the KSOPS generator: "decrypt that file at render time"
+└── externalsecret.yaml           builds `karakeep-secret` (NEXTAUTH_SECRET + MEILI_MASTER_KEY) from OpenBao `homelab/karakeep`
 ```
 
 **Only port 3000 is in the Service, deliberately.** Chrome's DevTools port (`9222`) is remote code
@@ -81,19 +80,19 @@ mkdir -p /data/karakeep && chown -R 1000:1000 /data/karakeep && chmod -R 775 /da
 ```
 The karakeep container runs as uid 1000 specifically so this works — NFS checks the number, not the name.
 
-### 3.2 Fill in and encrypt the secret
-On the Arch box (it has the age key):
+### 3.2 Fill in the secret (in OpenBao)
+The values live in OpenBao at `homelab/karakeep`, not in git; `externalsecret.yaml` tells External Secrets to
+build `karakeep-secret` from them ([`../platform/openbao.md`](../platform/openbao.md)). From any machine logged in
+to OpenBao (`bao login -method=userpass username=william`):
 
 ```bash
 openssl rand -base64 36                      # → NEXTAUTH_SECRET
 openssl rand -base64 36 | tr -dc 'A-Za-z0-9' # → MEILI_MASTER_KEY
+bao kv patch homelab/karakeep NEXTAUTH_SECRET='…' MEILI_MASTER_KEY='…'
+kubectl -n apps annotate externalsecret karakeep-secret force-sync=$(date +%s) --overwrite   # or wait ≤1h
 ```
 
-Paste both into `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml`, then:
-
-```bash
-sops --encrypt --in-place kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml
-```
+Use `kv patch`, not `kv put` — `put` replaces **all** keys at the path with only the ones you typed.
 
 Neither value is anything you need to remember — they're random, and nothing outside the cluster uses them.
 
@@ -102,8 +101,8 @@ Neither value is anything you need to remember — they're random, and nothing o
   same key** — that's why it's one secret entry referenced twice, not two separate values. If they ever
   disagree, search breaks while everything else keeps working.
 
-⚠️ Until this file is encrypted it is a plaintext template, and Argo's KSOPS step will fail to render the
-app. That's the expected failure if you Sync too early — see §7.
+⚠️ If `homelab/karakeep` is missing either key, External Secrets can't build `karakeep-secret` and the pod
+waits in `CreateContainerConfigError`. That's the expected failure if you Sync too early — see §7.
 
 ### 3.3 Add the DNS record
 Cloudflare → `karakeep` → **A** → the master's Tailscale IP, **grey cloud** (DNS only).
@@ -186,7 +185,9 @@ To enable it, add **one** of these to the `karakeep` container's `env:` and Sync
               value: "<model>"
 ```
 
-For option A, add the key to `karakeep-secret.enc.yaml` and re-encrypt — same two steps as §3.2.
+For option A, add the key in two places: `bao kv patch homelab/karakeep OPENAI_API_KEY=…`, **and** a new entry in
+`externalsecret.yaml` (`- secretKey: OPENAI_API_KEY` / `remoteRef: { key: karakeep, property: OPENAI_API_KEY }`),
+then push, Sync and restart.
 
 For option B, be realistic: without a GPU, tagging one bookmark takes tens of seconds and Ollama wants
 several GB of RAM. Workable for a trickle of saves; frustrating if you bulk-import.
@@ -197,7 +198,7 @@ several GB of RAM. Workable for a trickle of saves; frustrating if you bulk-impo
 
 | Symptom | Likely cause | Check / fix |
 |---|---|---|
-| Argo render fails mentioning ksops or sops | the secret is still the plaintext template | encrypt it (§3.2) → push → **Hard Refresh** in Argo |
+| Pod `CreateContainerConfigError`, `secret "karakeep-secret" not found` | External Secrets couldn't build it (key missing in `homelab/karakeep`, or OpenBao sealed/unreachable) | `kubectl -n apps describe externalsecret karakeep-secret`; fill it (§3.2) |
 | Pod `ContainerCreating`, mount error | `/data/karakeep` missing on the NFS box | §3.1 |
 | App loads, but every save fails to write | NFS dir not owned by `1000:1000` | `ls -ln /data/karakeep` on the file server |
 | Bookmarks save but never get a screenshot or text | the chrome container | `logs -c chrome`. Chrome crashing on startup usually means memory — raise its limit |
@@ -224,8 +225,8 @@ sudo k3s kubectl rollout restart deploy/karakeep -n apps               # after a
 | `MEILI_ADDR` | deployment | `http://127.0.0.1:7700` | the sidecar, over the shared loopback |
 | `BROWSER_WEB_URL` | deployment | `http://127.0.0.1:9222` | ditto |
 | `NEXTAUTH_URL` | deployment | `https://karakeep.williampring.ca` | must match how you actually reach it |
-| `NEXTAUTH_SECRET` | secret | random | signs session cookies |
-| `MEILI_MASTER_KEY` | secret | random | shared by two containers — they must agree |
+| `NEXTAUTH_SECRET` | OpenBao `homelab/karakeep` | random | signs session cookies |
+| `MEILI_MASTER_KEY` | OpenBao `homelab/karakeep` | random | shared by two containers — they must agree |
 | meilisearch image | deployment | `v1.41.0` | deliberately matches Karakeep's own compose, not latest |
 | NodePort | service | `30300` | mnemonic: Karakeep's own port 3000 |
 

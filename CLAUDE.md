@@ -11,13 +11,13 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
   too, with a Renovate custom manager — `kubernetes/apps/media/immich/values.yaml` is the example.
 - **Secrets**: SOPS + age via KSOPS. Pattern = `<app>-secret.enc.yaml` (encrypted) + `<app>-secret.sops.yaml`
   (generator) + `generators:` in `kustomization.yaml`. Target state: a value is either `ENC[...]` in git or not in git.
-  **Current state (by the owner's choice while testing):** a placeholder template (qbittorrent), Karakeep's
-  secret applied as cleartext, and a few inline values (Suwayomi's login, the Bark device key
+  **Current state (by the owner's choice while testing):** a placeholder template (qbittorrent) and a few
+  inline values (Suwayomi's login, the Bark device key
   placeholders); the checks WARN rather than block (`STRICT_SECRETS=0`). Do not "fix" this unasked — see
   `docs/platform/secrets.md` known debt.
   **Pilot (Nov 2026):** OpenBao (`https://192.168.68.91:8200`, Proxmox LXC) + External Secrets Operator now run
-  beside SOPS. Converted so far: Grafana (`kube-prometheus-stack/externalsecret.yaml` ← `homelab/grafana`) and
-  Wealthfolio (← `homelab/wealthfolio`); every other app stays on SOPS until the owner says otherwise. Docs: `docs/platform/openbao.md`. Never put
+  beside SOPS. Converted so far (one PR per app): Grafana (`kube-prometheus-stack/externalsecret.yaml` ← `homelab/grafana`),
+  Wealthfolio, degoog, Immich and Karakeep (each ← `homelab/<app>`); the rest stay on SOPS until the owner says otherwise. Docs: `docs/platform/openbao.md`. Never put
   OpenBao behind the Cloudflare tunnel.
 - **One owner per thing.** Ansible = nodes (Tailscale, k3s, the few out-of-git secrets/labels). Argo = every app.
 - **Hostnames** are `*.williampring.ca` → the master's Tailscale IP (DNS-only). Internet-facing exceptions:

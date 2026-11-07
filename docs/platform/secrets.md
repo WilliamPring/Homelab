@@ -2,7 +2,7 @@
 
 > **Being replaced (Nov 2026).** SOPS is on its way out in favour of OpenBao (on a Proxmox LXC) +
 > External Secrets Operator, so secret values stop living in git at all. Why, and the setup:
-> [`openbao.md`](openbao.md). **Already on OpenBao:** Grafana (`kube-prometheus-stack-secret`), Wealthfolio (`wealthfolio-secret`), degoog (`degoog-secret`) and Immich (`immich-secret`);
+> [`openbao.md`](openbao.md). **Already on OpenBao:** Grafana (`kube-prometheus-stack-secret`), Wealthfolio (`wealthfolio-secret`), degoog (`degoog-secret`), Immich (`immich-secret`) and Karakeep (`karakeep-secret`);
 > for every other app, everything below still applies.
 
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day
@@ -27,7 +27,6 @@ git at all.** Plaintext never gets committed.
 | File | Secret → namespace | Keys | Used by |
 |---|---|---|---|
 | `kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml` | `qbittorrent-secret` → media | `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_ADDRESSES` | Gluetun (Mullvad) ⚠️ **template, not yet encrypted** |
-| `kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep ⚠️ **template, not yet encrypted** |
 Each one has a sibling `<app>-secret.sops.yaml` (the KSOPS *generator*, not a secret — it just
 says "decrypt that file") and is listed under `generators:` in the app's `kustomization.yaml`.
 
@@ -39,6 +38,7 @@ says "decrypt that file") and is listed under `generators:` in the app's `kustom
 | `homelab/wealthfolio` | `wealthfolio-secret` → apps | `WF_SECRET_KEY`, `WF_AUTH_PASSWORD_HASH` | Wealthfolio |
 | `homelab/degoog` | `degoog-secret` → apps | `DEGOOG_SETTINGS_PASSWORDS`, `DEGOOG_VALKEY_URL` | degoog |
 | `homelab/immich` | `immich-secret` → media | `REDIS_PASSWORD` | Immich (Valkey user `redis` @ .103) |
+| `homelab/karakeep` | `karakeep-secret` → apps | `NEXTAUTH_SECRET`, `MEILI_MASTER_KEY` | Karakeep (values were cleartext in git history — rotate) |
 
 Each is built by the app's `externalsecret.yaml`. Change a value in OpenBao, not here (`openbao.md` §6).
 
@@ -56,18 +56,13 @@ Each is built by the app's `externalsecret.yaml`. Change a value in OpenBao, not
 Migrating these into `.enc.yaml` files is the open item (§5 below is the recipe).
 
 ### Known debt ⚠️
-- **`kubernetes/apps/apps/karakeep/karakeep-secret.enc.yaml` is cleartext in a PUBLIC repo.**
-  `NEXTAUTH_SECRET` signs Karakeep's login cookies, so anyone holding it can forge a session —
-  gated only by Karakeep being reachable on Tailscale/LAN and not the internet. Accepted for now,
-  deliberately. **Fix when ready — two commands, on the Arch box:**
-  ```bash
-  ./scripts/secrets.sh rotate karakeep NEXTAUTH_SECRET MEILI_MASTER_KEY
-  ./scripts/secrets.sh encrypt karakeep
-  # then in karakeep/kustomization.yaml: move the file out of `resources:` and
-  # uncomment the `generators:` block (both lines are already there, ready to swap)
-  ```
-  Then Sync + `kubectl rollout restart deploy/karakeep -n apps`. You get logged out of Karakeep
-  once. Rotating is the fix, not deleting: the old values are in git history permanently.
+- **Karakeep's two values were cleartext in a PUBLIC repo** (the old `karakeep-secret.enc.yaml`, now deleted
+  but still in git history). `NEXTAUTH_SECRET` signs Karakeep's login cookies, so anyone holding it can forge a
+  session — gated only by Karakeep being reachable on Tailscale/LAN. They now live in OpenBao
+  (`homelab/karakeep`). **Fix = rotate them there:** OpenBao UI → `homelab` → `karakeep` → Create new version
+  with new random values (Tools → Random, `openbao.md` §6; keep `MEILI_MASTER_KEY` alphanumeric), force-sync
+  the ExternalSecret, then `kubectl rollout restart deploy/karakeep -n apps`. You get logged out once. If
+  search comes back empty afterwards, re-index from Karakeep's admin settings (bookmarks themselves are on NFS).
 - `kubernetes/apps/media/suwayomi/deployment.yaml` carries Suwayomi's Basic-auth username/password **inline**
   (chosen for now; host is Tailscale-only). Move to a SOPS secret with the §5 recipe when ready,
   then rotate the password since the old one stays in git history.
