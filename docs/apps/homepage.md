@@ -158,6 +158,71 @@ bao kv patch homelab/homepage HOMEPAGE_VAR_ARGOCD_KEY=<token>
 
 ---
 
+## First-time setup (after the redesign merges, or on a rebuild)
+
+Run the `kubectl` commands on the homelab cluster (the master, or a kubeconfig pointing at it).
+Check `kubectl config current-context` first if you also have work clusters configured.
+
+**1. Create the OpenBao entry.** Without it, Argo shows `homepage-secret` with
+`could not get secret data from provider`: ESO looked up `homelab/homepage` and found nothing.
+Put in all nine properties at once. ESO fails the whole Secret if even one is missing, so use
+`unset` for any you don't have yet:
+
+```bash
+bao kv put homelab/homepage \
+  HOMEPAGE_VAR_IMMICH_KEY=unset HOMEPAGE_VAR_QBITTORRENT_KEY=unset HOMEPAGE_VAR_KAVITA_KEY=unset \
+  HOMEPAGE_VAR_CALIBRE_USERNAME=unset HOMEPAGE_VAR_CALIBRE_PASSWORD=unset \
+  HOMEPAGE_VAR_SUWAYOMI_USERNAME=unset HOMEPAGE_VAR_SUWAYOMI_PASSWORD=unset \
+  HOMEPAGE_VAR_KARAKEEP_KEY=unset HOMEPAGE_VAR_ARGOCD_KEY=unset
+```
+
+No policy change is needed: ESO's read-only policy already covers `homelab/data/*`.
+
+**2. Sync `homepage` in Argo CD**, then make ESO fetch now and restart the pod:
+
+```bash
+kubectl -n apps annotate externalsecret homepage-secret force-sync=$(date +%s) --overwrite
+kubectl -n apps rollout restart deploy/homepage
+```
+
+`homepage-secret` should now be Healthy. The theme, tabs, status dots, LAN IPs and the Gatus and
+Grafana numbers work from here. Every other widget shows an API error until its key is real.
+
+**3. Fill in real keys one at a time**, whenever you want that tile's numbers. Get each key from the
+table above, then:
+
+```bash
+bao kv patch homelab/homepage HOMEPAGE_VAR_IMMICH_KEY=<key>
+kubectl -n apps annotate externalsecret homepage-secret force-sync=$(date +%s) --overwrite
+kubectl -n apps rollout restart deploy/homepage        # env vars are read at start
+```
+
+**4. Optional: the Argo CD widget.** This needs a manual apply, because Argo does not sync its own
+bootstrap folder:
+
+```bash
+kubectl apply -k kubernetes/bootstrap/argocd -n argocd
+argocd account generate-token --account homepage
+bao kv patch homelab/homepage HOMEPAGE_VAR_ARGOCD_KEY=<token>
+```
+
+Then force-sync and restart as in step 3.
+
+### Why the secrets exist at all (and what is duplicated)
+
+They are only for the number blocks on seven tiles. Those apps' APIs require a key or login, and
+the repo is public, so the key can't sit in `configmap.yaml`. The dashboard works without any of them.
+
+- **Immich, qBittorrent, Kavita, Karakeep, Argo CD:** a key made just for Homepage. The app keeps its
+  half in its own database, so OpenBao is the only copy you maintain.
+- **Suwayomi** (and **Calibre-Web** if you use your own login): a username and password, so they
+  really are a second copy. Suwayomi's login also sits inline in `suwayomi/deployment.yaml`. To keep
+  one copy, either leave these four `unset` (those two tiles show an error box), give Calibre-Web a
+  separate viewer user, or, once Suwayomi moves to `homelab/suwayomi`, point those two `remoteRef`
+  entries in `externalsecret.yaml` at `key: suwayomi`.
+
+---
+
 ## What's in the ConfigMap
 
 One ConfigMap, five keys, each mounted as its own file via `subPath` (so Homepage can still
