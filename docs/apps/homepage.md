@@ -140,13 +140,34 @@ The widget needs an API token. It uses a dedicated account, not admin:
 - `kubernetes/bootstrap/argocd/argocd-rbac-cm.yaml` adds `g, homepage, role:readonly`.
   `policy.default` stays unset, so nothing else changes.
 
-These are **bootstrap** files: Argo does not sync them. You apply them:
+These are **bootstrap** files: Argo does not sync them. Apply them by hand, then make the token
+in the UI. Neither the `argocd` CLI nor a kubeconfig on your laptop is needed:
 
-```bash
-kubectl apply -k kubernetes/bootstrap/argocd -n argocd
-argocd account generate-token --account homepage     # or UI → Settings → Accounts → homepage → Generate New
-bao kv patch homelab/homepage HOMEPAGE_VAR_ARGOCD_KEY=<token>
-```
+1. **Create the account.** SSH to the master and patch the two ConfigMaps. These are the same
+   settings as the bootstrap files above, so the cluster still matches git. (With the repo and a
+   kubeconfig: `kubectl apply -k kubernetes/bootstrap/argocd -n argocd` does the same.)
+   ```bash
+   sudo k3s kubectl -n argocd patch cm argocd-cm --type merge -p '{"data":{"accounts.homepage":"apiKey"}}'
+   sudo k3s kubectl -n argocd patch cm argocd-rbac-cm --type merge -p '{"data":{"policy.csv":"g, homepage, role:readonly\n"}}'
+   ```
+   ⚠️ The second patch replaces all of `policy.csv`. That line is the only rule in this repo; if
+   you ever add more, put them in `argocd-rbac-cm.yaml` and patch with all of them.
+2. **Generate the token in the UI.** Argo CD → gear icon (**Settings**) → **Accounts** →
+   **homepage** → **Tokens** → **GENERATE NEW** → copy it (it is shown once).
+   - If the page says `account 'admin' does not have 'apiKey' capability`, you are on the
+     **admin** row. Pick **homepage**. Don't give admin `apiKey`.
+   - If **homepage** isn't listed, step 1 didn't apply. Check with
+     `sudo k3s kubectl -n argocd get cm argocd-cm -o jsonpath='{.data.accounts\.homepage}'`,
+     which should print `apiKey`.
+3. **Test it** (optional): `curl -s -H "Authorization: Bearer <token>" http://192.168.68.63:30443/api/v1/applications | head -c 300`
+   should list your apps. An empty list means the read-only rule is missing; `401` means a bad token.
+4. **Store it.** `bao kv patch homelab/homepage HOMEPAGE_VAR_ARGOCD_KEY=<token>` on the OpenBao
+   LXC, or in the OpenBao web UI (`homelab/homepage` → **Create new version**).
+5. **Reload Homepage** on the master:
+   ```bash
+   sudo k3s kubectl -n apps annotate externalsecret homepage-secret force-sync=$(date +%s) --overwrite
+   sudo k3s kubectl -n apps rollout restart deploy/homepage
+   ```
 
 ### Adding a widget
 
