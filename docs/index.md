@@ -3,7 +3,7 @@
 A personal homelab: two Proxmox hosts → a two-node **k3s** cluster built by **Ansible** → every app deployed
 from this repo by **Argo CD**. Photos (Immich), manga and books (Kavita, Suwayomi, Calibre-Web),
 torrents behind a VPN (qBittorrent + Gluetun → Mullvad), search (SearXNG, degoog), bookmarks with archived
-copies (Karakeep), budgeting (Actual), portfolio tracking (Ghostfolio, with Wealthfolio on trial), and the glue (cert-manager, Gatus, Bark, Homepage, and Grafana with Prometheus + Loki).
+copies (Karakeep), budgeting (Actual), portfolio tracking (Wealthfolio), and the glue (cert-manager, Gatus, Bark, Homepage, and Grafana with Prometheus + Loki).
 
 New here? Learn the workflow hands-on first: **[`learn/onboarding-an-app.md`](learn/onboarding-an-app.md)**.
 
@@ -18,7 +18,7 @@ This page is the mental model. Each section ends with where to read more.
 │ Proxmox pve-a (.96) + pve-b (.89)                                                       │
 │   ├─ VM  k3s-master-01 192.168.68.63      ├─ LXC file server  .50   NFS /data (photos, manga, books, ROMs)
 │   ├─ VM  k3s-worker-01 192.168.68.62 (32GB — Immich, Suwayomi, qBittorrent pinned here)      │
-│   ├─ LXC Postgres   .7   (Ghostfolio)              ├─ LXC Valkey/Redis .103 (Immich, degoog)
+│   ├─ LXC Postgres   .7   (old DBs, backups only)   ├─ LXC Valkey/Redis .103 (Immich, degoog)
 └──────────────────────────────────────────────────────────────────────────────────────────┘
           │  Ansible (ansible/)  — Tailscale, k3s, nfs-common, the few out-of-git secrets/labels
           ▼
@@ -27,7 +27,7 @@ This page is the mental model. Each section ends with where to read more.
 │  Argo CD  ◄── kubernetes/bootstrap/   (applied by hand, twice, ever)                     │
 │     └─ ApplicationSet ──► one Application per  kubernetes/apps/<namespace>/<app>/        │
 │           media: immich · immich-prereqs · immich-public-proxy · kavita · calibre · suwayomi · qbittorrent
-│           apps: searxng · degoog · homepage · karakeep · actual · ghostfolio · wealthfolio
+│           apps: searxng · degoog · homepage · karakeep · actual · wealthfolio
 │           monitoring: gatus · bark · kube-prometheus-stack · loki · alloy
 │           cert-manager: cert-manager · cert-manager-issuer                               │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
@@ -172,7 +172,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 **Apps** — one guide per app: setup, how it fits, troubleshooting
 - [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
 - [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/searxng.md`](apps/searxng.md) · [`apps/degoog.md`](apps/degoog.md)
-- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/ghostfolio.md`](apps/ghostfolio.md) · [`apps/wealthfolio.md`](apps/wealthfolio.md) · [`apps/homepage.md`](apps/homepage.md)
+- [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/wealthfolio.md`](apps/wealthfolio.md) · [`apps/homepage.md`](apps/homepage.md)
 - [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md) · [`apps/grafana.md`](apps/grafana.md) (Prometheus, Loki, Alloy, Alertmanager)
 
 **Platform** — the things apps rely on
@@ -187,7 +187,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 
 **Runbooks** — do-this-when
 - [`runbooks/rebuild-from-zero.md`](runbooks/rebuild-from-zero.md) — the whole stack from a blank cluster, in order
-- [`runbooks/deploy-ghostfolio.md`](runbooks/deploy-ghostfolio.md) — **step-by-step walkthrough of an app that needs a DB, secrets and DNS** (the pattern for any future one)
+- [`archive/deploy-ghostfolio.md`](archive/deploy-ghostfolio.md) — **step-by-step walkthrough of an app that needs a DB, secrets and DNS** (Ghostfolio itself was removed; the pattern still holds)
 - [`runbooks/cheatsheet.md`](runbooks/cheatsheet.md) · [`runbooks/cluster-cleanup.md`](runbooks/cluster-cleanup.md)
 - [`runbooks/proxmox-install.md`](runbooks/proxmox-install.md) · [`runbooks/couchdb-lxc-setup.md`](runbooks/couchdb-lxc-setup.md) · [`runbooks/tailscale-mullvad-exit-node.md`](runbooks/tailscale-mullvad-exit-node.md)
 

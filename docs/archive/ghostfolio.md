@@ -1,5 +1,9 @@
 # Ghostfolio — portfolio tracker (stocks, ETFs, crypto)
 
+> **Archived — Ghostfolio was removed (Nov 2026)**; Wealthfolio is the portfolio tracker now. Its `ghostfolio`
+> database on the Postgres LXC is kept as a backup until you drop it (`docs/runbooks/cluster-cleanup.md` §10).
+> Manifests and `scripts/postgres-ghostfolio-setup.sh` are in git history (the commit before "remove ghostfolio").
+
 Self-hosted dashboard for what you own and how it's doing, across every brokerage, in CAD.
 
 **It has no bank or brokerage sync.** No Plaid, no Flinks, no account linking — that capability

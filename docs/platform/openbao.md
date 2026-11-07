@@ -3,9 +3,9 @@
 > **Status (Nov 2026): converting app by app.** OpenBao runs on a Proxmox LXC (`192.168.68.91`).
 > External Secrets Operator is deployed and the cluster's connection to OpenBao is `Valid`.
 > **On OpenBao:** Grafana (`homelab/grafana`), Wealthfolio (`homelab/wealthfolio`), degoog (`homelab/degoog`), Immich (`homelab/immich`) and Karakeep (`homelab/karakeep`).
-> **Still on SOPS** (`secrets.md`): Ghostfolio, qBittorrent — converted one app per PR, taking that app's
+> **Still on SOPS** (`secrets.md`): qBittorrent — converted one app per PR, taking that app's
 > files from branch `feat/openbao-remaining-apps`.
-> Komf and RomM were removed (Nov 2026).
+> Komf, RomM and Ghostfolio were removed (Nov 2026).
 >
 > **New here? Read §11 "How it works, end to end" first**: diagrams plus one value followed from
 > OpenBao to the pod.
@@ -152,7 +152,7 @@ bao secrets enable -path=homelab -version=2 kv
 - **`kv` version 2:** the version history (§3). Overwrite a password by mistake and you can still read
   the old one with `bao kv get -version=N homelab/grafana`.
 - **`-path=homelab`:** one mount for the whole homelab, one entry per app: `homelab/grafana`,
-  `homelab/ghostfolio`, `homelab/karakeep`, … Each entry holds that app's keys, mirroring today's one-Secret-per-app layout.
+  `homelab/wealthfolio`, `homelab/karakeep`, … Each entry holds that app's keys, mirroring today's one-Secret-per-app layout.
 
 ### Step 3 — a read-only login for the cluster
 ```bash
@@ -296,7 +296,7 @@ Key names are in git on purpose (values aren't): CI's secretrefs check (`check-c
 catches a Deployment asking for a key the ExternalSecret doesn't provide, before Sync does.
 
 **A new app with a secret:** `bao kv put homelab/<app> KEY=…`, copy `externalsecret.yaml` from any app
-(e.g. `kubernetes/apps/apps/ghostfolio/`), change name / namespace / path / keys, list it in
+(e.g. `kubernetes/apps/apps/wealthfolio/`), change name / namespace / path / keys, list it in
 `resources:`.
 
 ---
@@ -314,7 +314,7 @@ catches a Deployment asking for a key the ExternalSecret doesn't provide, before
 | `scripts/openbao-import.sh` | copies the **live** Secrets from the cluster into OpenBao | no age key needed, no typing values, can't import a stale file. Values go through pipes only, never printed |
 | `openbao-approle` Secret (namespace `external-secrets`) | ESO's role-id + secret-id | **made by hand, not in git** — it's the key to OpenBao, so it can't come from OpenBao |
 
-Secret → OpenBao path: converted = `grafana` (monitoring), `wealthfolio` (apps), `degoog` (apps), `immich` (media), `karakeep` (apps). Still to do, same pattern: `ghostfolio`, `qbittorrent` — the import script knows them.
+Secret → OpenBao path: converted = `grafana` (monitoring), `wealthfolio` (apps), `degoog` (apps), `immich` (media), `karakeep` (apps). Still to do, same pattern: `qbittorrent` — the import script knows them.
 
 ### Rollout — in this order
 Each step depends on the one before it. Nothing in the cluster changes until you Sync.

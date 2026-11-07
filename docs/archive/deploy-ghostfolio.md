@@ -1,5 +1,9 @@
 # Deploying Ghostfolio — a step-by-step walkthrough
 
+> **Archived — Ghostfolio was removed (Nov 2026).** Kept because it is still the best end-to-end walkthrough of
+> an app that needs a database, secrets and DNS. Its setup script (`scripts/postgres-ghostfolio-setup.sh`) is in
+> git history. Secrets are OpenBao now (`docs/platform/openbao.md`), not SOPS.
+
 The first app you've added that needs **three** things outside the cluster: a database role, a
 set of secrets, and a DNS record. This walks through all of it in order, explaining what each
 step is for, so the next app that needs a database is something you can do without a guide.

@@ -1,4 +1,4 @@
-# Wealthfolio — local-first portfolio tracker, on TRIAL next to Ghostfolio (docs/apps/wealthfolio.md).
+# Wealthfolio — local-first portfolio tracker, the portfolio tracker (docs/apps/wealthfolio.md).
 # One Rust binary that serves the web UI and the API; one SQLite file; no database server, no cache.
 #
 #   data   → local-path PVC (storage.yaml explains why it CANNOT be NFS: SQLite WAL mode)
@@ -28,7 +28,7 @@ spec:
         app: wealthfolio
     spec:
       # A Service named `wealthfolio` would inject WEALTHFOLIO_PORT=tcp://… into the pod. The app reads
-      # WF_* names, so it does not collide today — off anyway, like Actual and Ghostfolio.
+      # WF_* names, so it does not collide today — off anyway, like Actual.
       enableServiceLinks: false
       securityContext:
         runAsUser: 1000       # the image's own `wealthfolio` user (USER 1000:1000 in its Dockerfile)

@@ -1,7 +1,7 @@
-# Wealthfolio — portfolio tracker (on trial)
+# Wealthfolio — portfolio tracker
 
-`https://wealthfolio.williampring.ca` — a local-first portfolio tracker, running **next to Ghostfolio** to
-compare the two on the same transactions. Pick a winner, then remove the other.
+`https://wealthfolio.williampring.ca` — a local-first portfolio tracker. It was trialled
+next to Ghostfolio and won; Ghostfolio was removed in Nov 2026 (`../archive/ghostfolio.md`).
 
 | | |
 |---|---|
@@ -106,7 +106,7 @@ Then open the URL and log in with the password you hashed.
 
 ---
 
-## Comparing it with Ghostfolio
+## Comparing it with Ghostfolio (history — how the trial was judged)
 
 Import the **same** CSV into both, then compare each against your broker statement, not against each
 other:

@@ -139,17 +139,10 @@ data:
             namespace: apps
             podSelector: app=actual
 
-        - Portfolio:
-            href: https://portfolio.williampring.ca
-            description: Stocks, ETFs & crypto (Ghostfolio)
-            icon: ghostfolio.png
-            siteMonitor: http://ghostfolio.apps.svc.cluster.local:3333/api/v1/health
-            namespace: apps
-            podSelector: app=ghostfolio
 
         - Wealthfolio:
             href: https://wealthfolio.williampring.ca
-            description: Portfolio tracker, on trial next to Ghostfolio
+            description: Stocks, ETFs & crypto (Wealthfolio)
             icon: mdi-chart-line           # no wealthfolio.png in dashboard-icons (checked: 404)
             siteMonitor: http://wealthfolio.apps.svc.cluster.local:8088/api/v1/healthz
             namespace: apps
