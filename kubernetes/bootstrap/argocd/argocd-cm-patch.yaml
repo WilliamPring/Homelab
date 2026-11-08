@@ -1,3 +1,11 @@
 - op: add
   path: /data/kustomize.buildOptions
   value: --enable-alpha-plugins --enable-exec --enable-helm
+# Read-only API account for the Homepage Argo CD widget (apps / out-of-sync / health counts).
+# `apiKey` only — it cannot log in to the UI. Its permissions come from argocd-rbac-cm.yaml
+# (role:readonly). Generate its token once, after applying this:
+#   argocd account generate-token --account homepage   (or UI → Settings → Accounts → homepage)
+# and store it in OpenBao: bao kv patch homelab/homepage HOMEPAGE_VAR_ARGOCD_KEY=<token>
+- op: add
+  path: /data/accounts.homepage
+  value: apiKey

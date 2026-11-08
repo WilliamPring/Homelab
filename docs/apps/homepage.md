@@ -9,6 +9,7 @@
 | **Namespace** | `apps` |
 | **Image** | `ghcr.io/gethomepage/homepage` (pinned; Renovate PRs bumps) |
 | **Storage** | none — the whole config is a ConfigMap |
+| **Secret** | `homepage-secret` ← OpenBao `homelab/homepage` (widget API keys only; optional) |
 
 ---
 
@@ -42,6 +43,121 @@ this tells you *which layer* broke before you open a terminal.
 
 ---
 
+## The layout (redesigned Nov 2026)
+
+```
+┌ info bar (every tab) ─ cluster + node CPU/RAM │ Toronto weather │ clock │ search (degoog) ┐
+├ [ Home ] [ Ops ] ───────────────────────────────────────────────────────────────────────┤
+│ Home:  Media        Reading         Everyday       Money                                │
+│        Immich ▦     Library ▦       Bookmarks ▦    Budget                               │
+│        Downloads ▦  Books ▦         degoog         Portfolio                            │
+│                     Manga sources ▦ SearXNG                                             │
+│ Ops:   Cluster:        Argo CD ▦ │ Grafana ▦ │ Status ▦ │ Bark                          │
+│        Infrastructure: Pulse │ OpenBao │ Proxmox .96 │ Proxmox .89                       │
+│        bookmarks:      Homelab (repo, Argo/Gatus LAN)                                    │
+│ every tab, bottom: LAN fallback — every NodePort with its local IP:port written out      │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+▦ = live widget (numbers from the app's API, not just a dot)
+```
+
+| Before | After |
+|---|---|
+| one long page, 3 groups (Media / Apps / Monitoring), 4 tiles across | two tabs: **Home** (what you use) and **Ops** (what runs it); 6 groups, each with an icon |
+| plain `slate` dark theme | night-sky background at 35% opacity, frosted-glass cards (`cardBlur: md`), boxed info widgets, theme-coloured glyphs, refined stat blocks, `plexData` digits |
+| one service widget (Grafana → Prometheus targets) | widgets on Immich, qBittorrent, Kavita, Calibre-Web, Suwayomi, Karakeep, Argo CD, Gatus and Grafana |
+| Komf, RomM and Ghostfolio tiles | gone (apps removed); Wealthfolio is "Portfolio" |
+| Proxmox only as bookmarks | Proxmox hosts are tiles under **Infrastructure** next to Pulse and OpenBao |
+| info bar: cluster, search, weather | + date/time; weather cached 15 min |
+
+Why these choices (from the Homepage docs and the configs people share on r/selfhosted / GitHub):
+
+- **Tabs**: the most common advice on busy dashboards is to split daily-use apps from admin
+  tools. Groups with no `tab:` would show on every tab; every group here has one, so each lives
+  in exactly one place. The info bar (`widgets.yaml`) is always on top.
+- **Background + glass**: a dim photo with `cardBlur` is the look most shared dashboards use.
+  The docs say `cardBlur` does not combine with the background's blur/saturate/brightness
+  filters, so only `opacity` is set. The image comes from Unsplash and is loaded by your
+  **browser**, not the pod. To self-host it, mount a file at `/app/public/images/` and use
+  `image: /images/<file>`.
+- **Column groups on Home, row groups on Ops**: four short groups side by side fill one screen.
+  The Ops tiles carry most of the wide widgets, so they get full-width rows of four.
+- **`useEqualHeights`**: tiles with a widget are taller; without this a row looks ragged.
+- **LAN fallback on every tab**: that group has no `tab:`, so it sits at the bottom of both
+  tabs, and each link shows its `192.168.68.63:<port>` so you can read the IP even when you can't click it.
+- **No `focus: true` on search**: it would grab keystrokes from quicklaunch (type anywhere to
+  filter tiles and launch one), which is the faster way to open an app.
+
+---
+
+## Service widgets and their secrets
+
+Homepage replaces `{{HOMEPAGE_VAR_X}}` anywhere in its config with the env var `HOMEPAGE_VAR_X`
+(official feature, see gethomepage.dev → Installation → "Using environment secrets"). The chain:
+
+```
+OpenBao homelab/homepage  (property HOMEPAGE_VAR_X)
+  → externalsecret.yaml   → Secret apps/homepage-secret (key HOMEPAGE_VAR_X)
+  → deployment.yaml env   (secretKeyRef, optional: true)
+  → configmap.yaml        key: "{{HOMEPAGE_VAR_X}}"
+```
+
+Every env var is `optional: true`, so the pod starts before any of this exists. Until a key is
+filled in, its widget shows an API error and the other tiles work.
+
+| OpenBao property (`homelab/homepage`) | widget | how to get it |
+|---|---|---|
+| `HOMEPAGE_VAR_IMMICH_KEY` | Immich: photos / videos / storage | Immich → Account Settings → API Keys → new key with **`server.statistics`** only |
+| `HOMEPAGE_VAR_QBITTORRENT_KEY` | qBittorrent: down/up speed, leech/seed + leech progress | qBittorrent → Options → WebUI → Authentication → **API Key** (qBit ≥ 5.2) |
+| `HOMEPAGE_VAR_KAVITA_KEY` | Kavita: series / files | Kavita (admin user) → Settings → Account → API Key |
+| `HOMEPAGE_VAR_CALIBRE_USERNAME` / `_PASSWORD` | Calibre-Web: books / authors / series | a Calibre-Web user (reads the OPDS feed). A separate low-privilege user is best |
+| `HOMEPAGE_VAR_SUWAYOMI_USERNAME` / `_PASSWORD` | Suwayomi: download/read counts | the basic-auth login set in `suwayomi/deployment.yaml` |
+| `HOMEPAGE_VAR_KARAKEEP_KEY` | Karakeep: bookmarks / favorites / highlights / tags | Karakeep → User Settings → API Keys |
+| `HOMEPAGE_VAR_ARGOCD_KEY` | Argo CD: apps / **out of sync** / healthy / degraded | token of the read-only `homepage` account, see below |
+
+No credential needed: **Gatus** (up / down / uptime of the *edge* checks) and **Grafana**'s
+Prometheus targets widget.
+
+> ⚠️ **ESO writes the Secret only when every listed property exists.** One missing key and
+> `homepage-secret` is not created (the ExternalSecret shows `SecretSyncedError`). Put all nine
+> in at once. A placeholder such as `unset` works for one you have not generated yet:
+> ```bash
+> bao kv put homelab/homepage \
+>   HOMEPAGE_VAR_IMMICH_KEY=… HOMEPAGE_VAR_QBITTORRENT_KEY=… HOMEPAGE_VAR_KAVITA_KEY=… \
+>   HOMEPAGE_VAR_CALIBRE_USERNAME=… HOMEPAGE_VAR_CALIBRE_PASSWORD=… \
+>   HOMEPAGE_VAR_SUWAYOMI_USERNAME=… HOMEPAGE_VAR_SUWAYOMI_PASSWORD=… \
+>   HOMEPAGE_VAR_KARAKEEP_KEY=… HOMEPAGE_VAR_ARGOCD_KEY=…
+> kubectl -n apps annotate externalsecret homepage-secret force-sync=$(date +%s) --overwrite
+> kubectl -n apps rollout restart deploy/homepage      # env vars are read at start
+> ```
+> To change one later, use `bao kv patch`, force-sync, then restart.
+
+### The Argo CD `homepage` account
+
+The widget needs an API token. It uses a dedicated account, not admin:
+
+- `kubernetes/bootstrap/argocd/argocd-cm-patch.yaml` adds `accounts.homepage: apiKey` (API
+  tokens only, no UI login).
+- `kubernetes/bootstrap/argocd/argocd-rbac-cm.yaml` adds `g, homepage, role:readonly`.
+  `policy.default` stays unset, so nothing else changes.
+
+These are **bootstrap** files: Argo does not sync them. You apply them:
+
+```bash
+kubectl apply -k kubernetes/bootstrap/argocd -n argocd
+argocd account generate-token --account homepage     # or UI → Settings → Accounts → homepage → Generate New
+bao kv patch homelab/homepage HOMEPAGE_VAR_ARGOCD_KEY=<token>
+```
+
+### Adding a widget
+
+1. Add the `widget:` block to the tile in `configmap.yaml`. Use the **in-cluster** URL (the pod
+   calls it, not your browser) and `"{{HOMEPAGE_VAR_<NAME>}}"` for the credential.
+2. Add the property to OpenBao and to `externalsecret.yaml`'s `data:`.
+3. Add the env var to `deployment.yaml` with `secretKeyRef: { name: homepage-secret, key: …, optional: true }`.
+   `make conventions` checks that the key exists in the ExternalSecret.
+
+---
+
 ## What's in the ConfigMap
 
 One ConfigMap, five keys, each mounted as its own file via `subPath` (so Homepage can still
@@ -49,11 +165,10 @@ create `/app/config/logs`):
 
 | key | what it is |
 |---|---|
-| `settings.yaml` | title, theme, layout, `statusStyle`, quicklaunch |
+| `settings.yaml` | title, theme + background, tabs/layout, `statusStyle`, quicklaunch |
 | `services.yaml` | the tiles |
-| `widgets.yaml` | the top bar — cluster stats, search, weather |
-
-| `bookmarks.yaml` | repo, Proxmox, and the **LAN fallback** list |
+| `widgets.yaml` | the info bar: cluster stats, weather, clock, search |
+| `bookmarks.yaml` | repo, Argo/Gatus LAN links, and the **LAN fallback** list |
 | `kubernetes.yaml` | how to talk to the cluster API |
 
 ### The LAN fallback bookmarks
@@ -75,12 +190,6 @@ these too. If `.63` is down, swap the IP and the links still work.
 > Set **DHCP reservations for both nodes** on the router so this stops recurring, then verify:
 > ```bash
 > sudo k3s kubectl get nodes -o wide     # INTERNAL-IP must match .63 / .62
-> ```
-
-> ⚠️ **Node IPs have moved before** (one changed on its own — DHCP). If the whole fallback list
-> dies at once while `kubectl get pods` is healthy, re-check the IPs and set DHCP reservations:
-> ```bash
-> sudo k3s kubectl get nodes -o wide     # INTERNAL-IP column
 > ```
 
 Two fixed LAN addresses worth memorising, because they are the ones you need when the edge
@@ -181,18 +290,16 @@ sudo k3s kubectl top nodes            # must work before the widget can
 
 ## Known gaps
 
-- **No API-backed widgets yet.** Homepage has real widgets for Immich, qBittorrent, Kavita,
-  Calibre-web, Karakeep, Suwayomi, Gatus, ArgoCD, Gluetun, Proxmox and
-  Pulse — they show actual data (library counts, VPN exit IP, out-of-sync app count) instead
-  of a dot. Every one needs an API key or password, and **this repo is public**, so they are
-  blocked on a SOPS-encrypted `homepage-secret` + `{{HOMEPAGE_VAR_*}}` substitution.
-  Note that substitution is community-documented, not official — prove it with one throwaway
-  variable before wiring several credentials through it, and set `hideErrors: true` so a
-  broken widget does not paint the dashboard with API errors.
-- **Actual Budget and SearXNG have no widget** — a dot is all they will ever get.
-- **Pulse has no widget yet.** Its embedded iframe was removed in Nov 2026 (it loaded a whole
-  second app on every page view). Homepage has a real `pulse` widget that would show VM/LXC and
-  backup state as data — it needs an API token, so it is blocked on the same secret path.
-- **The Immich Public Proxy has no tile.** Its live hostname is `public-immich.williampring.ca`
-  (the proxy's `PUBLIC_BASE_URL`); the old `share.williampring.ca` record is gone. Point a tile
-  there if you want one.
+- **No widget for Pulse or Proxmox.** Both have Homepage widgets (`pulse` needs a
+  `monitoring:read` token; `proxmox` needs a PVE API token). They are not wired because the
+  widget is called from the **pod**, and it is not verified that a pod can reach
+  `pulse.williampring.ca` (a Tailscale IP) or the Proxmox hosts. Test with
+  `kubectl -n apps exec deploy/homepage -- wget -qO- https://192.168.68.96:8006` before adding them.
+- **No Gluetun widget** (VPN exit IP / country). Gluetun's control server (`:8000`) is not in the
+  qBittorrent Service. That server can also *change* the VPN, so exposing it in-cluster needs an
+  auth `config.toml` that allows only `GET /v1/publicip/ip`. Not worth it for one number.
+- **Actual, Wealthfolio, SearXNG, degoog and Bark have no widget**: Homepage has none for them.
+  A dot is all they get.
+- **The background image is third-party** (Unsplash, loaded by the browser). If it ever 404s, the
+  page falls back to the plain dark theme.
+- **The Immich Public Proxy has no tile.** Its live hostname is `public-immich.williampring.ca`.

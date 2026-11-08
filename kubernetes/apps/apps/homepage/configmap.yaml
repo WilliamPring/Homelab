@@ -1,19 +1,23 @@
 # ============================================================
 # Homepage ConfigMap  —  https://home.williampring.ca
 # ============================================================
-# This is the index of the homelab. Every app that has a UI gets a tile here, and
-# every tile carries a `siteMonitor` so the page shows whether the thing is actually
-# alive, not just that a link exists.
+# The index of the homelab. Two tabs:
+#   Home  — the apps you use (Media, Reading, Everyday, Money)
+#   Ops   — the things that run them (Cluster, Infrastructure, bookmarks + LAN fallback)
+# The info bar at the top (cluster CPU/RAM, weather, clock, search) shows on both tabs.
+# Layout + rationale: docs/apps/homepage.md.
 #
 # ⚠️ siteMonitor URLs are IN-CLUSTER (*.svc.cluster.local), not the public hostname.
-#    The probe runs from the homepage POD, not your browser. Probing in-cluster answers
-#    "is the app running?" — independent of Cloudflare DNS, Tailscale and the cert.
-#    The edge (DNS + cert + Traefik) is Gatus's job; its endpoint list is the source
-#    these URLs were copied from (kubernetes/apps/monitoring/gatus/configmap.yaml).
-#    Keep the two lists in step when you add an app.
+#    The probe runs from the homepage POD, not your browser — it answers "is the app
+#    running?", independent of Cloudflare DNS, Tailscale and the cert. The edge is
+#    Gatus's job; its endpoint list (kubernetes/apps/monitoring/gatus/configmap.yaml) is
+#    where these URLs came from. Keep the two lists in step when you add an app.
+#    A red dot + working link = the app is down. A green dot + dead link = the edge → Gatus.
 #
-# A red tile with a working link therefore means "the app is down".
-# A green tile with a dead link means "DNS/Tailscale/cert is down" → check Gatus.
+# 🔑 Widget credentials are NEVER written here. A widget says `key: "{{HOMEPAGE_VAR_X}}"`;
+#    Homepage substitutes the env var HOMEPAGE_VAR_X, which deployment.yaml reads from the
+#    Secret `homepage-secret` ← externalsecret.yaml ← OpenBao `homelab/homepage`.
+#    A key that is not in OpenBao yet = that one tile shows an API error; the rest work.
 #
 # ⚠️ Adding a tile is not enough. A new app needs: a tile here, a Gatus endpoint,
 #    and its doc in docs/apps/. See docs/platform/adding-an-app.md.
@@ -28,13 +32,29 @@ metadata:
 data:
   settings.yaml: |
     title: Homelab
+    description: William's k3s homelab
     theme: dark
     color: slate
-    headerStyle: clean
+
+    # A dim night-sky photo behind frosted-glass cards. Only `opacity` is used on the image:
+    # the docs say background blur/saturate/brightness do not combine with `cardBlur`.
+    # The image is loaded by your BROWSER from Unsplash (not by the pod). To self-host it,
+    # mount a file at /app/public/images/ and use `image: /images/<file>`.
+    background:
+      image: https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=2560&q=80
+      opacity: 35
+    cardBlur: md
+
+    headerStyle: boxedWidgets      # each top-bar widget in its own glass box
+    blockStyle: refined            # the little stat blocks inside service widgets
+    font: plexData                 # monospace-ish digits for stats and the clock only
+    iconStyle: theme               # mdi-/si- glyphs take the theme colour, not a gradient
+    useEqualHeights: true          # tiles in a row line up even when one has a widget
+    hideVersion: true
+    disableUpdateCheck: true       # Renovate owns updates (pinned tag in deployment.yaml)
 
     # Every tile has a siteMonitor, so without this each one prints a response time in ms.
-    # At 20+ tiles that is noise — `dot` collapses it to green/red. Per-service `statusStyle`
-    # overrides this if you ever want the number back on one tile.
+    # `dot` collapses it to green/red.
     statusStyle: dot
 
     # Type anywhere on the page to filter tiles and launch one. `provider` is inherited from
@@ -44,20 +64,50 @@ data:
       hideVisitURL: false
       mobileButtonPosition: bottom-right
 
+    # Order here = order on the page, and the order of the tabs.
+    # `style: column` groups sit side by side; `style: row` spans the width with N tiles across.
     layout:
       Media:
+        tab: Home
+        icon: mdi-play-box-multiple-outline
+        style: column
+      Reading:
+        tab: Home
+        icon: mdi-book-open-page-variant-outline
+        style: column
+      Everyday:
+        tab: Home
+        icon: mdi-compass-outline
+        style: column
+      Money:
+        tab: Home
+        icon: mdi-piggy-bank-outline
+        style: column
+
+      Cluster:
+        tab: Ops
+        icon: mdi-kubernetes
+        style: row
+        columns: 4
+      Infrastructure:
+        tab: Ops
+        icon: mdi-server-network
         style: row
         columns: 4
 
-      Apps:
-        style: row
-        columns: 4
-
-      Monitoring:
+      # Bookmark groups.
+      Homelab:
+        tab: Ops
+        icon: mdi-bookmark-outline
+      # No `tab:` on purpose → shown at the bottom of EVERY tab, so the raw local IPs are
+      # one glance away whichever tab you are on when the edge is down.
+      LAN fallback (no DNS needed):
+        icon: mdi-lan
         style: row
         columns: 4
 
   services.yaml: |
+    # ───────────────────────────── Home tab ─────────────────────────────
     - Media:
         - Immich:
             href: https://immich.williampring.ca
@@ -65,35 +115,15 @@ data:
             icon: immich.png
             siteMonitor: http://immich-server.media.svc.cluster.local:2283/api/server/ping
             namespace: media
-            # Chart-rendered, so NOT this repo's `app: <name>` convention. These labels are
-            # copied from immich-prereqs/services.yaml, whose `immich-server-local` NodePort
-            # Service selects exactly them and works today — so they are verified, not guessed.
+            # Chart-rendered, so NOT this repo's `app: <name>` convention. Copied from
+            # immich-prereqs/services.yaml, whose NodePort Service selects exactly these.
             podSelector: app.kubernetes.io/name=server,app.kubernetes.io/instance=immich
-
-        - Library:
-            href: https://library.williampring.ca
-            description: Manga & books reader (Kavita)
-            icon: kavita.png
-            siteMonitor: http://kavita.media.svc.cluster.local:5000/api/health
-            namespace: media
-            podSelector: app=kavita
-
-        - Books:
-            href: https://books.williampring.ca
-            description: Ebook ingest & metadata (Calibre-Web)
-            icon: calibre-web.png
-            siteMonitor: http://calibre.media.svc.cluster.local:8083/
-            namespace: media
-            podSelector: app=calibre
-
-        - Manga sources:
-            href: https://suwayomi.williampring.ca
-            description: Browse & subscribe to online manga (Suwayomi)
-            icon: suwayomi.png
-            siteMonitor: http://suwayomi.media.svc.cluster.local:4567/
-            namespace: media
-            podSelector: app=suwayomi
-
+            widget:
+              type: immich
+              version: 2                  # Immich ≥ v1.118 (we run v3.x)
+              url: http://immich-server.media.svc.cluster.local:2283
+              key: "{{HOMEPAGE_VAR_IMMICH_KEY}}"     # API key with `server.statistics`
+              fields: ["photos", "videos", "storage"]
 
         - Downloads:
             href: https://qbittorrent.williampring.ca
@@ -104,16 +134,67 @@ data:
             siteMonitor: http://qbittorrent.media.svc.cluster.local:8080/
             namespace: media
             podSelector: app=qbittorrent
+            widget:
+              type: qbittorrent
+              url: http://qbittorrent.media.svc.cluster.local:8080
+              key: "{{HOMEPAGE_VAR_QBITTORRENT_KEY}}"  # WebUI → Authentication → API Key (qBit ≥ 5.2)
+              enableLeechProgress: true
 
+    - Reading:
+        - Library:
+            href: https://library.williampring.ca
+            description: Manga & books reader (Kavita)
+            icon: kavita.png
+            siteMonitor: http://kavita.media.svc.cluster.local:5000/api/health
+            namespace: media
+            podSelector: app=kavita
+            widget:
+              type: kavita
+              url: http://kavita.media.svc.cluster.local:5000
+              key: "{{HOMEPAGE_VAR_KAVITA_KEY}}"     # admin user → Settings → Account → API Key
 
-    - Apps:
-        - SearXNG:
-            href: https://private.williampring.ca
-            description: Private metasearch
-            icon: searxng.png
-            siteMonitor: http://searxng.apps.svc.cluster.local:8080/healthz
+        - Books:
+            href: https://books.williampring.ca
+            description: Ebook ingest & metadata (Calibre-Web)
+            icon: calibre-web.png
+            siteMonitor: http://calibre.media.svc.cluster.local:8083/
+            namespace: media
+            podSelector: app=calibre
+            widget:
+              type: calibreweb
+              url: http://calibre.media.svc.cluster.local:8083
+              username: "{{HOMEPAGE_VAR_CALIBRE_USERNAME}}"
+              password: "{{HOMEPAGE_VAR_CALIBRE_PASSWORD}}"
+              fields: ["books", "authors", "series"]
+
+        - Manga sources:
+            href: https://suwayomi.williampring.ca
+            description: Browse & subscribe to online manga (Suwayomi)
+            icon: suwayomi.png
+            siteMonitor: http://suwayomi.media.svc.cluster.local:4567/
+            namespace: media
+            podSelector: app=suwayomi
+            widget:
+              type: suwayomi
+              url: http://suwayomi.media.svc.cluster.local:4567
+              # Suwayomi's basic_auth login. Its own copy is inline in suwayomi/deployment.yaml
+              # (testing stance) — this one goes through OpenBao, so it is not duplicated in git.
+              username: "{{HOMEPAGE_VAR_SUWAYOMI_USERNAME}}"
+              password: "{{HOMEPAGE_VAR_SUWAYOMI_PASSWORD}}"
+
+    - Everyday:
+        - Bookmarks:
+            href: https://karakeep.williampring.ca
+            description: Saved links with archived copies (Karakeep)
+            icon: karakeep.png
+            siteMonitor: http://karakeep.apps.svc.cluster.local:3000/api/health
             namespace: apps
-            podSelector: app=searxng
+            podSelector: app=karakeep
+            widget:
+              type: karakeep
+              url: http://karakeep.apps.svc.cluster.local:3000
+              key: "{{HOMEPAGE_VAR_KARAKEEP_KEY}}"   # User Settings → API Keys
+              fields: ["bookmarks", "favorites", "highlights", "tags"]
 
         - degoog:
             href: https://search.williampring.ca
@@ -123,14 +204,15 @@ data:
             namespace: apps
             podSelector: app=degoog
 
-        - Bookmarks:
-            href: https://karakeep.williampring.ca
-            description: Saved links with archived copies (Karakeep)
-            icon: karakeep.png
-            siteMonitor: http://karakeep.apps.svc.cluster.local:3000/api/health
+        - SearXNG:
+            href: https://private.williampring.ca
+            description: Private metasearch
+            icon: searxng.png
+            siteMonitor: http://searxng.apps.svc.cluster.local:8080/healthz
             namespace: apps
-            podSelector: app=karakeep
+            podSelector: app=searxng
 
+    - Money:
         - Budget:
             href: https://actual.williampring.ca
             description: Envelope budgeting & sync (Actual)
@@ -139,8 +221,7 @@ data:
             namespace: apps
             podSelector: app=actual
 
-
-        - Wealthfolio:
+        - Portfolio:
             href: https://wealthfolio.williampring.ca
             description: Stocks, ETFs & crypto (Wealthfolio)
             icon: mdi-chart-line           # no wealthfolio.png in dashboard-icons (checked: 404)
@@ -148,14 +229,33 @@ data:
             namespace: apps
             podSelector: app=wealthfolio
 
-    - Monitoring:
-        - Status:
-            href: https://status.williampring.ca
-            description: Uptime checks & alerts (Gatus)
-            icon: gatus.png
-            siteMonitor: http://gatus.monitoring.svc.cluster.local:8080/
-            namespace: monitoring
-            podSelector: app=gatus
+    # ───────────────────────────── Ops tab ─────────────────────────────
+    - Cluster:
+        - Argo CD:
+            # Fronted by NPMplus + a Cloudflare tunnel — NOT Traefik, and there is no Ingress
+            # in this repo for it (same arrangement as Bark). The tunnel's Service URL must
+            # point at http://<node>:30443 — plain HTTP. If it points at https, or Argo's
+            # server.insecure is not live, this loops with ERR_TOO_MANY_REDIRECTS.
+            #
+            # ⚠️ The NodePort in the LAN fallback bookmarks is not optional: this hostname
+            #    depends on Cloudflare + the tunnel + NPMplus, and Argo is the tool you need
+            #    IN ORDER TO FIX a broken edge. Never delete that bookmark.
+            href: https://deploy.williampring.ca
+            description: GitOps deployments — sync is manual
+            icon: argo-cd.png
+            siteMonitor: http://argocd-server.argocd.svc.cluster.local:80/healthz?full=true
+            namespace: argocd
+            # ⚠️ UNVERIFIED — labels come from the upstream install manifest, not this repo.
+            #      sudo k3s kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-server
+            # podSelector: app.kubernetes.io/name=argocd-server
+            widget:
+              # Token of the read-only `homepage` account (bootstrap/argocd/argocd-cm-patch.yaml
+              # + argocd-rbac-cm.yaml). `outOfSync` is the number that matters here: with manual
+              # sync, it is "merged but not deployed yet".
+              type: argocd
+              url: http://argocd-server.argocd.svc.cluster.local:80
+              key: "{{HOMEPAGE_VAR_ARGOCD_KEY}}"
+              fields: ["apps", "outOfSync", "healthy", "degraded"]
 
         - Grafana:
             # Metrics (Prometheus) + logs (Loki) + alerts (Alertmanager → Bark), one UI.
@@ -171,23 +271,18 @@ data:
               type: prometheus
               url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
 
-        - Argo CD:
-            # Fronted by NPMplus + a Cloudflare tunnel — NOT Traefik, and there is no Ingress
-            # in this repo for it (same arrangement as Bark). The tunnel's Service URL must
-            # point at http://<node>:30443 — plain HTTP. If it points at https, or Argo's
-            # server.insecure is not live, this loops with ERR_TOO_MANY_REDIRECTS.
-            #
-            # ⚠️ The NodePort below it in bookmarks is the FALLBACK and is not optional:
-            #    this hostname depends on Cloudflare + the tunnel + NPMplus, and Argo is the
-            #    tool you need IN ORDER TO FIX a broken edge. Never delete that bookmark.
-            href: https://deploy.williampring.ca
-            description: GitOps deployments (Argo CD)
-            icon: si-argo
-            siteMonitor: http://argocd-server.argocd.svc.cluster.local:80/healthz?full=true
-            namespace: argocd
-            # ⚠️ UNVERIFIED — labels come from the upstream install manifest, not this repo.
-            #      sudo k3s kubectl get pod -n argocd -l app.kubernetes.io/name=argocd-server
-            # podSelector: app.kubernetes.io/name=argocd-server
+        - Status:
+            href: https://status.williampring.ca
+            description: Uptime checks & alerts (Gatus)
+            icon: gatus.png
+            siteMonitor: http://gatus.monitoring.svc.cluster.local:8080/
+            namespace: monitoring
+            podSelector: app=gatus
+            widget:
+              # No credential: Gatus's API is open in-cluster. Counts EDGE checks (DNS + cert +
+              # Traefik), so "down" here with green dots elsewhere = the edge, not the apps.
+              type: gatus
+              url: http://gatus.monitoring.svc.cluster.local:8080
 
         - Bark:
             # No Ingress by design — NPMplus owns this hostname (same as deploy.*).
@@ -204,14 +299,11 @@ data:
             namespace: monitoring
             podSelector: app=bark
 
+    - Infrastructure:
         - Pulse:
-            # The ONLY tile that is not in this cluster — Pulse runs on Proxmox. So there is no
-            # *.svc.cluster.local to probe and no podSelector; a siteMonitor here would measure
-            # the edge path rather than the service, and would go red on an auth prompt.
-            # Gatus already watches both Proxmox hosts directly (its `infra` group).
-            #
-            # Was an embedded iframe until Nov 2026 — removed: it loaded a whole second app on
-            # every page view, and a dashboard should tell you where to go, not be the thing.
+            # Not in this cluster — Pulse runs on Proxmox. No *.svc.cluster.local to probe and
+            # no podSelector; a siteMonitor here would measure the edge path rather than the
+            # service. Gatus already watches both Proxmox hosts directly (its `infra` group).
             href: https://pulse.williampring.ca/
             description: Proxmox VMs, LXCs & backups (Pulse)
             icon: mdi-server-network
@@ -221,7 +313,17 @@ data:
             # tunnel). Gatus's `infra` group watches /sys/health, which also catches "sealed".
             href: https://192.168.68.91:8200/ui/
             description: Secrets for every app (log in as william)
-            icon: mdi-safe-square-outline
+            icon: openbao.png
+
+        - Proxmox .96:
+            href: https://192.168.68.96:8006
+            description: Proxmox VE host
+            icon: proxmox.png
+
+        - Proxmox .89:
+            href: https://192.168.68.89:8006
+            description: Proxmox VE host
+            icon: proxmox.png
 
   kubernetes.yaml: |
     # `cluster` = read the API with the projected ServiceAccount token mounted in this pod
@@ -231,16 +333,17 @@ data:
     # ⚠️ These are SERVICE DISCOVERY toggles, not display toggles. Left on, Homepage scans
     #    Ingresses/IngressRoutes and auto-creates tiles for any that carry the annotation
     #    `gethomepage.dev/enabled: "true"`. Nothing in this repo sets that annotation, so
-    #    discovery finds nothing and services.yaml stays the single source of truth.
-    #    Turn one on only if you decide you want tiles defined next to each app instead.
+    #    services.yaml stays the single source of truth.
     ingress: false
     traefik: false
     gateway: false
 
   widgets.yaml: |
-    # Replaces the old `resources` widget, which read the filesystem/CPU of WHICHEVER NODE
-    # the homepage pod happened to land on — and silently changed meaning on a reschedule.
-    # This reads the real cluster through metrics-server.
+    # The info bar — shown above every tab. Order here = order left to right.
+    #
+    # Real cluster numbers via metrics-server (not the old `resources` widget, which read
+    # whichever node the pod happened to land on). The worker runs hot (~85% RAM), so the
+    # per-node bars are the first thing to glance at.
     - kubernetes:
         cluster:
           show: true
@@ -254,106 +357,128 @@ data:
           memory: true
           showLabel: true
 
-    - search:
-        provider: custom
-        url: https://search.williampring.ca/search?q=
-        target: _blank
-
     - openmeteo:
         label: Toronto
         latitude: 43.6532
         longitude: -79.3832
         timezone: America/Toronto
         units: metric
+        cache: 15                  # minutes — no need to hit the API on every page view
+
+    - datetime:
+        text_size: xl
+        format:
+          weekday: short
+          month: short
+          day: numeric
+          hour: numeric
+          minute: 2-digit
+          hourCycle: h23
+
+    - search:
+        provider: custom
+        url: https://search.williampring.ca/search?q=
+        target: _blank
+        # No `focus: true` on purpose: it would steal keystrokes from quicklaunch
+        # (type anywhere → filter tiles), which is the faster way to open an app.
 
   bookmarks.yaml: |
     - Homelab:
         - Repo:
-            - abbr: GH
+            - icon: github.png
               href: https://github.com/WilliamPring/Homelab
+              description: WilliamPring/Homelab
 
-        - Proxmox 192.168.68.96:
-            - abbr: PVE
-              href: https://192.168.68.96:8006
+        - Argo CD (LAN):
+            - icon: argo-cd.png
+              href: http://192.168.68.63:30443
+              description: 192.168.68.63:30443
 
-        - Proxmox 192.168.68.89:
-            - abbr: PVE
-              href: https://192.168.68.89:8006
+        - Gatus (LAN):
+            - icon: gatus.png
+              href: http://192.168.68.63:30881
+              description: 192.168.68.63:30881
 
     # LAN fallback — every app also listens on a NodePort, reachable by raw IP with no
     # DNS, no Cloudflare, no Tailscale and no cert. This is what you use when the tiles
-    # above are all dead but `kubectl get pods` looks fine: the apps are up, the edge is
-    # not. Ports come from the README port table; keep them in step.
+    # are all dead but `kubectl get pods` looks fine: the apps are up, the edge is not.
+    # Ports come from the README port table; keep them in step.
     #
     # ⚠️ .63 = k3s-master-01, .62 = k3s-worker-01. Use http://192.168.68.62:<port> if .63 is down.
     #
-    # ℹ️ WHY THE MASTER IP WORKS EVEN FOR APPS PINNED TO THE WORKER. Immich, Suwayomi and
-    #    qBittorrent all carry `nodeSelector: immich-node: "true"`, so their pods only ever run
-    #    on .62 — yet .63:<port> still reaches them. That is because NO Service in this repo sets
-    #    `externalTrafficPolicy: Local`; the default is `Cluster`, so kube-proxy on ANY node
-    #    forwards a NodePort to wherever the pod actually is.
-    #    🛑 If you ever add `externalTrafficPolicy: Local` to a Service (people do, to preserve
-    #       the client source IP), that app's NodePort STOPS answering on .63 and these links
-    #       break for that app only. Point it at .62 if you do.
+    # ℹ️ WHY THE MASTER IP WORKS EVEN FOR APPS PINNED TO THE WORKER. No Service in this repo sets
+    #    `externalTrafficPolicy: Local`; the default `Cluster` makes kube-proxy on ANY node forward
+    #    a NodePort to wherever the pod is.
+    #    🛑 Add `externalTrafficPolicy: Local` to a Service and its NodePort STOPS answering on .63.
     #
-    # 🛑 THESE IPs HAVE MOVED BEFORE. The master was .93 until a DHCP lease change put it on
-    #    .63, and the repo kept saying .93 — including ansible/inventory.ini, which is what
-    #    Ansible SSHes to. Symptom: every link here dies at once while `kubectl get pods` is
-    #    perfectly healthy. Set DHCP RESERVATIONS for both nodes, then re-check with:
-    #      sudo k3s kubectl get nodes -o wide
+    # 🛑 THESE IPs HAVE MOVED BEFORE (the master was .93 until a DHCP lease change). Symptom:
+    #    every link here dies at once while `kubectl get pods` is healthy. Set DHCP
+    #    RESERVATIONS for both nodes, then re-check:  sudo k3s kubectl get nodes -o wide
     #
     # ⚠️ Plain http, LAN only. Not reachable over Tailscale (192.168.68.x is not routed).
     - LAN fallback (no DNS needed):
         # 🛑 Argo CD first, because it is the one you need when everything else is broken.
-        #    deploy.williampring.ca runs through Cloudflare + a tunnel + NPMplus; this does not.
         - Argo CD:
             - abbr: "ACD"
               href: http://192.168.68.63:30443
+              description: 192.168.68.63:30443
 
         - Immich:
             - abbr: "IMM"
               href: http://192.168.68.63:30041
+              description: 192.168.68.63:30041
 
         - Immich shares:
             - abbr: "IPP"
               href: http://192.168.68.63:30042
+              description: 192.168.68.63:30042
 
         - degoog:
             - abbr: "DEG"
               href: http://192.168.68.63:30882
+              description: 192.168.68.63:30882
 
         - qBittorrent:
             - abbr: "QBT"
               href: http://192.168.68.63:30080
+              description: 192.168.68.63:30080
 
         - Calibre-Web:
             - abbr: "CAL"
               href: http://192.168.68.63:30083
+              description: 192.168.68.63:30083
 
         - Karakeep:
             - abbr: "KRK"
               href: http://192.168.68.63:30300
+              description: 192.168.68.63:30300
 
         - Suwayomi:
             - abbr: "SUW"
               href: http://192.168.68.63:30456
+              description: 192.168.68.63:30456
 
         - Kavita:
             - abbr: "KAV"
               href: http://192.168.68.63:30500
+              description: 192.168.68.63:30500
 
         - Actual:
             - abbr: "ACT"
               href: http://192.168.68.63:30506
+              description: 192.168.68.63:30506
 
         - SearXNG:
             - abbr: "SRX"
               href: http://192.168.68.63:30880
+              description: 192.168.68.63:30880
 
         - Gatus:
             - abbr: "GTS"
               href: http://192.168.68.63:30881
+              description: 192.168.68.63:30881
 
         - Bark:
             - abbr: "BRK"
               href: http://192.168.68.63:30889
+              description: 192.168.68.63:30889
