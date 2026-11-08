@@ -14,7 +14,7 @@ kubernetes/
 | Namespace | Apps |
 |---|---|
 | `media` | immich, immich-prereqs, immich-public-proxy, kavita, calibre, suwayomi, qbittorrent |
-| `apps` | searxng, degoog, homepage, karakeep, actual, ghostfolio, wealthfolio |
+| `apps` | searxng, degoog, homepage, karakeep, actual, wealthfolio |
 | `monitoring` | gatus, bark, kube-prometheus-stack, loki, alloy |
 | `cert-manager` | cert-manager, cert-manager-issuer |
 

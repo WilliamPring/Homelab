@@ -125,7 +125,7 @@ k get applications -n argocd -o name | sed 's|application.argoproj.io/||' | sort
 ls -d kubernetes/apps/*/* | xargs -n1 basename | sort > /tmp/git.txt   # run from the repo (one dir per app)
 comm -23 /tmp/live.txt /tmp/git.txt                             # live but NOT in git
 ```
-Expect: `vaultwarden` (until item 4), `komf` (until item 8), `romm` (until item 9), nothing else. Anything else listed is a leftover.
+Expect: `vaultwarden` (until item 4), `komf` (until item 8), `romm` (until item 9), `ghostfolio` (until item 10), nothing else. Anything else listed is a leftover.
 
 **DELETE** (per name from the output)
 ```bash
@@ -211,6 +211,33 @@ Also, by hand:
   its `pg_hba.conf` line.
 - OpenBao: delete `homelab/romm` if you ever created it.
 - GitHub: close Renovate's open `rommapp/romm` PR (branch `renovate/rommapp-romm-5.x`).
+- [ ] done
+
+## 10. Ghostfolio — removed from the repo Nov 2026
+
+⚠️ **Its data is NOT deleted by any of this.** Holdings, activities and users all live in the `ghostfolio`
+database on the Postgres LXC. The pods hold nothing: no PVCs, and its private Valkey is an `emptyDir` cache.
+
+**LOOK**
+```bash
+k get application -n argocd ghostfolio
+k get deploy,svc,ingress,secret -n apps -l app=ghostfolio      # ghostfolio + ghostfolio-valkey + ghostfolio-secret
+k get certificate -n apps | grep -i ghostfolio
+```
+**DELETE**
+```bash
+k delete application -n argocd ghostfolio                       # Argo record only (no finalizer)
+k delete deploy,svc,ingress,secret -n apps -l app=ghostfolio
+k delete secret,certificate ghostfolio-tls -n apps --ignore-not-found
+```
+Also, by hand:
+- Cloudflare DNS: delete the `portfolio` A record.
+- Postgres LXC (192.168.68.7): the `ghostfolio` database and role are **left as the backup**. Export first if
+  you want the history (`su postgres -c 'pg_dump ghostfolio' > ghostfolio.sql`), then when sure:
+  `su postgres -c "psql -c 'DROP DATABASE ghostfolio;' -c 'DROP ROLE ghostfolio;'"` and remove its `pg_hba.conf` line.
+  After that no app uses this LXC (RomM's and Vaultwarden's old databases are backups too).
+- OpenBao: delete `homelab/ghostfolio` if you ever created it (the import script used to know that path).
+- GitHub: close any open Renovate PR for `ghostfolio/ghostfolio`.
 - [ ] done
 
 ---

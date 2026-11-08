@@ -17,7 +17,7 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
   `docs/platform/secrets.md` known debt.
   **Pilot (Nov 2026):** OpenBao (`https://192.168.68.91:8200`, Proxmox LXC) + External Secrets Operator now run
   beside SOPS. Converted so far (one PR per app): Grafana (`kube-prometheus-stack/externalsecret.yaml` ← `homelab/grafana`),
-  Wealthfolio, degoog, Immich and Karakeep (each ← `homelab/<app>`); the rest stay on SOPS until the owner says otherwise. Docs: `docs/platform/openbao.md`. Never put
+  Wealthfolio, degoog, Immich and Karakeep (each ← `homelab/<app>`); Ghostfolio was removed; the rest stay on SOPS until the owner says otherwise. Docs: `docs/platform/openbao.md`. Never put
   OpenBao behind the Cloudflare tunnel.
 - **One owner per thing.** Ansible = nodes (Tailscale, k3s, the few out-of-git secrets/labels). Argo = every app.
 - **Hostnames** are `*.williampring.ca` → the master's Tailscale IP (DNS-only). Internet-facing exceptions:
@@ -57,4 +57,4 @@ Learning the workflow from scratch: `docs/learn/onboarding-an-app.md` (a guided 
 
 ## When unsure
 Check how `kubernetes/apps/apps/wealthfolio/` does it — it is the smallest complete example (manifests + an
-ExternalSecret from OpenBao + docs/apps/wealthfolio.md). For a SOPS one (until those are converted) see `kubernetes/apps/apps/ghostfolio/`.
+ExternalSecret from OpenBao + docs/apps/wealthfolio.md). The last app still on SOPS is `kubernetes/apps/media/qbittorrent/` (a placeholder template).

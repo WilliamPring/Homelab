@@ -125,14 +125,6 @@ data:
         interval: 1m
         conditions: ["[STATUS] == 200"]
         alerts: [{ type: custom }]
-      - name: Ghostfolio
-        group: apps
-        # /api/v1/health is the app's own check — it returns 200 only once Postgres AND the
-        # dedicated Valkey are both reachable, so this one endpoint covers all three.
-        url: "http://ghostfolio.apps.svc.cluster.local:3333/api/v1/health"
-        interval: 1m
-        conditions: ["[STATUS] == 200"]
-        alerts: [{ type: custom }]
       - name: Wealthfolio
         group: apps
         # The image's own healthcheck endpoint; needs no login.
@@ -257,12 +249,6 @@ data:
       - name: actual.williampring.ca
         group: edge
         url: "https://actual.williampring.ca/"
-        interval: 5m
-        conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
-        alerts: [{ type: custom }]
-      - name: portfolio.williampring.ca
-        group: edge
-        url: "https://portfolio.williampring.ca/api/v1/health"
         interval: 5m
         conditions: ["[STATUS] == 200", "[CERTIFICATE_EXPIRATION] > 168h"]
         alerts: [{ type: custom }]

@@ -1,13 +1,22 @@
 #!/bin/sh
-# postgres-ghostfolio-setup.sh — add the Ghostfolio database + role to the Alpine Postgres LXC
-# (192.168.68.7). The LXC itself was set up earlier (listen_addresses='*', LAN pg_hba);
+# postgres-app-setup.sh — add ONE app's database + role to the Alpine Postgres LXC (192.168.68.7).
+# One role + one database per app, both named after the app (CLAUDE.md: "one role per app").
+# The LXC itself was set up earlier (listen_addresses='*', LAN pg_hba);
 # on a FRESH LXC also run:  su postgres -c "psql -c \"ALTER SYSTEM SET listen_addresses = '*';\"" && rc-service postgresql restart
-# Run as ROOT inside the Postgres LXC:   sh postgres-ghostfolio-setup.sh
-# Idempotent — safe to re-run (re-running RESETS the password → update ghostfolio-secret.enc.yaml).
+# Run as ROOT inside the Postgres LXC:   sh postgres-app-setup.sh <app>
+# Idempotent — safe to re-run (re-running RESETS the password → update the app's secret).
+# (Was postgres-ghostfolio-setup.sh until Ghostfolio was removed, Nov 2026.)
 set -eu
 
-DB_NAME="ghostfolio"
-DB_USER="ghostfolio"
+APP="${1:-}"
+case "$APP" in
+  "" | *[!a-z0-9_]*)
+    echo "usage: sh postgres-app-setup.sh <app>   (lowercase letters, digits and _ only)" >&2
+    exit 2 ;;
+esac
+
+DB_NAME="${APP}"
+DB_USER="${APP}"
 LAN_CIDR="192.168.68.0/24"
 DB_PASS="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)"
 
@@ -43,17 +52,15 @@ set -e
 cat <<EOF
 
 ============================================================
- Postgres ready for Ghostfolio
+ Postgres ready for ${APP}
    host 192.168.68.7 · port 5432 · db ${DB_NAME} · user ${DB_USER}
    PASSWORD: ${DB_PASS}
 
- >>> Ghostfolio takes ONE connection URL, not separate fields. On the Arch box:
+ >>> Put it in the app's secret (OpenBao homelab/${APP}). Apps that take ONE
+     connection URL instead of separate fields want:
 
-   ./scripts/secrets.sh set ghostfolio \\
-     DATABASE_URL='postgresql://${DB_USER}:${DB_PASS}@192.168.68.7:5432/${DB_NAME}?connect_timeout=300'
-   ./scripts/secrets.sh encrypt ghostfolio
+   postgresql://${DB_USER}:${DB_PASS}@192.168.68.7:5432/${DB_NAME}
 
- (If the password contains characters that are special in a URL, percent-encode them.
-  This script only generates A-Za-z0-9, so as written it is always URL-safe.)
+ (The password is only A-Za-z0-9, so it is always URL-safe.)
 ============================================================
 EOF

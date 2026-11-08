@@ -28,7 +28,6 @@ cd "$(dirname "$0")/.."
 # namespace/secret-name  →  OpenBao path under homelab/  (the same pairs the externalsecret.yaml files use)
 MAP="
 apps/degoog-secret                        degoog
-apps/ghostfolio-secret                    ghostfolio
 apps/karakeep-secret                      karakeep
 apps/wealthfolio-secret                   wealthfolio
 media/immich-secret                       immich
