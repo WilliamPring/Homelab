@@ -314,7 +314,7 @@ catches a Deployment asking for a key the ExternalSecret doesn't provide, before
 | `scripts/openbao-import.sh` | copies the **live** Secrets from the cluster into OpenBao | no age key needed, no typing values, can't import a stale file. Values go through pipes only, never printed |
 | `openbao-approle` Secret (namespace `external-secrets`) | ESO's role-id + secret-id | **made by hand, not in git** — it's the key to OpenBao, so it can't come from OpenBao |
 
-Secret → OpenBao path: converted = `grafana` (monitoring), `wealthfolio` (apps), `degoog` (apps), `immich` (media), `karakeep` (apps). Still to do, same pattern: `qbittorrent` — the import script knows them.
+Secret → OpenBao path: converted = `grafana` (monitoring), `wealthfolio` (apps), `degoog` (apps), `immich` (media), `karakeep` (apps). Still to do, same pattern: `qbittorrent` — the import script knows it.
 
 ### Rollout — in this order
 Each step depends on the one before it. Nothing in the cluster changes until you Sync.

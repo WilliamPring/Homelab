@@ -87,7 +87,7 @@ New to it? Onboard a throwaway app with the guided lab: [`docs/learn/onboarding-
 | k3s master — `k3s-master-01` | `192.168.68.63` | Argo/Traefik entry; any NodePort also answers here |
 | k3s worker (32GB) — `k3s-worker-01` | `192.168.68.62` | Immich, Suwayomi, qBittorrent are pinned here |
 | file server (NFS `/data`) | `192.168.68.50` | photos, manga, books, ROMs, downloads |
-| Postgres LXC | `192.168.68.7` | nothing live today — holds the old Ghostfolio, RomM and Vaultwarden DBs as backups |
+| Postgres LXC | `192.168.68.7` | no app today (old Ghostfolio, RomM, Vaultwarden databases kept as backups) |
 | Valkey / Redis | `192.168.68.103` | Immich, degoog |
 
 LAN NodePorts (plain http, same WiFi — e.g. for the Kindle): Kavita `:30500` · Calibre-Web `:30083` ·
@@ -120,7 +120,7 @@ Start at **[`docs/index.md`](docs/index.md)**. Grouped by purpose:
 - `docs/platform/` — **adding an app (onboarding checklist)**, Argo CD, TLS/cert-manager, secrets (day-to-day + deep dive), updates & notifications, CI, Valkey
 - `docs/runbooks/` — **rebuild from zero**, cheatsheet, cluster cleanup, Proxmox install, LXC how-tos
 - `docs/architecture/` — the plan docs (partly historical) and the learning roadmap
-- `docs/archive/` — removed/superseded setups
+- `docs/archive/` — removed/superseded setups (incl. the Ghostfolio deploy walkthrough: still the worked example for an app with a database)
 - [`ansible/README.md`](ansible/README.md) / [`ansible/LEARN.md`](ansible/LEARN.md) — node provisioning + the Ansible teaching guide
 - [`kubernetes/README.md`](kubernetes/README.md) — the app tree and how to add an app · [`CLAUDE.md`](CLAUDE.md) — conventions
 

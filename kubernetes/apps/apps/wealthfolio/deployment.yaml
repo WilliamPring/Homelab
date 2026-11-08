@@ -1,4 +1,4 @@
-# Wealthfolio — local-first portfolio tracker, the portfolio tracker (docs/apps/wealthfolio.md).
+# Wealthfolio — local-first portfolio tracker (docs/apps/wealthfolio.md). The only one since Ghostfolio went (Nov 2026).
 # One Rust binary that serves the web UI and the API; one SQLite file; no database server, no cache.
 #
 #   data   → local-path PVC (storage.yaml explains why it CANNOT be NFS: SQLite WAL mode)

@@ -57,4 +57,4 @@ Learning the workflow from scratch: `docs/learn/onboarding-an-app.md` (a guided 
 
 ## When unsure
 Check how `kubernetes/apps/apps/wealthfolio/` does it — it is the smallest complete example (manifests + an
-ExternalSecret from OpenBao + docs/apps/wealthfolio.md). The last SOPS one (until it is converted) is `kubernetes/apps/media/qbittorrent/`.
+ExternalSecret from OpenBao + docs/apps/wealthfolio.md). The last app still on SOPS is `kubernetes/apps/media/qbittorrent/` (a placeholder template).

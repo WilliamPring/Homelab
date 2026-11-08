@@ -56,7 +56,7 @@ Sync in this order, waiting for Healthy each time:
 | NFS folders | file server `/data/{images,library,library/manga,books,books-ingest}` owned 1000:1000 | `mkdir -p … && chown -R 1000:1000 …` |
 | `immich-db` Secret, node label | step 1 | re-run Ansible |
 | `cloudflare-api-token` | step 5 | by hand |
-| Postgres roles/DBs | LXC `.7`: none needed today (old DBs are backups) | — |
+| Postgres roles/DBs | LXC `.7`: none in use today | `sh scripts/postgres-app-setup.sh <app>` |
 | Valkey ACL users | LXC `.103`: `immich`, (`degoog`) | `platform/redis.md` |
 | DNS records | Cloudflare: one A per hostname → master Tailscale IP, grey cloud | by hand (README Addresses table) |
 | Suwayomi login, qBittorrent secret | inline / templates — see `platform/secrets.md` known debt | fill → `sops -e -i` |

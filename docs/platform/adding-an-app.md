@@ -4,7 +4,7 @@ How every app in `kubernetes/apps/` was added. Follow it top to bottom; each ste
 **First time?** Do the guided lab first: [`../learn/onboarding-an-app.md`](../learn/onboarding-an-app.md) walks a
 throwaway app through every step below and back out again. This page is the checklist you use after that.
 Reference app to copy from: **`kubernetes/apps/apps/wealthfolio/`** (raw manifests + an ExternalSecret from OpenBao +
-a doc).
+a doc; the last app still on SOPS is `kubernetes/apps/media/qbittorrent/`, until it is converted).
 A blank skeleton lives in **`kubernetes/templates/app/`**.
 
 ```
@@ -105,8 +105,8 @@ If the app needs a sync option the default lacks (e.g. `ServerSideApply` for hug
   except through the Cloudflare tunnel pattern the Immich share proxy uses.
 - **File server** (if NFS): `mkdir -p /data/<folder> && chown -R 1000:1000 /data/<folder> && chmod -R 775 /data/<folder>`
   on `192.168.68.50`. The export of `/data` already covers subfolders.
-- **Database** (if any): a role + database on the Postgres LXC (`scripts/postgres-ghostfolio-setup.sh` in git history is the
-  template; walkthrough: `archive/deploy-ghostfolio.md`), a dedicated ACL user on Valkey (`platform/redis.md`). Passwords → the app's SOPS secret.
+- **Database** (if any): a role + database on the Postgres LXC (`sh scripts/postgres-app-setup.sh <app>`
+  on the LXC), a dedicated ACL user on Valkey (`platform/redis.md`). Passwords → the app's SOPS secret.
 - **Secrets**: fill the template, `sops -e -i`, verify with `sops -d … >/dev/null` (`platform/secrets.md` §3).
 
 ## 6. Sync and verify
@@ -126,7 +126,7 @@ Your phone gets "<app>: deployed" (Argo → Bark).
 |---|---|---|
 | **Homepage tile** | `kubernetes/apps/apps/homepage/configmap.yaml` → `services.yaml` block; icon names from the dashboard-icons set | the front door lists everything |
 | **Gatus check** | `kubernetes/apps/monitoring/gatus/configmap.yaml` → an `apps` endpoint (in-cluster Service URL) and an `edge` endpoint (the hostname, with cert-expiry) | you find out it is down before you need it |
-| **Doc** | `docs/apps/<app>.md` — architecture, first-time setup, day-to-day, troubleshooting, quick reference (copy the shape of `apps/karakeep.md`) | the setup steps you'll forget |
+| **Doc** | `docs/apps/<app>.md` — architecture, first-time setup, day-to-day, troubleshooting, quick reference (copy the shape of `apps/wealthfolio.md`) | the setup steps you'll forget |
 | **README** | add the NodePort to the Addresses table if you added one; add the doc to `docs/index.md` | one place for ports and hostnames |
 | **Renovate** | nothing — if the image/chart is pinned it is already tracked. Stateless app? add it to the `stateless patch updates` group in `renovate.json`. Runs migrations? add it to the `db-migration` rule | PRs arrive with the right label and grouping |
 

@@ -215,28 +215,29 @@ Also, by hand:
 
 ## 10. Ghostfolio — removed from the repo Nov 2026
 
-Its data lives in the `ghostfolio` database on the Postgres LXC, which this does **not** touch. Its Valkey
-was its own pod (a cache) and goes with it.
+⚠️ **Its data is NOT deleted by any of this.** Holdings, activities and users all live in the `ghostfolio`
+database on the Postgres LXC. The pods hold nothing: no PVCs, and its private Valkey is an `emptyDir` cache.
 
 **LOOK**
 ```bash
 k get application -n argocd ghostfolio
-k get deploy,svc,ingress,pvc,secret -n apps | grep -i ghostfolio
+k get deploy,svc,ingress,secret -n apps -l app=ghostfolio      # ghostfolio + ghostfolio-valkey + ghostfolio-secret
 k get certificate -n apps | grep -i ghostfolio
 ```
 **DELETE**
 ```bash
 k delete application -n argocd ghostfolio                       # Argo record only (no finalizer)
-k delete deploy/ghostfolio deploy/ghostfolio-valkey svc/ghostfolio svc/ghostfolio-valkey ingress/ghostfolio -n apps
-k delete secret ghostfolio-secret -n apps
+k delete deploy,svc,ingress,secret -n apps -l app=ghostfolio
 k delete secret,certificate ghostfolio-tls -n apps --ignore-not-found
 ```
 Also, by hand:
 - Cloudflare DNS: delete the `portfolio` A record.
 - Postgres LXC (192.168.68.7): the `ghostfolio` database and role are **left as the backup**. Export first if
-  you want the history (`pg_dump -U ghostfolio ghostfolio > ghostfolio.sql`), then when sure:
+  you want the history (`su postgres -c 'pg_dump ghostfolio' > ghostfolio.sql`), then when sure:
   `su postgres -c "psql -c 'DROP DATABASE ghostfolio;' -c 'DROP ROLE ghostfolio;'"` and remove its `pg_hba.conf` line.
-- OpenBao: delete `homelab/ghostfolio` if you ever created it.
+  After that no app uses this LXC (RomM's and Vaultwarden's old databases are backups too).
+- OpenBao: delete `homelab/ghostfolio` if you ever created it (the import script used to know that path).
+- GitHub: close any open Renovate PR for `ghostfolio/ghostfolio`.
 - [ ] done
 
 ---

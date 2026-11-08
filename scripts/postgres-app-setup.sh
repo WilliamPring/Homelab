@@ -1,0 +1,66 @@
+#!/bin/sh
+# postgres-app-setup.sh — add ONE app's database + role to the Alpine Postgres LXC (192.168.68.7).
+# One role + one database per app, both named after the app (CLAUDE.md: "one role per app").
+# The LXC itself was set up earlier (listen_addresses='*', LAN pg_hba);
+# on a FRESH LXC also run:  su postgres -c "psql -c \"ALTER SYSTEM SET listen_addresses = '*';\"" && rc-service postgresql restart
+# Run as ROOT inside the Postgres LXC:   sh postgres-app-setup.sh <app>
+# Idempotent — safe to re-run (re-running RESETS the password → update the app's secret).
+# (Was postgres-ghostfolio-setup.sh until Ghostfolio was removed, Nov 2026.)
+set -eu
+
+APP="${1:-}"
+case "$APP" in
+  "" | *[!a-z0-9_]*)
+    echo "usage: sh postgres-app-setup.sh <app>   (lowercase letters, digits and _ only)" >&2
+    exit 2 ;;
+esac
+
+DB_NAME="${APP}"
+DB_USER="${APP}"
+LAN_CIDR="192.168.68.0/24"
+DB_PASS="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32)"
+
+echo ">> role '${DB_USER}'..."
+if [ -z "$(su postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'\"")" ]; then
+  su postgres -c "psql -c \"CREATE ROLE ${DB_USER} LOGIN PASSWORD '${DB_PASS}';\""
+else
+  su postgres -c "psql -c \"ALTER ROLE ${DB_USER} PASSWORD '${DB_PASS}';\""
+fi
+
+echo ">> database '${DB_NAME}'..."
+if [ -z "$(su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'\"")" ]; then
+  su postgres -c "psql -c \"CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};\""
+fi
+su postgres -c "psql -d ${DB_NAME} -c \"GRANT ALL ON SCHEMA public TO ${DB_USER};\""
+
+# pg_hba: one line for this db/user from the LAN (listen_addresses is already '*').
+HBA="$(su postgres -c "psql -tAc 'SHOW hba_file'" | tr -d '[:space:]')"
+HBA_LINE="host    ${DB_NAME}    ${DB_USER}    ${LAN_CIDR}    scram-sha-256"
+echo ">> pg_hba (${HBA}): allow ${DB_USER}@${LAN_CIDR}..."
+grep -qF "${HBA_LINE}" "${HBA}" || echo "${HBA_LINE}" >> "${HBA}"
+
+# pg_hba changes only need a reload
+echo ">> reload..."
+su postgres -c "psql -c 'SELECT pg_reload_conf();'" >/dev/null
+
+echo ">> verify:"
+set +e
+su postgres -c "psql -tAc \"SELECT datname FROM pg_database WHERE datname='${DB_NAME}'\""
+nc -zv 192.168.68.7 5432
+set -e
+
+cat <<EOF
+
+============================================================
+ Postgres ready for ${APP}
+   host 192.168.68.7 · port 5432 · db ${DB_NAME} · user ${DB_USER}
+   PASSWORD: ${DB_PASS}
+
+ >>> Put it in the app's secret (OpenBao homelab/${APP}). Apps that take ONE
+     connection URL instead of separate fields want:
+
+   postgresql://${DB_USER}:${DB_PASS}@192.168.68.7:5432/${DB_NAME}
+
+ (The password is only A-Za-z0-9, so it is always URL-safe.)
+============================================================
+EOF

@@ -1,8 +1,9 @@
 # Ghostfolio — portfolio tracker (stocks, ETFs, crypto)
 
-> **Archived — Ghostfolio was removed (Nov 2026)**; Wealthfolio is the portfolio tracker now. Its `ghostfolio`
-> database on the Postgres LXC is kept as a backup until you drop it (`docs/runbooks/cluster-cleanup.md` §10).
-> Manifests and `scripts/postgres-ghostfolio-setup.sh` are in git history (the commit before "remove ghostfolio").
+> **Archived: removed from the homelab in Nov 2026.** Wealthfolio is the portfolio tracker now
+> ([`../apps/wealthfolio.md`](../apps/wealthfolio.md)). Ghostfolio's data is still in the `ghostfolio` database on
+> the Postgres LXC; cleanup is [`../runbooks/cluster-cleanup.md`](../runbooks/cluster-cleanup.md) §10. The manifests
+> below no longer exist, and the DB script is now `scripts/postgres-app-setup.sh ghostfolio`.
 
 Self-hosted dashboard for what you own and how it's doing, across every brokerage, in CAD.
 
@@ -57,7 +58,7 @@ Its contents are a quote cache and a BullMQ job queue, both rebuilt on demand, s
 ## Setup
 
 👉 **First time? Use the walkthrough instead:**
-[`../runbooks/deploy-ghostfolio.md`](../runbooks/deploy-ghostfolio.md) — the same steps with the
+[`deploy-ghostfolio.md`](deploy-ghostfolio.md) — the same steps with the
 *why* at each one, expected output, and a checklist. What follows here is the short reference.
 
 ### 1. Postgres role (on the LXC, once)

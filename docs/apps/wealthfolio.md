@@ -1,7 +1,7 @@
 # Wealthfolio — portfolio tracker
 
-`https://wealthfolio.williampring.ca` — a local-first portfolio tracker. It was trialled
-next to Ghostfolio and won; Ghostfolio was removed in Nov 2026 (`../archive/ghostfolio.md`).
+`https://wealthfolio.williampring.ca` — a local-first portfolio tracker. It ran next to Ghostfolio as a
+trial; Ghostfolio was removed in Nov 2026 (its old guide: [`../archive/ghostfolio.md`](../archive/ghostfolio.md)).
 
 | | |
 |---|---|
@@ -28,8 +28,8 @@ leave returns stuck at 0.
 
 ⚠️ **Why local-path and not NFS.** Wealthfolio opens SQLite in **WAL mode**, and SQLite documents that WAL
 does not work over a network filesystem. Actual keeps its SQLite on NFS; this app cannot. The cost: the
-database lives on one node's disk, which is **not backed up and does not survive a rebuild**. That's fine for a
-trial (re-import the broker CSV). It is not fine for your real records: see [Backups](#backups).
+database lives on one node's disk, which is **not backed up and does not survive a rebuild**. That was fine for a
+trial. Now that it's the only portfolio tracker, set up [Backups](#backups).
 
 ---
 
@@ -96,29 +96,12 @@ sudo k3s kubectl -n apps get externalsecret wealthfolio-secret   # SecretSynced,
 Then open the URL and log in with the password you hashed.
 
 ### 4. Set it up for Canadian accounts
-1. **Settings → General → Base currency: CAD.** Unlike Ghostfolio this is a setting in the app, not an env
-   var.
+1. **Settings → General → Base currency: CAD.** It's a setting in the app, not an env var.
 2. **One account per account type:** TFSA, RRSP, FHSA, non-registered, each with its own currency (a
    USD account for US-listed holdings if your broker keeps one).
 3. **Import activities** from your broker's CSV (Activities → Import), one account at a time.
 4. **Symbols need the Yahoo suffix:** `XEQT.TO`, `VFV.TO`, `RY.TO`. A bare `RY` is the US listing in USD.
 5. **Contribution limits** (Settings) track TFSA and RRSP room.
-
----
-
-## Comparing it with Ghostfolio (history — how the trial was judged)
-
-Import the **same** CSV into both, then compare each against your broker statement, not against each
-other:
-
-| Check | Where |
-|---|---|
-| total value per account matches the statement | both dashboards |
-| return % on one holding you can work out by hand | the holding's page in each app |
-| dividends counted | income view in Wealthfolio, Activities in Ghostfolio |
-
-The app whose numbers match the statement wins. Remove the other one with
-[`../platform/adding-an-app.md`](../platform/adding-an-app.md) §8.
 
 ---
 
@@ -137,8 +120,8 @@ Nothing backs this up yet. Before it holds records you care about, either:
   sudo k3s kubectl -n apps scale deploy/wealthfolio --replicas=1
   ```
 
-If Wealthfolio wins the trial, automate this (a nightly CronJob that writes a consistent copy to NFS) as part
-of the backup work in [`../index.md`](../index.md) §9.
+Automate this (a nightly CronJob that writes a consistent copy to NFS) as part of the backup work in
+[`../index.md`](../index.md) §9. Not done yet, and this is now the only portfolio tracker.
 
 ---
 

@@ -1,14 +1,15 @@
 # Deploying Ghostfolio — a step-by-step walkthrough
 
-> **Archived — Ghostfolio was removed (Nov 2026).** Kept because it is still the best end-to-end walkthrough of
-> an app that needs a database, secrets and DNS. Its setup script (`scripts/postgres-ghostfolio-setup.sh`) is in
-> git history. Secrets are OpenBao now (`docs/platform/openbao.md`), not SOPS.
+> **Archived with Ghostfolio (removed Nov 2026).** Kept because it is still the clearest walk-through of an
+> app that needs a database, secrets and DNS. Changed since: the DB script is now
+> `scripts/postgres-app-setup.sh <app>`, and new secrets go to OpenBao ([`../platform/openbao.md`](../platform/openbao.md)),
+> not SOPS.
 
 The first app you've added that needs **three** things outside the cluster: a database role, a
 set of secrets, and a DNS record. This walks through all of it in order, explaining what each
 step is for, so the next app that needs a database is something you can do without a guide.
 
-Reference for the app itself: [`../apps/ghostfolio.md`](../apps/ghostfolio.md).
+Reference for the app itself: [`ghostfolio.md`](ghostfolio.md).
 
 **Roughly 25 minutes**, most of it waiting for a certificate.
 
@@ -165,7 +166,7 @@ are a quote cache and a job queue, both rebuilt on demand, which is why it has n
 > **If you'd rather use the shared Valkey**, it's possible but you'd be accepting that the
 > `default` user (with `~*`) can read every app's keys, and you'd need `REDIS_DB: "3"` so
 > Ghostfolio's "Flush cache" button can't wipe Immich's queue. The trade-off is written up in
-> [`../apps/ghostfolio.md`](../apps/ghostfolio.md).
+> [`ghostfolio.md`](ghostfolio.md).
 
 ---
 
@@ -412,7 +413,7 @@ reasonable book value and let it accumulate forward.
 | Site loads on laptop, not phone | Tailscale is off on the phone. This is a PWA — it has to *reach* the server, unlike Bark which is pushed |
 | Prices blank for everything | the data gatherer hasn't run. Admin Control → Data gatherer → refresh |
 
-Full troubleshooting table: [`../apps/ghostfolio.md`](../apps/ghostfolio.md).
+Full troubleshooting table: [`ghostfolio.md`](ghostfolio.md).
 
 ---
 
@@ -432,6 +433,6 @@ Full troubleshooting table: [`../apps/ghostfolio.md`](../apps/ghostfolio.md).
 ## Afterwards
 
 - ACB for tax is a *separate* tool — see the Canadian section of
-  [`../apps/ghostfolio.md`](../apps/ghostfolio.md). Ghostfolio's numbers are not filing numbers.
+  [`ghostfolio.md`](ghostfolio.md). Ghostfolio's numbers are not filing numbers.
 - Renovate will open PRs for the image. Ghostfolio is in the **db-migration** group: it runs
   migrations on every start, so it never rides in a batch — read the release notes, merge, Sync.

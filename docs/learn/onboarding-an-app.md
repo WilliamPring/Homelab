@@ -7,7 +7,7 @@ throwaway app. Every step says what to run, what you should see, and what just h
 |---|---|
 | **this guide** | learning it — once, start to finish (about 45 minutes) |
 | [`platform/adding-an-app.md`](../platform/adding-an-app.md) | every real app after that — the checklist |
-| [`archive/deploy-ghostfolio.md`](../archive/deploy-ghostfolio.md) | a real app with a database, secrets and DNS, end to end |
+| [`archive/deploy-ghostfolio.md`](../archive/deploy-ghostfolio.md) | a real app with a database, secrets and DNS, end to end (archived with the app, still the pattern) |
 
 ---
 
@@ -340,7 +340,7 @@ one edge check (do DNS, the cert and Traefik work?):
 ```
 Both red → the app is down. Only `edge` red → the app is fine; look at DNS, TLS or Traefik.
 
-**Doc** — `docs/apps/<app>.md` (copy the shape of [`apps/karakeep.md`](../apps/karakeep.md)) plus a line in
+**Doc** — `docs/apps/<app>.md` (copy the shape of [`apps/wealthfolio.md`](../apps/wealthfolio.md)) plus a line in
 [`../index.md`](../index.md). **Renovate** — nothing to do: the pinned tag is already tracked. A stateless app can
 join the `stateless patch updates` group in `renovate.json`; one that migrates a database belongs in the
 `db-migration` rule.
@@ -423,10 +423,10 @@ changes — `sudo k3s kubectl rollout restart deploy/myapp -n apps`. → [`../pl
 
 ### 3.5 A database or Redis
 
-One Postgres role + database per app on the LXC (template: `scripts/postgres-ghostfolio-setup.sh` in git history) and one Valkey ACL user
+One Postgres role + database per app on the LXC (`sh scripts/postgres-app-setup.sh <app>`, run there) and one Valkey ACL user
 per app ([`../platform/redis.md`](../platform/redis.md)). The passwords go in the app's SOPS secret. Create them
 **before** the first Sync, or the pod crash-loops on connect. The full walk-through is
-[`../archive/deploy-ghostfolio.md`](../archive/deploy-ghostfolio.md).
+[`../archive/deploy-ghostfolio.md`](../archive/deploy-ghostfolio.md) (archived with the app).
 
 ### 3.6 LAN access (Kindle, TV)
 

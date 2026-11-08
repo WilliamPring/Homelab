@@ -18,7 +18,7 @@ This page is the mental model. Each section ends with where to read more.
 │ Proxmox pve-a (.96) + pve-b (.89)                                                       │
 │   ├─ VM  k3s-master-01 192.168.68.63      ├─ LXC file server  .50   NFS /data (photos, manga, books, ROMs)
 │   ├─ VM  k3s-worker-01 192.168.68.62 (32GB — Immich, Suwayomi, qBittorrent pinned here)      │
-│   ├─ LXC Postgres   .7   (old DBs, backups only)   ├─ LXC Valkey/Redis .103 (Immich, degoog)
+│   ├─ LXC Postgres   .7   (none today)              ├─ LXC Valkey/Redis .103 (Immich, degoog)
 └──────────────────────────────────────────────────────────────────────────────────────────┘
           │  Ansible (ansible/)  — Tailscale, k3s, nfs-common, the few out-of-git secrets/labels
           ▼
@@ -187,7 +187,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 
 **Runbooks** — do-this-when
 - [`runbooks/rebuild-from-zero.md`](runbooks/rebuild-from-zero.md) — the whole stack from a blank cluster, in order
-- [`archive/deploy-ghostfolio.md`](archive/deploy-ghostfolio.md) — **step-by-step walkthrough of an app that needs a DB, secrets and DNS** (Ghostfolio itself was removed; the pattern still holds)
+- [`archive/deploy-ghostfolio.md`](archive/deploy-ghostfolio.md) — **step-by-step walkthrough of an app that needs a DB, secrets and DNS** (archived with Ghostfolio in Nov 2026; still the pattern)
 - [`runbooks/cheatsheet.md`](runbooks/cheatsheet.md) · [`runbooks/cluster-cleanup.md`](runbooks/cluster-cleanup.md)
 - [`runbooks/proxmox-install.md`](runbooks/proxmox-install.md) · [`runbooks/couchdb-lxc-setup.md`](runbooks/couchdb-lxc-setup.md) · [`runbooks/tailscale-mullvad-exit-node.md`](runbooks/tailscale-mullvad-exit-node.md)
 
