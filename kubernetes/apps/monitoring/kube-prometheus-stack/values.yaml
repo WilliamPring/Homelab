@@ -99,9 +99,12 @@ grafana:
     type: pvc
     storageClassName: local-path
     size: 2Gi
+  # Was 192Mi / 512Mi until Grafana was OOMKilled at that limit (Nov 2026). Log panels add spikes on top:
+  # every Loki query pulls up to maxLines (5000, below) through Grafana's own process.
+  # The two k8s-sidecar containers have no limit, so "RAM % of limit" on Homelab apps can read >100%.
   resources:
-    requests: { cpu: 50m, memory: 192Mi }
-    limits: { memory: 512Mi }
+    requests: { cpu: 50m, memory: 512Mi }
+    limits: { memory: 1Gi }
   grafana.ini:
     server:
       root_url: https://grafana.williampring.ca
