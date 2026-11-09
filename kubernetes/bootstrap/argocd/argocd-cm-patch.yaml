@@ -1,6 +1,9 @@
+# --enable-helm lets kustomize inflate `helmCharts:` (cert-manager, external-secrets, immich,
+# kube-prometheus-stack, loki, alloy). --enable-alpha-plugins and --enable-exec went with KSOPS
+# in Nov 2026: nothing in this repo runs an exec plugin any more.
 - op: add
   path: /data/kustomize.buildOptions
-  value: --enable-alpha-plugins --enable-exec --enable-helm
+  value: --enable-helm
 # Read-only API account for the Homepage Argo CD widget (apps / out-of-sync / health counts).
 # `apiKey` only — it cannot log in to the UI. Its permissions come from argocd-rbac-cm.yaml
 # (role:readonly). Generate its token once, after applying this:

@@ -10,7 +10,7 @@
 # chart bump can add a container, drop a volume, or rename every object — and a Renovate diff of
 # `version: 1.2.3` → `version: 1.3.0` tells you none of it. Rendering both sides closes that gap.
 #
-# KSOPS generators are stripped (CI has no age key), so Secrets are absent from both sides —
+# Secret VALUES live in OpenBao, not in git, so they are absent from both sides —
 # a secret VALUE change is invisible here by design. Keys are checked by check-conventions.sh.
 set -uo pipefail
 root="${1:?usage: render-all.sh <repo-root> <out-dir>}"

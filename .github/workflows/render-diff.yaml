@@ -8,7 +8,7 @@
 # So: render every app at the PR's base, render it at the head, and post the diff as a comment
 # that updates in place on each push.
 #
-# ⚠️ Secrets are absent from both sides — KSOPS generators are stripped (CI has no age key), so
+# ⚠️ Secret VALUES are absent from both sides — they live in OpenBao, not git — so
 # this diff can never leak a secret value, and equally can never show you one changing.
 name: render-diff
 

@@ -31,12 +31,15 @@ sudo k3s kubectl -n argocd rollout status deploy/argocd-server
 `platform/argocd.md` for the password and the UI hostname (needs the `argocd` DNS record and, for TLS,
 step 5 to have happened — port-forward works meanwhile).
 
-## 3. The age key (before anything with a secret can sync)
+## 3. OpenBao access (before anything with a secret can sync)
+Nothing needs an age key any more — SOPS was retired in Nov 2026. What the cluster needs is ESO's
+credentials for OpenBao, made by hand because they are the key to everything else:
 ```bash
-sudo k3s kubectl create secret generic sops-age -n argocd --from-file=keys.txt=$HOME/.config/sops/age/keys.txt
-sudo k3s kubectl -n argocd rollout restart deploy/argocd-repo-server
+sudo k3s kubectl create namespace external-secrets
+sudo k3s kubectl -n external-secrets create secret generic openbao-approle \
+  --from-literal=role-id=<role-id> --from-literal=secret-id=<secret-id>
 ```
-**This key is the master key.** It lives on the Arch box, in your password manager, and offline. `platform/secrets.md`.
+**OpenBao's unseal key is the master key.** It lives in your password manager and offline. `platform/openbao.md`.
 
 ## 4. Register every app
 ```bash
@@ -59,7 +62,7 @@ Sync in this order, waiting for Healthy each time:
 | Postgres roles/DBs | LXC `.7`: none in use today | `sh scripts/postgres-app-setup.sh <app>` |
 | Valkey ACL users | LXC `.103`: `immich`, (`degoog`) | `platform/redis.md` |
 | DNS records | Cloudflare: one A per hostname → master Tailscale IP, grey cloud | by hand (README Addresses table) |
-| Suwayomi login, qBittorrent secret | inline / templates — see `platform/secrets.md` known debt | fill → `sops -e -i` |
+| Suwayomi login | still inline — see `platform/openbao.md` known debt | move to OpenBao |
 
 ## 7. Apps, in dependency order
 ```

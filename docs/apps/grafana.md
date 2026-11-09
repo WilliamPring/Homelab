@@ -91,7 +91,7 @@ change it under *profile → Change password*. Editing the secret later does not
 
 ### 3. Bark device key
 `kube-prometheus-stack/bark-relay.yaml` carries the same `REPLACE_ME_DEVICE_KEY` placeholder as Gatus and
-Argo notifications (testing stance, see `../platform/secrets.md`). Replace all three together.
+Argo notifications (testing stance, see `../platform/openbao.md`). Replace all three together.
 
 ### 4. Re-apply the ApplicationSet (once)
 The Prometheus Operator's CRDs are too big for client-side apply, so `kube-prometheus-stack` gets

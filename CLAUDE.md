@@ -9,16 +9,16 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 - **Pin everything.** Image tags, chart versions, tool versions. `latest` and `"*"` are invisible to Renovate.
   A Helm chart that also picks the APP version (its `appVersion`) gets the app's image tag pinned in `values.yaml`
   too, with a Renovate custom manager — `kubernetes/apps/media/immich/values.yaml` is the example.
-- **Secrets**: SOPS + age via KSOPS. Pattern = `<app>-secret.enc.yaml` (encrypted) + `<app>-secret.sops.yaml`
-  (generator) + `generators:` in `kustomization.yaml`. Target state: a value is either `ENC[...]` in git or not in git.
-  **Current state (by the owner's choice while testing):** a placeholder template (qbittorrent) and a few
-  inline values (Suwayomi's login, the Bark device key
-  placeholders); the checks WARN rather than block (`STRICT_SECRETS=0`). Do not "fix" this unasked — see
-  `docs/platform/secrets.md` known debt.
-  **Pilot (Nov 2026):** OpenBao (`https://192.168.68.91:8200`, Proxmox LXC) + External Secrets Operator now run
-  beside SOPS. Converted so far (one PR per app): Grafana (`kube-prometheus-stack/externalsecret.yaml` ← `homelab/grafana`),
-  Wealthfolio, degoog, Immich and Karakeep (each ← `homelab/<app>`); Ghostfolio was removed; the rest stay on SOPS until the owner says otherwise. Docs: `docs/platform/openbao.md`. Never put
-  OpenBao behind the Cloudflare tunnel.
+- **Secrets**: OpenBao (`https://192.168.68.91:8200`, a Proxmox LXC) + External Secrets Operator. Pattern =
+  `externalsecret.yaml` in the app directory, listed in `resources:`, reading `homelab/<app>`. A secret VALUE is
+  never in git; the KEY NAMES are, on purpose, so CI can check every `secretKeyRef` against them.
+  ⚠️ ESO writes the Secret only when EVERY key it lists exists in OpenBao — add the key there BEFORE syncing, or
+  that app's whole Secret stops updating. Docs: `docs/platform/openbao.md`. Never put OpenBao behind the
+  Cloudflare tunnel.
+  **SOPS/age/KSOPS was retired in Nov 2026** with the last app (qBittorrent). Do not reintroduce `*.enc.yaml`,
+  `*.sops.yaml` or `generators:` — and do not re-add the repo-server tool overrides that came with KSOPS.
+  **Still inline, by the owner's choice while testing:** Suwayomi's login and the Bark device-key placeholders.
+  Do not "fix" those unasked — see the known debt in `docs/platform/openbao.md`.
 - **One owner per thing.** Ansible = nodes (Tailscale, k3s, the few out-of-git secrets/labels). Argo = every app.
 - **Hostnames** are `*.williampring.ca` → the master's Tailscale IP (DNS-only). Internet-facing exceptions:
   `public-immich.` (Immich share proxy), and `deploy.` (Argo CD) + `bark.` via a Cloudflare tunnel → NPMplus (no Ingress here).
@@ -31,7 +31,7 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 - `ansible/` — node provisioning. `docs/` — one doc per app + platform docs. `scripts/ci/` — validation.
 
 ## Shape of an app directory
-- `kustomization.yaml` listing the resources (and the KSOPS generator if it has a secret).
+- `kustomization.yaml` listing the resources (including `externalsecret.yaml` if it has a secret).
 - `deployment.yaml` (pinned image, resources, a readiness probe on EVERY container — sidecars too, since one unready
   container takes the whole pod out of its Service), `service.yaml` (NodePort if LAN access is wanted — pick a free
   port from the README table), `ingress.yaml` (Traefik + `cert-manager.io/cluster-issuer: letsencrypt`), `storage.yaml`
@@ -57,4 +57,4 @@ Learning the workflow from scratch: `docs/learn/onboarding-an-app.md` (a guided 
 
 ## When unsure
 Check how `kubernetes/apps/apps/wealthfolio/` does it — it is the smallest complete example (manifests + an
-ExternalSecret from OpenBao + docs/apps/wealthfolio.md). The last app still on SOPS is `kubernetes/apps/media/qbittorrent/` (a placeholder template).
+ExternalSecret from OpenBao + docs/apps/wealthfolio.md). Every app now follows that shape — nothing uses SOPS.

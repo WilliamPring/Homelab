@@ -13,7 +13,10 @@ patches:
   #    upstream install's empty argocd-cmd-params-cm and server.insecure got wiped on every
   #    apply, causing ERR_TOO_MANY_REDIRECTS behind any proxy. See the header in that file.
   - path: config.yaml
-  - path: repo-server-ksops-patch.yaml
+  # NOTE: there is deliberately no repo-server patch any more. It used to mount KSOPS, KSOPS's
+  # bundled kustomize and a matching Helm 3 over Argo's own binaries. KSOPS went with the last
+  # SOPS secret (Nov 2026), and with it the tool overrides — the repo-server now runs the
+  # kustomize + Helm pair that ships in the Argo image, which is the pair upstream tests.
   - path: argocd-notifications-cm.yaml   # notifications → Bark (patches the empty CM from the install)
   - path: argocd-rbac-cm.yaml          # read-only role for the Homepage widget's `homepage` account
   - path: argocd-cm-patch.yaml

@@ -8,15 +8,12 @@ kubeconfig
 # the k3s admin kubeconfig — cluster-admin in a single file
 k3s.yaml
 *.agekey
-# sops/age private key file (`age-keygen -o keys.txt`)
+# age private key file. SOPS is retired (Nov 2026) but the old key still exists off-repo —
+# and a stray private key must never be committed regardless.
 keys.txt
 *.pem
 *.key
 *.crt
-
-# SOPS leaves these behind if an edit session is interrupted — they hold DECRYPTED content
-.decrypted~*
-*.decrypted.yaml
 
 # `make diag` writes a cluster dump here and tells you to commit it. Review it first: it is a
 # paste of live cluster state, and this repo is PUBLIC. Un-ignore deliberately, per file.

@@ -8,7 +8,7 @@
 #   Trigger             When                                                          Bark level
 #   on-out-of-sync      git moved (Renovate merge / your push) → waiting for your Sync click   active
 #   on-deployed         a Sync finished and the app is Healthy                                 active
-#   on-sync-failed      a Sync errored (bad manifest, KSOPS decrypt, missing secret…)   timeSensitive
+#   on-sync-failed      a Sync errored (bad manifest, missing secret, bad chart values…) timeSensitive
 #   on-health-degraded  pods crash-looping / probes failing                            timeSensitive
 #
 # Bark levels are NAMES, not numbers: passive (silent) · active (normal) · timeSensitive (breaks

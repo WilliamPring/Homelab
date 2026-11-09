@@ -1,4 +1,9 @@
-# Argo CD + KSOPS + SOPS + age
+# Argo CD + KSOPS + SOPS + age (ARCHIVED)
+
+> **Retired in Nov 2026** — see [`secrets-sops.md`](secrets-sops.md) and the current
+> [`../platform/openbao.md`](../platform/openbao.md). Kept because it is still the clearest write-up of
+> *why* secrets committed to git have to be encrypted, and of the trade-offs that led to OpenBao.
+> The mechanics below describe a setup that no longer exists.
 
 This directory contains the Argo CD installation and configuration required to manage SOPS-encrypted Kubernetes Secrets using KSOPS.
 

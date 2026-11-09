@@ -17,7 +17,7 @@
 # As a patch it MERGES into the upstream ConfigMap, so there is only ever one.
 #
 # ⚠️ No `namespace:` — the upstream manifest's resources carry none, and a namespaced patch would
-#    match nothing. Same reason repo-server-ksops-patch.yaml omits it.
+#    match nothing. The now-deleted repo-server KSOPS patch omitted it for the same reason.
 #
 # ⚠️ argocd-server reads this AT STARTUP. After applying, restart it or nothing changes:
 #      sudo k3s kubectl rollout restart deploy/argocd-server -n argocd
