@@ -64,6 +64,13 @@ data:
       hideVisitURL: false
       mobileButtonPosition: bottom-right
 
+    # Shared API keys, referenced by widgets as `provider: <name>` instead of an inline key.
+    # Substituted from the env var of the same name (deployment.yaml ← homepage-secret ←
+    # OpenBao homelab/homepage), exactly like the "{{HOMEPAGE_VAR_X}}" keys in services.yaml:
+    # the value itself is never in git. Free key: https://finnhub.io (US symbols only).
+    providers:
+      finnhub: "{{HOMEPAGE_VAR_FINNHUB_KEY}}"
+
     # Order here = order on the page, and the order of the tabs.
     # `style: column` groups sit side by side; `style: row` spans the width with N tiles across.
     layout:
@@ -339,11 +346,37 @@ data:
     gateway: false
 
   widgets.yaml: |
-    # The info bar — shown above every tab. Order here = order left to right.
+    # The info bar — shown above every tab. Order here = order left to right (it wraps).
+    # Reading order: the two Proxmox HOSTS → the cluster on top of them → tickers → search,
+    # clock, weather.
     #
+    # ⚠️ The two glances widgets need Glances running ON EACH PROXMOX HOST — it is a host
+    #    service, so Ansible or a documented manual step, never Argo (docs/apps/homepage.md
+    #    → "Glances on the Proxmox hosts"). Until it is up, both render an error box.
+    - glances:
+        url: http://192.168.68.96:61208
+        version: 4                 # `glances -V` on the host: PVE 8 (bookworm) apt ships 3.x → 3
+        label: pve-a
+        cpu: true
+        mem: true
+        disk: /
+        cputemp: true              # extra API call per refresh; it is what the TEMP bar reads
+        unit: metric
+
+    - glances:
+        url: http://192.168.68.89:61208
+        version: 4
+        label: pve-b
+        cpu: true
+        mem: true
+        disk: /
+        cputemp: true
+        unit: metric
+
     # Real cluster numbers via metrics-server (not the old `resources` widget, which read
     # whichever node the pod happened to land on). The worker runs hot (~85% RAM), so the
-    # per-node bars are the first thing to glance at.
+    # per-node bars are the first thing to glance at. Kept on purpose: the hosts above show
+    # Proxmox's view, which stays calm while a k3s node is the thing filling up.
     - kubernetes:
         cluster:
           show: true
@@ -357,13 +390,25 @@ data:
           memory: true
           showLabel: true
 
-    - openmeteo:
-        label: Toronto
-        latitude: 43.6532
-        longitude: -79.3832
-        timezone: America/Toronto
-        units: metric
-        cache: 15                  # minutes — no need to hit the API on every page view
+    # Ticker + daily % change, from Finnhub (key: settings.yaml → providers.finnhub).
+    # ⚠️ The free tier is US symbols only — Canadian .TO tickers (XEQT.TO, VFV.TO) return
+    #    nothing. These are the US-listed equivalents; edit the list to taste. Max 8.
+    #    This is a market-wide glance, NOT your portfolio: Homepage has no Wealthfolio widget.
+    - stocks:
+        provider: finnhub
+        color: true
+        cache: 5                   # minutes — the free tier is rate-limited per minute
+        watchlist:
+          - VTI
+          - VXUS
+          - VT
+
+    - search:
+        provider: custom
+        url: https://search.williampring.ca/search?q=
+        target: _blank
+        # No `focus: true` on purpose: it would steal keystrokes from quicklaunch
+        # (type anywhere → filter tiles), which is the faster way to open an app.
 
     - datetime:
         text_size: xl
@@ -375,12 +420,13 @@ data:
           minute: 2-digit
           hourCycle: h23
 
-    - search:
-        provider: custom
-        url: https://search.williampring.ca/search?q=
-        target: _blank
-        # No `focus: true` on purpose: it would steal keystrokes from quicklaunch
-        # (type anywhere → filter tiles), which is the faster way to open an app.
+    - openmeteo:
+        label: Toronto
+        latitude: 43.6532
+        longitude: -79.3832
+        timezone: America/Toronto
+        units: metric
+        cache: 15                  # minutes — no need to hit the API on every page view
 
   bookmarks.yaml: |
     - Homelab:
