@@ -20,8 +20,6 @@ apply the patch files as broken half-objects and the kustomization.yaml as garba
 upstream install objects carry no namespace, hence **`-n argocd`**.
 ```bash
 sudo k3s kubectl create namespace argocd                  # first time only
-sudo k3s kubectl create secret generic sops-age -n argocd \
-  --from-file=keys.txt=$HOME/.config/sops/age/keys.txt    # first time only — the age key KSOPS decrypts with (docs/platform/secrets.md)
 sudo k3s kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd
 sudo k3s kubectl -n argocd rollout status deploy/argocd-server
 sudo k3s kubectl -n argocd rollout status deploy/argocd-repo-server
@@ -40,29 +38,30 @@ What the directory sets up:
   ⚠️ It also carries no `namespace:` — the upstream manifest's resources have none, so a
   namespaced patch matches nothing.
   (There is no `ingress.yaml` any more — see Access.)
-- `argocd-cm-patch.yaml` → a JSON patch on the install's `argocd-cm`: `kustomize.buildOptions: --enable-alpha-plugins --enable-helm`.
-  `--enable-alpha-plugins` lets kustomize run the KSOPS generator; `--enable-helm` lets it inflate `helmCharts:` (immich, cert-manager).
+- `argocd-cm-patch.yaml` → a JSON patch on the install's `argocd-cm`: `kustomize.buildOptions: --enable-helm`,
+  which lets kustomize inflate `helmCharts:` (immich, cert-manager, external-secrets, the monitoring three).
   (`argocd-cm.yaml` in the same folder is the older whole-ConfigMap version, no longer in the kustomization.)
-- `repo-server-ksops-patch.yaml` → two init containers copy tools into the repo-server, and mounts the `sops-age` key:
-  **ksops + its bundled kustomize** (from `viaductoss/ksops`) and **Helm 3.17** (from `alpine/helm`), both mounted over
-  Argo's own binaries. Why: Argo 3.5 ships Helm 4, and ksops' kustomize is older than Argo's; the mismatch broke
-  `helmCharts` rendering, so the repo-server now runs a known-good kustomize + Helm 3 pair. A future Argo upgrade does
-  NOT change what renders your apps — bump those two images deliberately.
+- **There is no repo-server patch.** Until Nov 2026 one mounted KSOPS, KSOPS's bundled kustomize and a matching
+  Helm 3 over Argo's own binaries — the tool overrides existed only because KSOPS's kustomize was older than
+  Argo's and would not drive the Helm that Argo ships. Retiring SOPS retired all of it, so the repo-server now
+  runs the kustomize + Helm pair from the Argo image, which upstream tests together. Nothing to pin, and an
+  Argo bump no longer risks a tool mismatch.
 - `argocd-notifications-cm.yaml` → pushes to Bark (`docs/platform/updates-and-notifications.md`).
 - **DNS:** `argocd → A → <master Tailscale 100.x IP>` (grey cloud).
 
 ## How Argo turns a directory into running objects
 ```
-git push ──► repo-server clones main ──► kustomize build --enable-alpha-plugins --enable-helm kubernetes/apps/<ns>/<app>
+git push ──► repo-server clones main ──► kustomize build --enable-helm kubernetes/apps/<ns>/<app>
                                              ├─ resources: *.yaml                      (raw manifests)
-                                             ├─ helmCharts: → helm pull + helm template  (immich, cert-manager)
-                                             └─ generators: → ksops → sops -d (age key)  (secrets)
+                                             └─ helmCharts: → helm pull + helm template  (immich, cert-manager)
+     (secrets are NOT rendered here: an ExternalSecret is just another manifest, and ESO fills it
+      in-cluster afterwards — the repo-server never sees a secret value)
              ──► rendered manifests ──► application-controller diffs them against the cluster ──► OutOfSync / Synced
              ──► you click Sync ──► kubectl apply (server-side for cert-manager) ──► health checks ──► Healthy
 ```
 - The render is **cached**. After fixing a render error (missing flag, bad chart), use **Hard Refresh**, not Refresh.
-- `scripts/ci/validate.sh` runs the same `kustomize build` for every app (KSOPS generator stripped — CI has no key),
-  so "CI green" means "Argo will render it".
+- `scripts/ci/validate.sh` runs the same `kustomize build` for every app — byte-for-byte the same since
+  KSOPS went, so "CI green" means "Argo will render it".
 - Argo polls GitHub every ~3 min. A GitHub webhook would make it instant; not set up (not needed).
 
 ### ⚠️ Why insecure mode is required
@@ -212,9 +211,8 @@ Full onboarding checklist: `docs/platform/adding-an-app.md`.
 | `ERR_TOO_MANY_REDIRECTS` on the domain | insecure mode not active — apply `kubernetes/bootstrap/argocd/config.yaml` + `rollout restart deploy/argocd-server`; test in **incognito** (browsers cache redirect loops) |
 | App stuck `OutOfSync / Missing` | you registered it but haven't clicked **SYNC** (manual mode) |
 | `failed to resolve revision` on a Helm app | chart `targetRevision` must be a concrete version (all charts are pinned now; Renovate bumps them) |
-| `failed to load generator plugin ... ksops` | the repo-server lacks KSOPS → `kubernetes/bootstrap/argocd/` was applied with `-f` or never re-applied; run the `apply -k` above, then **Hard Refresh** the app (the error is cached) |
 | `must specify --enable-helm` / chart apps fail, raw apps fine | `argocd-cm` lacks the flag OR the repo-server was not restarted after the apply (ConfigMap read at startup). Check: `kubectl -n argocd get cm argocd-cm -o jsonpath='{.data.kustomize\.buildOptions}'`; pods' AGE must be recent |
-| chart apps fail with a helm/kustomize version error | the tool overrides in `repo-server-ksops-patch.yaml` (kustomize from ksops, Helm 3.17) must both be mounted; `kubectl -n argocd exec deploy/argocd-repo-server -c argocd-repo-server -- sh -c 'kustomize version; helm version --short'` |
+| chart apps fail with a helm/kustomize version error | should not happen since the KSOPS tool overrides went (Nov 2026) — the repo-server uses the Argo image's own pair. If it does, something re-introduced a repo-server patch: `kubectl -n argocd exec deploy/argocd-repo-server -c argocd-repo-server -- sh -c 'kustomize version; helm version --short'` |
 | Need the full error text (UI truncates) | `make diag HOST=sysadmin@192.168.68.63` → `debug/argocd-diag.txt` (read-only snapshot: conditions, versions, logs) |
 | `Deployment "argocd-repo-server" is invalid` on apply | live repo-server was edited by hand and conflicts with the patch → `kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd --server-side --force-conflicts` once |
 | Helm-chart app won't pull (OCI) | Settings → Repositories → Connect repo (type Helm, Enable OCI) — e.g. the Immich chart |
@@ -225,7 +223,7 @@ Full onboarding checklist: `docs/platform/adding-an-app.md`.
   can't break its own bootstrap. Its config files live in `kubernetes/bootstrap/argocd/`.
 - Applications are generated by the **ApplicationSet** (`kubernetes/bootstrap/apps.yaml`). The only
   hand-applied objects are Argo's own install and that one file.
-- Secrets: `docs/platform/secrets.md`. Updates & phone notifications: `docs/platform/updates-and-notifications.md`.
-- The repo-server's kustomize and Helm are **pinned copies** from the KSOPS patch, not Argo's bundled ones (see above).
+- Secrets: `docs/platform/openbao.md`. Updates & phone notifications: `docs/platform/updates-and-notifications.md`.
+- The repo-server uses the kustomize and Helm **bundled in the Argo image** — the KSOPS-era overrides went in Nov 2026.
 - Everything is **manual sync** by design — Argo shows drift but waits for a click, so there
   are no surprise upgrades (important for Immich).

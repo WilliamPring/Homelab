@@ -101,14 +101,13 @@ reconnect on its own.
 
 ```
 kubernetes/apps/media/qbittorrent/
-├── kustomization.yaml              lists everything below; `generators:` runs KSOPS for the secret
+├── kustomization.yaml              lists everything below, including the ExternalSecret
 ├── deployment.yaml                 the pod: seed-config → gluetun (sidecar) → qbittorrent
 ├── configmap.yaml                  qBittorrent.conf SEED (tun0 binding, save paths, WebUI behind a proxy)
 ├── storage.yaml                    NFS PV/PVC for /downloads · local-path PVC for /config
 ├── service.yaml                    ClusterIP + NodePort 30080 (WebUI only)
 ├── ingress.yaml                    qbittorrent.williampring.ca + Let's Encrypt cert
-├── qbittorrent-secret.enc.yaml     Mullvad WireGuard key + address (SOPS-encrypted)
-└── qbittorrent-secret.sops.yaml    the KSOPS generator: "decrypt that file at render time"
+└── externalsecret.yaml             Mullvad WireGuard key + address ← OpenBao homelab/qbittorrent
 ```
 
 When the pod starts, the containers come up in this order:
@@ -141,14 +140,17 @@ make in the WebUI stay. To reset to what's in git, delete `/config/qBittorrent/q
    Take only the IPv4 address: the cluster doesn't do IPv6, and an IPv6 address makes Gluetun fail to connect.
    The key uses one of your account's 5 device slots.
 
-### 4.2 Put it in the SOPS secret (on the Arch box)
+### 4.2 Put it in OpenBao
 ```bash
-$EDITOR kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml      # replace both REPLACE_ME values
-sops --encrypt --in-place kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml
-sops -d kubernetes/apps/media/qbittorrent/qbittorrent-secret.enc.yaml >/dev/null && echo ENCRYPTED
+bao kv put homelab/qbittorrent \
+  WIREGUARD_PRIVATE_KEY='<PrivateKey from the Mullvad config>' \
+  WIREGUARD_ADDRESSES='<Address from the Mullvad config, e.g. 10.66.12.34/32>'
+bao kv get homelab/qbittorrent        # both keys present?
 ```
-**Encrypt before you push.** Argo's KSOPS step can't decrypt a file that was never encrypted, so the app
-shows a render error until you do. (CI only warns about this while `STRICT_SECRETS=0`.)
+**Create the entry BEFORE you Sync.** `externalsecret.yaml` lists both keys, and External Secrets writes
+`qbittorrent-secret` only once every listed key exists — until then the pod has no Mullvad credentials and
+Gluetun will not come up. (This app was the last one on SOPS; its old `.enc.yaml` was never actually
+encrypted, which is why it could not render at all. See `../platform/openbao.md`.)
 
 ### 4.3 Create the download folders (file server, 192.168.68.50)
 ```bash
@@ -225,7 +227,7 @@ For an end-to-end check from qBittorrent itself, add a torrent IP checker such a
 - **Change the Mullvad location:** edit `SERVER_COUNTRIES` / `SERVER_CITIES` in `deployment.yaml`, then push and Sync.
   Your key works with every Mullvad WireGuard server. The names come from Gluetun's server list (e.g. `Vancouver`,
   `Montreal`).
-- **Rotate the Mullvad key:** revoke the old key on mullvad.net, generate a new one, run `sops` on the secret file to
+- **Rotate the Mullvad key:** revoke the old key on mullvad.net, generate a new one, `bao kv patch homelab/qbittorrent` to
   edit it, push, Sync, then `rollout restart deploy/qbittorrent -n media`. Pods don't restart by themselves when a
   Secret changes.
 - **Upgrades:** Renovate opens PRs for `qmcgaw/gluetun` and `lscr.io/linuxserver/qbittorrent`. Read the changelog,
@@ -254,7 +256,7 @@ For an end-to-end check from qBittorrent itself, add a torrent IP checker such a
 |---|---|---|
 | Pod stuck at `Init:1/2` | Gluetun can't connect (wrong/revoked key, or an IPv6 address in `WIREGUARD_ADDRESSES`) | `kubectl logs -n media deploy/qbittorrent -c gluetun`. Repeated `i/o timeout` / handshake errors usually mean a bad key: generate a new one (§4.1) |
 | Pod stuck at `Init:1/2` **after a node reboot or OOM-kill**, logs say `adding IPv6 rule: ...: file exists` | a stale WireGuard `ip rule` from the previous container — ip rules are pod-scoped and outlive an abrupt exit | the `postStart` hook in `deployment.yaml` clears these on every start, so this should self-heal. If it persists, delete the pod so it gets a fresh network namespace |
-| Argo shows a render / `ComparisonError` mentioning ksops or sops | the secret is still the plaintext template | encrypt it (§4.2) → push → *Hard Refresh* |
+| ExternalSecret `SecretSyncedError`, pod has no Mullvad credentials | a key is missing from `homelab/qbittorrent` — ESO writes nothing unless both exist | `bao kv get homelab/qbittorrent` (§4.2) → push → *Hard Refresh* |
 | Pod `CreateContainerError` / mount error on `tun` | the node has no `/dev/net/tun` | on the worker: `ls -l /dev/net/tun` (should be `crw-rw-rw- 10,200`). `sudo modprobe tun` to load it |
 | WebUI shows plain `Unauthorized` | qBittorrent's host-header check behind the proxy | confirm `WebUI\HostHeaderValidation=false` in `/config/qBittorrent/qBittorrent.conf` (it's seeded, but an older config on the PVC wins) |
 | WebUI times out but the pod is Ready | Gluetun's firewall is blocking the port | `FIREWALL_INPUT_PORTS` must include `8080` |
@@ -308,4 +310,4 @@ sudo k3s kubectl rollout restart deploy/qbittorrent -n media                   #
 ### History
 An earlier version (Aug 2026) ran in a `vpn` namespace, was applied by an Ansible role, and used hostPath volumes and
 `:latest` images. It was dropped in the GitOps refactor. This version keeps what that one learned (`FIREWALL_*`, the
-host-header fix, revoked-key symptoms) and moves it into Argo: pinned images, a SOPS secret, NFS downloads, and a native sidecar.
+host-header fix, revoked-key symptoms) and moves it into Argo: pinned images, an OpenBao secret, NFS downloads, and a native sidecar.

@@ -120,17 +120,18 @@ Backups are the biggest open item (see §9).
 ## 6. Secrets
 
 ```
-you (age private key on the Arch box)  ──sops -e──►  <app>-secret.enc.yaml  (values are ENC[...], safe in git)
-                                                              │
-                                   Argo repo-server + KSOPS + the same age key (Secret `sops-age`)
-                                                              ▼
-                                                   a real Kubernetes Secret → the pod
+you  ──bao kv put──►  OpenBao on the Proxmox LXC .91     (the value; never in git)
+                                   │
+git:  externalsecret.yaml  (the KEY NAMES only)  ──► External Secrets Operator reads both
+                                   │
+                                   ▼
+                        a real Kubernetes Secret → the pod
 ```
-A value is either `ENC[...]` in git or not in git. Today, while testing: one template is a placeholder
-(qbittorrent), and Suwayomi's login and the Bark
-device key (placeholders) are inline. The checks WARN until `STRICT_SECRETS=1` — the full list is the known-debt
-section of `platform/secrets.md`.
-→ `platform/secrets.md` (day-to-day), `platform/secrets-architecture.md` (deep dive)
+A secret value is never in git — only the key NAMES, so CI can check each `secretKeyRef` against them.
+Still inline while testing: Suwayomi's login and the Bark device-key placeholders; the full list is the
+known-debt section of `platform/openbao.md`. SOPS + age + KSOPS was retired in Nov 2026 (the old guides are
+in `archive/`).
+→ `platform/openbao.md`
 
 ## 7. Notifications
 
@@ -179,8 +180,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 - [`platform/argocd.md`](platform/argocd.md) — Argo CD: install, how it renders, the ApplicationSet, gotchas
 - [`platform/adding-an-app.md`](platform/adding-an-app.md) — **onboarding a new app, step by step**
 - [`platform/tls.md`](platform/tls.md) — cert-manager + Let's Encrypt (Cloudflare DNS-01)
-- [`platform/secrets.md`](platform/secrets.md) · [`platform/secrets-architecture.md`](platform/secrets-architecture.md)
-- [`platform/openbao.md`](platform/openbao.md) — **replacing SOPS, app by app (Grafana + Wealthfolio done)**: OpenBao on Proxmox + External Secrets Operator, every step explained
+- [`platform/openbao.md`](platform/openbao.md) — **the secrets doc**: OpenBao on Proxmox + External Secrets Operator, every step explained (it replaced SOPS/KSOPS entirely in Nov 2026)
 - [`platform/updates-and-notifications.md`](platform/updates-and-notifications.md) — Renovate, Argo → phone, Proxmox → phone
 - [`platform/ci.md`](platform/ci.md) — the GitHub Actions gate, the conventions check, the PR render-diff
 - [`platform/redis.md`](platform/redis.md) — the shared Valkey and per-app ACL users

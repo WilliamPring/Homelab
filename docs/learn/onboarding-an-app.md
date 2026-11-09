@@ -15,7 +15,7 @@ throwaway app. Every step says what to run, what you should see, and what just h
 
 **Tools on your laptop** (macOS shown; Arch has the same packages):
 ```bash
-brew install kubectl helm kubeconform yamllint pre-commit sops age
+brew install kubectl helm kubeconform yamllint pre-commit
 make hooks          # once per clone: cheap checks on commit, the full render on push
 ```
 `make validate` needs `kubectl`, `helm`, `kubeconform` and `ruby`; `make lint` needs `yamllint`.
@@ -413,18 +413,18 @@ What follows from that choice:
 ### 3.4 Secrets
 
 ```bash
-./scripts/secrets.sh new apps/myapp API_KEY DB_PASSWORD     # .enc.yaml + .sops.yaml + the generator, in one go
+bao kv put homelab/myapp API_KEY=… DB_PASSWORD=…            # then list both keys in externalsecret.yaml
 ./scripts/secrets.sh set myapp API_KEY=abc123 DB_PASSWORD=-  # '-' generates a strong value
 ./scripts/secrets.sh encrypt myapp                           # encrypts, then proves it decrypts
 make conventions                                             # D: every secretKeyRef points at a real key
 ```
 Encrypt before the first commit: git history is forever and this repo is public. Pods don't restart when a Secret
-changes — `sudo k3s kubectl rollout restart deploy/myapp -n apps`. → [`../platform/secrets.md`](../platform/secrets.md) §3 and §5.
+changes — `sudo k3s kubectl rollout restart deploy/myapp -n apps`. → [`../platform/openbao.md`](../platform/openbao.md).
 
 ### 3.5 A database or Redis
 
 One Postgres role + database per app on the LXC (`sh scripts/postgres-app-setup.sh <app>`, run there) and one Valkey ACL user
-per app ([`../platform/redis.md`](../platform/redis.md)). The passwords go in the app's SOPS secret. Create them
+per app ([`../platform/redis.md`](../platform/redis.md)). The passwords go in OpenBao. Create them
 **before** the first Sync, or the pod crash-loops on connect. The full walk-through is
 [`../archive/deploy-ghostfolio.md`](../archive/deploy-ghostfolio.md) (archived with the app).
 
@@ -458,7 +458,7 @@ do the Ingress, cert and DNS work?
 |---|---|---|
 | The app never shows up in Argo | not pushed; directory at the wrong depth | `git log origin/main -1`; `make conventions` (A); the refresh annotation above |
 | `ComparisonError`, "kustomize build failed" | the directory doesn't render | `make render APP=…`; after fixing, Argo → **Hard Refresh** |
-| `ComparisonError` mentioning `ksops`/`sops` | the secret file isn't encrypted, or was encrypted to another age key | `./scripts/secrets.sh status`; [`../platform/secrets.md`](../platform/secrets.md) troubleshooting |
+| ExternalSecret stuck `SecretSyncedError` | a key it lists is missing from OpenBao — ESO writes nothing unless every one exists | `bao kv get homelab/<app>`; [`../platform/openbao.md`](../platform/openbao.md) troubleshooting |
 | Sync fails: "provided port is already allocated" | NodePort collision | `make conventions` (B) |
 | Pod `Pending` | PVC not bound (`volumeName` typo), `nodeSelector` matches no node, not enough memory for `requests` | `sudo k3s kubectl describe pod …` → Events |
 | `ImagePullBackOff` | the tag doesn't exist | `describe pod`; look the tag up in the registry |
@@ -557,7 +557,7 @@ to make the probe send a Host the app allows (`httpHeaders`) — copied from the
 | **cert-manager · ClusterIssuer · Certificate · DNS-01** | issues TLS certs · how to reach Let's Encrypt (`letsencrypt`) · one cert request · proving domain ownership with a DNS TXT record |
 | **PV · PVC · StorageClass** | a piece of storage · a claim on one · a way to create them on demand (`local-path`); the NFS PVs are written by hand |
 | **RWO / RWX** | ReadWriteOnce — one node mounts it / ReadWriteMany — many nodes can |
-| **SOPS · age · KSOPS** | encrypts the values in a YAML file · the key type · the kustomize plugin that decrypts inside Argo |
+| **OpenBao · ESO** | the vault holding every secret value · the operator that copies them into Kubernetes Secrets |
 | **readiness / liveness / startup probe** | may it get traffic? / should it be restarted? / still booting — don't judge yet |
 | **requests / limits** | reserved for scheduling / the ceiling (memory over the limit = OOM-kill) |
 | **nodeSelector** | run only on nodes with this label (`immich-node=true` = the 32GB worker) |

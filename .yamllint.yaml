@@ -6,8 +6,6 @@ extends: default
 ignore: |
   docs/archive/
   .git/
-  # SOPS writes its own formatting (4-space indent, long ENC[] lines) — never hand-edited, never linted
-  **/*.enc.yaml
 
 rules:
   line-length:

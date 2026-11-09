@@ -59,7 +59,7 @@ kubernetes/       Apps as code — Argo CD watches this
   README.md         the tree + which apps live in which namespace
 
 docs/             Start at docs/index.md — apps/, platform/, runbooks/, learn/, architecture/
-scripts/          ci/ (validate, conventions, render-diff), secrets.sh (the SOPS helper), LXC setup scripts
+scripts/          ci/ (validate, conventions, render-diff), openbao-import.sh, LXC setup scripts
 ```
 
 ## How it works
@@ -106,8 +106,8 @@ Conventions for humans and AI tools: [`CLAUDE.md`](CLAUDE.md). Editor settings: 
 ## Design principles
 
 - **One owner per thing.** Infra lives in Ansible; apps live in GitOps. Nothing is deployed twice.
-- **Secrets live in git only as ciphertext.** SOPS + age encrypts the values; KSOPS decrypts them inside
-  Argo. The few bootstrap secrets (the age key, `immich-db`, the Cloudflare token) are created by hand.
+- **Secret values are not in git at all.** They live in OpenBao; External Secrets copies them into
+  real Secrets. The few bootstrap ones (`openbao-approle`, `immich-db`, the Cloudflare token) are made by hand.
 - **Stateful data stays out of the cluster.** NFS and the Postgres/Valkey LXCs survive a cluster rebuild.
 - **Manual sync by default.** Argo shows drift but waits for a click — no surprise upgrades.
 

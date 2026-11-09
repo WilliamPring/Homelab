@@ -74,7 +74,7 @@ Every Application is subscribed by default — no annotations to maintain.
 |---|---|---|---|
 | `on-out-of-sync` | sync status OutOfSync, once per git revision | 3 | **an update is waiting for your click** |
 | `on-deployed` | sync Succeeded + Healthy, once per synced revision | 3 | the Sync you clicked worked |
-| `on-sync-failed` | operation phase Error/Failed | 5 🚨 | bad manifest, KSOPS decrypt, missing secret, image pull |
+| `on-sync-failed` | operation phase Error/Failed | 5 🚨 | bad manifest, missing secret, bad chart values, image pull |
 | `on-health-degraded` | health Degraded | 5 ⚠️ | crash-loop / failing probes |
 
 Each notification's tap-target opens the app in Argo (`https://deploy.williampring.ca`, set as
@@ -132,9 +132,9 @@ make check          # lint + validate + conventions
 **Full details, including the conventions check and why `main` is not yet protected:
 [`ci.md`](ci.md).**
 
-**Secrets check is warn-only today** because the qbittorrent template is still
-plaintext. Once you fill + `sops -e -i` them (`docs/platform/secrets.md` §3), set
-`STRICT_SECRETS: "1"` in the workflow so a plaintext secret can never merge again.
+**There is no secrets check any more.** SOPS was retired in Nov 2026, so no ciphertext — and no
+plaintext template pretending to be ciphertext — lives in git at all. Secret values are in OpenBao
+(`docs/platform/openbao.md`); CI checks the key NAMES through `check-conventions.sh` (D).
 
 ---
 

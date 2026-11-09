@@ -1,10 +1,12 @@
-# OpenBao — where secrets live (replacing SOPS)
+# OpenBao — where secrets live
 
-> **Status (Nov 2026): converting app by app.** OpenBao runs on a Proxmox LXC (`192.168.68.91`).
-> External Secrets Operator is deployed and the cluster's connection to OpenBao is `Valid`.
-> **On OpenBao:** Grafana (`homelab/grafana`), Wealthfolio (`homelab/wealthfolio`), degoog (`homelab/degoog`), Immich (`homelab/immich`) and Karakeep (`homelab/karakeep`).
-> **Still on SOPS** (`secrets.md`): qBittorrent — converted one app per PR, taking that app's
-> files from branch `feat/openbao-remaining-apps`.
+> **Status (Nov 2026): done — this is the only secrets system.** OpenBao runs on a Proxmox LXC
+> (`192.168.68.91`). External Secrets Operator is deployed and the cluster's connection is `Valid`.
+> **On OpenBao:** Grafana (`homelab/grafana`), Wealthfolio, degoog, Immich, Karakeep, Homepage and
+> qBittorrent (each `homelab/<app>`).
+> **SOPS + age + KSOPS is retired.** qBittorrent was the last app; with it went the repo-server tool
+> overrides, `.sops.yaml`, `scripts/secrets.sh` and the CI secrets check. The old guides are in
+> `../archive/secrets-sops.md` and `../archive/secrets-architecture-sops.md`.
 > Komf, RomM and Ghostfolio were removed (Nov 2026).
 >
 > **New here? Read §11 "How it works, end to end" first**: diagrams plus one value followed from
@@ -394,7 +396,7 @@ Old `rev=` → in the Argo UI **Refresh** (or Hard Refresh) the app, then **Sync
 the message says why. Pods "Running" doesn't prove the new version is live — they may be from before.
 
 What happens to the old Secret: it has the same name, so ESO takes it over. If Argo still lists it as
-"requires pruning" (it carries Argo's tracking label from the KSOPS days), the pruned Secret is
+"requires pruning" (it may still carry Argo's tracking label from the KSOPS days), the pruned Secret is
 re-created by ESO within seconds. Running pods are unaffected either way; a pod that happened to restart
 in those seconds retries on its own.
 
@@ -405,24 +407,24 @@ bao kv get -field=admin-user homelab/grafana
 kubectl -n monitoring annotate externalsecret kube-prometheus-stack-secret force-sync=$(date +%s) --overwrite
 kubectl -n monitoring get secret kube-prometheus-stack-secret -o jsonpath='{.data.admin-user}' | base64 -d; echo
 ```
-Same value in both = OpenBao → ESO → Secret works. To roll the pilot back: revert the
-kube-prometheus-stack directory to its SOPS files and Sync (the SOPS secret was never deleted from git
-history).
+Same value in both = OpenBao → ESO → Secret works.
 
-### After the pilot: the remaining apps (branch `feat/migration-test-bao`)
-**One app at a time works** (that's how Wealthfolio was done): copy that app's `externalsecret.yaml`,
-`kustomization.yaml` and doc from the branch, delete its two SOPS files, create or import its OpenBao
-entry, push, Sync with Prune. Or all at once: that branch already has an `externalsecret.yaml` for every app, the SOPS files removed and the docs
-updated — bring it up to date with `main`, run `./scripts/openbao-import.sh` (all paths), and Sync each
-app with Prune. Two fixes from the pilot must go into it first: the cert as `openbao-ca.yaml` (the
-branch still has the gitignored `openbao-ca.crt`) and the import script's path filter.
+### The migration — DONE (Nov 2026)
+Every app was converted one PR at a time: Grafana first as the pilot, then Wealthfolio, degoog, Immich,
+Karakeep, Homepage and finally qBittorrent, which was also the end of SOPS. The recipe, if you ever add
+an app with a secret: create the OpenBao entry, add `externalsecret.yaml` listing the key names, list it
+in `kustomization.yaml`, push, Sync.
 
-### After every app is synced (the cleanup — a separate change)
-Then SOPS can go: the KSOPS repo-server patch (`bootstrap/argocd/repo-server-ksops-patch.yaml`, needs a
-`kubectl apply -k` of the bootstrap), the `sops-age` Secret in `argocd`, `.sops.yaml`,
-`scripts/secrets.sh`, `scripts/ci/check-sops.sh`, validate.sh's section 1, the pre-commit hook and the
-Makefile `secrets*` targets, and `secrets.md` / `secrets-architecture.md`. Also worth doing once: rotate
-Karakeep's two values (they were cleartext in git history) — just `bao kv patch` + restart.
+### The cleanup — DONE (Nov 2026)
+SOPS is gone: the KSOPS repo-server patch, `.sops.yaml`, `scripts/secrets.sh`, `scripts/ci/check-sops.sh`,
+validate.sh's secrets section, the pre-commit hook and the Makefile `secrets*` targets. The two old guides
+moved to `../archive/`. Removing the repo-server patch also dropped the kustomize + Helm 3 overrides that
+came with KSOPS, so the repo-server runs the pair shipped in the Argo image (`argocd.md`).
+
+**Two leftovers to clear by hand, whenever:**
+- the `sops-age` Secret in namespace `argocd` — nothing mounts it any more:
+  `sudo k3s kubectl -n argocd delete secret sops-age`
+- rotate Karakeep's two values, which were cleartext in git history — `bao kv patch` + restart the pod.
 
 ---
 

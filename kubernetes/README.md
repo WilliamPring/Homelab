@@ -3,7 +3,7 @@
 ```
 kubernetes/
 ├── bootstrap/
-│   ├── argocd/            Argo CD itself: pinned upstream install + patches (KSOPS/tool overrides, build flags,
+│   ├── argocd/            Argo CD itself: pinned upstream install + patches (build flags, RBAC,
 │   │                      notifications, the LAN NodePort).  Applied by hand:  sudo k3s kubectl apply -k kubernetes/bootstrap/argocd/ -n argocd
 │   └── apps.yaml          the ApplicationSet: every kubernetes/apps/<namespace>/<app>/ → one Application (applied once)
 ├── apps/

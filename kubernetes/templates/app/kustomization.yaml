@@ -9,4 +9,4 @@ resources:
 
 # Has a secret? add:
 # generators:
-#   - example-secret.sops.yaml     # see docs/platform/secrets.md §5
+#   - externalsecret.yaml          # from OpenBao — see docs/platform/openbao.md

@@ -11,9 +11,6 @@ lint:            ## yamllint every YAML file
 validate:        ## render + schema-check every app (what CI runs)
 	./scripts/ci/validate.sh
 
-validate-strict: ## same, but a plaintext *.enc.yaml fails
-	STRICT_SECRETS=1 ./scripts/ci/validate.sh
-
 conventions:     ## check THIS repo's rules (appset depth, nodeports, secretrefs, pinning)
 	./scripts/ci/check-conventions.sh
 
@@ -34,13 +31,9 @@ diag:            ## run the read-only Argo diagnostic on the master and fetch it
 	scp -q $(HOST):/tmp/argocd-diag.txt debug/argocd-diag.txt
 	@echo "→ debug/argocd-diag.txt  (now: git add debug/argocd-diag.txt && git commit -m 'debug: argocd diag' && git push)"
 
-secrets:         ## every secret: encrypted?, which keys, how it is wired (no age key needed)
-	./scripts/secrets.sh status
+# No secrets targets since SOPS was retired (Nov 2026): secret VALUES live in OpenBao and never
+# in git, so there is nothing here to encrypt, list or verify. Read or change one with the `bao`
+# CLI (docs/platform/openbao.md). `make conventions` still checks that every secretKeyRef in a
+# Deployment matches a key some ExternalSecret declares — key NAMES are in git on purpose.
 
-secrets-help:    ## all the SOPS commands: new / set / encrypt / view / get / rotate
-	./scripts/secrets.sh help
-
-secrets-check:   ## list *.enc.yaml files that are NOT encrypted
-	@for f in $$(find kubernetes -name '*.enc.yaml' 2>/dev/null); do grep -q '^sops:' $$f && echo "ok   $$f" || echo "PLAIN $$f"; done
-
-.PHONY: help lint validate validate-strict conventions check render hooks diag secrets secrets-help secrets-check
+.PHONY: help lint validate conventions check render hooks diag

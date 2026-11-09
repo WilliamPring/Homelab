@@ -133,7 +133,7 @@ overkill for your scale.
    Argo watches. *This is the big lesson.* Ansible installs Argo; Argo does the rest.
 3. ✅ **Real secrets** — **SOPS+age** or **Sealed Secrets**, so encrypted secrets live in the
    GitOps repo (works with Argo). Replaces plaintext/ansible-vault for app secrets.
-   (SOPS + KSOPS; the testing-stance exceptions are listed in `platform/secrets.md`.)
+   (OpenBao + External Secrets since Nov 2026; the remaining inline values are listed in `platform/openbao.md`.)
 4. ◐ **Ingress + TLS + DNS** — finish **cert-manager**, add **ExternalDNS** (auto Cloudflare
    records). Move apps off NodePort onto real hostnames. (cert-manager ✅; ExternalDNS not yet.)
 5. ✅ **Observability** — **kube-prometheus-stack** (Prometheus + Grafana + Alertmanager) +

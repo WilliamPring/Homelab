@@ -1,8 +1,14 @@
-# Secrets — the working guide
+# Secrets — the working guide (ARCHIVED)
+
+> **Retired in Nov 2026.** SOPS + age + KSOPS no longer exists in this repo: qBittorrent was the last
+> app, and with it went the Argo repo-server patch, `.sops.yaml`, `scripts/secrets.sh` and the CI
+> secrets check. **The current secrets doc is [`../platform/openbao.md`](../platform/openbao.md).**
+> Kept for history, and because the `sops-age` Secret and the age key itself still exist outside git.
+> Nothing below is a working instruction any more.
 
 > **Being replaced (Nov 2026).** SOPS is on its way out in favour of OpenBao (on a Proxmox LXC) +
 > External Secrets Operator, so secret values stop living in git at all. Why, and the setup:
-> [`openbao.md`](openbao.md). **Already on OpenBao:** Grafana (`kube-prometheus-stack-secret`), Wealthfolio (`wealthfolio-secret`), degoog (`degoog-secret`), Immich (`immich-secret`) and Karakeep (`karakeep-secret`);
+> [`openbao.md`](../platform/openbao.md). **Already on OpenBao:** Grafana (`kube-prometheus-stack-secret`), Wealthfolio (`wealthfolio-secret`), degoog (`degoog-secret`), Immich (`immich-secret`) and Karakeep (`karakeep-secret`);
 > for every other app, everything below still applies.
 
 How secrets are stored, decrypted, reused and added in this repo. This is the day-to-day

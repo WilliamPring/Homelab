@@ -28,13 +28,14 @@ Everything also runs locally — **`make check`** is the whole gate in one comma
 ### 1. `manifests` → `scripts/ci/validate.sh`
 | # | Check | Catches |
 |---|---|---|
-| 1 | every `*.enc.yaml` is SOPS-encrypted, no `REPLACE_ME` — **WARN-only** (`STRICT_SECRETS: "0"`) | a plaintext secret template reaching `main` |
-| 2 | every directory with a `kustomization.yaml` renders (KSOPS generator stripped) | bad patch targets, typos, the Argo "manifest generation error" class |
-| 3 | plain manifest directories are valid YAML | broken indentation |
-| 4 | chart-source `Application` files render via `helm template` | chart values-schema errors |
-| 5 | kubeconform over everything rendered, with the CRD catalog | field names that render fine but the API server rejects |
+| 1 | every directory with a `kustomization.yaml` renders | bad patch targets, typos, the Argo "manifest generation error" class |
+| 2 | plain manifest directories are valid YAML | broken indentation |
+| 3 | chart-source `Application` files render via `helm template` | chart values-schema errors |
+| 4 | kubeconform over everything rendered, with the CRD catalog | field names that render fine but the API server rejects |
 
-It cannot decrypt anything (no age key in CI), or prove a secret's *value* is right.
+Since SOPS was retired (Nov 2026) there is no ciphertext in git and no secrets check here: what CI renders is
+byte-for-byte what Argo's repo-server renders. It still cannot prove a secret's *value* is right — that lives
+in OpenBao. `check-conventions.sh` (D) does verify every `secretKeyRef` against the key names in git.
 
 > **⚠️ Check 4 was dead for a while.** It globbed `kubernetes/bootstrap/apps/*.yaml`, a directory
 > of hand-written Application files that the `kubernetes/apps/<ns>/<app>` + ApplicationSet

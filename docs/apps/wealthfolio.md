@@ -89,7 +89,7 @@ logs you out and makes those stored secrets unreadable.
 
 ### 3. Push, Sync, log in
 Push → Argo shows `wealthfolio` OutOfSync → read the diff → **Sync** with **Prune** ticked (the old
-KSOPS-made Secret, if any, is replaced by the ExternalSecret's). Check:
+Secret of the same name, if any, is taken over by the ExternalSecret). Check:
 ```bash
 sudo k3s kubectl -n apps get externalsecret wealthfolio-secret   # SecretSynced, READY True
 ```

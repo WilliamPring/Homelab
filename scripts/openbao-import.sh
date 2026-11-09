@@ -8,7 +8,7 @@
 #   ./scripts/openbao-import.sh grafana      # only these OpenBao paths (any of the flags above work too)
 #
 # Why copy from the cluster and not from the *.enc.yaml files: the running Secrets are what the apps
-# actually use today (KSOPS already decrypted them), so this needs no age key, works from any machine
+# actually use today, so this needs no local key material and works from any machine
 # with kubectl, and can't import a stale or placeholder file by mistake. Docs: docs/platform/openbao.md §7
 #
 # Values are NEVER printed or put on a command line (where `ps` could see them): they go

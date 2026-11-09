@@ -7,6 +7,4 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-
-generators:
-  - qbittorrent-secret.sops.yaml   # KSOPS → qbittorrent-secret (Mullvad WireGuard key + address)
+  - externalsecret.yaml   # qbittorrent-secret ← OpenBao homelab/qbittorrent (Mullvad key + address)

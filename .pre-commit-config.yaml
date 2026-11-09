@@ -15,13 +15,12 @@ repos:
         args: [--markdown-linebreak-ext=md]
       - id: check-yaml
         args: [--allow-multiple-documents]
-        exclude: ^(kubernetes|gitops)/.*/(kustomization|.*\.sops)\.yaml$|^docs/archive/
+        exclude: ^(kubernetes|gitops)/.*/kustomization\.yaml$|^docs/archive/
       - id: check-added-large-files
         args: [--maxkb=512]
       - id: check-merge-conflict
       # Catches PEM-headed keys (SSH/RSA/EC). ⚠️ It does NOT catch an age private key —
-      # AGE-SECRET-KEY-1... has no PEM header — which is the key this repo actually depends on.
-      # The local `age-private-key` hook below closes that gap.
+      # AGE-SECRET-KEY-1... has no PEM header. The local `age-private-key` hook below covers that.
       - id: detect-private-key
 
   - repo: https://github.com/adrienverge/yamllint
@@ -32,9 +31,11 @@ repos:
 
   - repo: local
     hooks:
-      # The SOPS age private key decrypts every secret in this repo. detect-private-key cannot
-      # see it (no PEM header), and the repo is public — so block the literal prefix outright.
-      # A real key is AGE-SECRET-KEY-1 + 58 chars; the docs' "AGE-SECRET-KEY-1..." is left alone.
+      # KEPT after SOPS was retired (Nov 2026). It no longer decrypts anything here, but the old
+      # age key still exists on the Arch box and this repo is public — a secret-detection hook is
+      # not worth deleting for tidiness. detect-private-key cannot see it (no PEM header), so
+      # block the literal prefix. A real key is AGE-SECRET-KEY-1 + 58 chars; the docs' truncated
+      # "AGE-SECRET-KEY-1..." is left alone.
       - id: age-private-key
         name: "no age private key in a commit"
         entry: '(?i)AGE-SECRET-KEY-1[A-Z0-9]{10,}'
@@ -46,11 +47,6 @@ repos:
         language: script
         pass_filenames: false
         stages: [pre-push]
-      - id: sops-encrypted
-        name: "*.enc.yaml should be SOPS-encrypted (warns until STRICT_SECRETS=1)"
-        entry: scripts/ci/check-sops.sh
-        language: script
-        files: \.enc\.yaml$
       - id: validate
         name: "render everything (scripts/ci/validate.sh)"
         entry: scripts/ci/validate.sh
