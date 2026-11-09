@@ -68,6 +68,7 @@ this tells you *which layer* broke before you open a terminal.
 | Komf, RomM and Ghostfolio tiles | gone (apps removed); Wealthfolio is "Portfolio" |
 | Proxmox only as bookmarks | Proxmox hosts are tiles under **Infrastructure** next to Pulse and OpenBao |
 | info bar: cluster, search, weather | + date/time; weather cached 15 min |
+| info bar: cluster first | **Nov 2026:** the two Proxmox hosts lead (Glances: CPU / RAM / disk / temp), then the cluster, then tickers (Finnhub), then search, clock, weather |
 
 Why these choices (from the Homepage docs and the configs people share on r/selfhosted / GitHub):
 
@@ -113,6 +114,7 @@ filled in, its widget shows an API error and the other tiles work.
 | `HOMEPAGE_VAR_SUWAYOMI_USERNAME` / `_PASSWORD` | Suwayomi: download/read counts | the basic-auth login set in `suwayomi/deployment.yaml` |
 | `HOMEPAGE_VAR_KARAKEEP_KEY` | Karakeep: bookmarks / favorites / highlights / tags | Karakeep → User Settings → API Keys |
 | `HOMEPAGE_VAR_ARGOCD_KEY` | Argo CD: apps / **out of sync** / healthy / degraded | token of the read-only `homepage` account, see below |
+| `HOMEPAGE_VAR_FINNHUB_KEY` | the **stocks** info bar widget (ticker + daily %) | a free key at [finnhub.io](https://finnhub.io). Not a tile — it is read through `settings.yaml` → `providers.finnhub` |
 
 No credential needed: **Gatus** (up / down / uptime of the *edge* checks) and **Grafana**'s
 Prometheus targets widget.
@@ -158,6 +160,47 @@ bao kv patch homelab/homepage HOMEPAGE_VAR_ARGOCD_KEY=<token>
 
 ---
 
+## Glances on the Proxmox hosts
+
+The two leftmost info-bar widgets (`pve-a` 192.168.68.96, `pve-b` 192.168.68.89) read **Glances**,
+which runs **on the Proxmox hosts themselves** — not in k3s, so Argo does not manage it. Without it
+they render an error box and everything else on the bar still works.
+
+Why Glances and not the Proxmox API: this is the host's own CPU / RAM / disk / **temperature**, the
+numbers a hypervisor hides. Per-VM and per-LXC detail is Pulse's job, and it already has a tile.
+
+On **each** host, as root:
+```bash
+apt update && apt install -y glances
+glances -V                      # 3.x on PVE 8 (bookworm), 4.x on PVE 9 — must match `version:` in widgets.yaml
+```
+Then a unit so it survives a reboot — `/etc/systemd/system/glances.service`:
+```ini
+[Unit]
+Description=Glances REST API
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/glances -w --disable-webui --bind 192.168.68.96
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+Set `--bind` to **that host's own** address: `.96` on pve-a, `.89` on pve-b. (systemd takes no inline
+`#` comments in `ExecStart` — anything after it is passed as an argument.)
+```bash
+systemctl enable --now glances
+curl -s http://localhost:61208/api/4/cpu | head -c 200     # /api/3/ on Glances 3.x
+```
+
+⚠️ **The API has no authentication by default.** `--bind` to the LAN address above (never
+`0.0.0.0` while the host has a public path), or add `--password` and set `username` / `password` on
+both widgets. It is read-only either way, but it does describe your hardware.
+
+Worth adding to Gatus's `infra` group alongside the two Proxmox checks, so a dead Glances pages you
+instead of silently emptying the bar.
+
 ## What's in the ConfigMap
 
 One ConfigMap, five keys, each mounted as its own file via `subPath` (so Homepage can still
@@ -167,7 +210,7 @@ create `/app/config/logs`):
 |---|---|
 | `settings.yaml` | title, theme + background, tabs/layout, `statusStyle`, quicklaunch |
 | `services.yaml` | the tiles |
-| `widgets.yaml` | the info bar: cluster stats, weather, clock, search |
+| `widgets.yaml` | the info bar: Proxmox hosts (Glances), cluster stats, stocks, search, clock, weather |
 | `bookmarks.yaml` | repo, Argo/Gatus LAN links, and the **LAN fallback** list |
 | `kubernetes.yaml` | how to talk to the cluster API |
 
