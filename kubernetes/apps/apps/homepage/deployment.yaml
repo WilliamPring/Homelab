@@ -69,10 +69,6 @@ spec:
             - name: HOMEPAGE_VAR_ARGOCD_KEY
               valueFrom:
                 secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_ARGOCD_KEY, optional: true }
-            # Not a tile's credential: the stocks info widget, via settings.yaml → providers.finnhub
-            - name: HOMEPAGE_VAR_FINNHUB_KEY
-              valueFrom:
-                secretKeyRef: { name: homepage-secret, key: HOMEPAGE_VAR_FINNHUB_KEY, optional: true }
 
           # Exactly what the image's own HEALTHCHECK does: GET /api/healthcheck as 127.0.0.1:3000.
           # The Host header is the point — a probe otherwise arrives as <pod-ip>:3000, which the

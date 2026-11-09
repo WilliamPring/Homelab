@@ -68,7 +68,7 @@ this tells you *which layer* broke before you open a terminal.
 | Komf, RomM and Ghostfolio tiles | gone (apps removed); Wealthfolio is "Portfolio" |
 | Proxmox only as bookmarks | Proxmox hosts are tiles under **Infrastructure** next to Pulse and OpenBao |
 | info bar: cluster, search, weather | + date/time; weather cached 15 min |
-| info bar: cluster first | **Nov 2026:** the two Proxmox hosts lead (Glances: CPU / RAM / disk / temp), then the cluster, then tickers (Finnhub), then search, clock, weather |
+| info bar: cluster, search, weather in one line | **Nov 2026:** the cluster leads, so `cluster · k3s-master-01 · k3s-worker-01` fill the first line and the small widgets — search, clock, weather — wrap underneath. The two Proxmox host bars (Glances) come last. Rows are wrapping, not a setting: Homepage has no header line break, so order is the only lever and a wide enough monitor pulls row 2 up beside the nodes |
 
 Why these choices (from the Homepage docs and the configs people share on r/selfhosted / GitHub):
 
@@ -114,7 +114,6 @@ filled in, its widget shows an API error and the other tiles work.
 | `HOMEPAGE_VAR_SUWAYOMI_USERNAME` / `_PASSWORD` | Suwayomi: download/read counts | the basic-auth login set in `suwayomi/deployment.yaml` |
 | `HOMEPAGE_VAR_KARAKEEP_KEY` | Karakeep: bookmarks / favorites / highlights / tags | Karakeep → User Settings → API Keys |
 | `HOMEPAGE_VAR_ARGOCD_KEY` | Argo CD: apps / **out of sync** / healthy / degraded | token of the read-only `homepage` account, see below |
-| `HOMEPAGE_VAR_FINNHUB_KEY` | the **stocks** info bar widget (ticker + daily %) | a free key at [finnhub.io](https://finnhub.io). Not a tile — it is read through `settings.yaml` → `providers.finnhub` |
 
 No credential needed: **Gatus** (up / down / uptime of the *edge* checks) and **Grafana**'s
 Prometheus targets widget.
@@ -210,7 +209,7 @@ create `/app/config/logs`):
 |---|---|
 | `settings.yaml` | title, theme + background, tabs/layout, `statusStyle`, quicklaunch |
 | `services.yaml` | the tiles |
-| `widgets.yaml` | the info bar: Proxmox hosts (Glances), cluster stats, stocks, search, clock, weather |
+| `widgets.yaml` | the info bar, in display order: cluster + nodes, search, clock, weather, then the Proxmox hosts (Glances) |
 | `bookmarks.yaml` | repo, Argo/Gatus LAN links, and the **LAN fallback** list |
 | `kubernetes.yaml` | how to talk to the cluster API |
 
