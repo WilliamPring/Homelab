@@ -64,13 +64,6 @@ data:
       hideVisitURL: false
       mobileButtonPosition: bottom-right
 
-    # Shared API keys, referenced by widgets as `provider: <name>` instead of an inline key.
-    # Substituted from the env var of the same name (deployment.yaml ← homepage-secret ←
-    # OpenBao homelab/homepage), exactly like the "{{HOMEPAGE_VAR_X}}" keys in services.yaml:
-    # the value itself is never in git. Free key: https://finnhub.io (US symbols only).
-    providers:
-      finnhub: "{{HOMEPAGE_VAR_FINNHUB_KEY}}"
-
     # Order here = order on the page, and the order of the tabs.
     # `style: column` groups sit side by side; `style: row` spans the width with N tiles across.
     layout:
@@ -346,37 +339,17 @@ data:
     gateway: false
 
   widgets.yaml: |
-    # The info bar — shown above every tab. Order here = order left to right (it wraps).
-    # Reading order: the two Proxmox HOSTS → the cluster on top of them → tickers → search,
-    # clock, weather.
+    # The info bar — shown above every tab. Order here = order left to right, and the rows
+    # are WRAPPING, not a setting: the browser fills one line, then starts the next. Homepage
+    # has no explicit line break for the header, so "first row / second row" is really
+    # "widest thing first". Hence the cluster leads — cluster · k3s-master-01 · k3s-worker-01
+    # fill line one — and the small widgets (search, clock, weather) flow underneath.
+    # On a very wide monitor part of row 2 may pull up beside the nodes; narrowing the window
+    # shows the intended split. The Proxmox host bars sit at the end — see the note there.
     #
-    # ⚠️ The two glances widgets need Glances running ON EACH PROXMOX HOST — it is a host
-    #    service, so Ansible or a documented manual step, never Argo (docs/apps/homepage.md
-    #    → "Glances on the Proxmox hosts"). Until it is up, both render an error box.
-    - glances:
-        url: http://192.168.68.96:61208
-        version: 4                 # `glances -V` on the host: PVE 8 (bookworm) apt ships 3.x → 3
-        label: pve-a
-        cpu: true
-        mem: true
-        disk: /
-        cputemp: true              # extra API call per refresh; it is what the TEMP bar reads
-        unit: metric
-
-    - glances:
-        url: http://192.168.68.89:61208
-        version: 4
-        label: pve-b
-        cpu: true
-        mem: true
-        disk: /
-        cputemp: true
-        unit: metric
-
     # Real cluster numbers via metrics-server (not the old `resources` widget, which read
     # whichever node the pod happened to land on). The worker runs hot (~85% RAM), so the
-    # per-node bars are the first thing to glance at. Kept on purpose: the hosts above show
-    # Proxmox's view, which stays calm while a k3s node is the thing filling up.
+    # per-node bars are the first thing to glance at — which is why they lead.
     - kubernetes:
         cluster:
           show: true
@@ -389,19 +362,6 @@ data:
           cpu: true
           memory: true
           showLabel: true
-
-    # Ticker + daily % change, from Finnhub (key: settings.yaml → providers.finnhub).
-    # ⚠️ The free tier is US symbols only — Canadian .TO tickers (XEQT.TO, VFV.TO) return
-    #    nothing. These are the US-listed equivalents; edit the list to taste. Max 8.
-    #    This is a market-wide glance, NOT your portfolio: Homepage has no Wealthfolio widget.
-    - stocks:
-        provider: finnhub
-        color: true
-        cache: 5                   # minutes — the free tier is rate-limited per minute
-        watchlist:
-          - VTI
-          - VXUS
-          - VT
 
     - search:
         provider: custom
@@ -427,6 +387,34 @@ data:
         timezone: America/Toronto
         units: metric
         cache: 15                  # minutes — no need to hit the API on every page view
+
+    # ── Proxmox hosts, last ──────────────────────────────────────────────────────────────
+    # The hypervisors underneath the cluster: CPU / RAM / disk / temperature, the numbers the
+    # k3s widget above cannot see (a host can be thermally throttling while every pod is fine).
+    #
+    # ⚠️ These need Glances running ON EACH PROXMOX HOST — a host service, so Ansible or a
+    #    documented manual step, never Argo (docs/apps/homepage.md → "Glances on the Proxmox
+    #    hosts"). Until it is up BOTH RENDER AN ERROR BOX at the end of the bar. Delete the
+    #    two blocks below if you would rather not look at that while it is pending.
+    - glances:
+        url: http://192.168.68.96:61208
+        version: 4                 # `glances -V` on the host: PVE 8 (bookworm) apt ships 3.x → 3
+        label: pve-a
+        cpu: true
+        mem: true
+        disk: /
+        cputemp: true              # extra API call per refresh; it is what the TEMP bar reads
+        unit: metric
+
+    - glances:
+        url: http://192.168.68.89:61208
+        version: 4
+        label: pve-b
+        cpu: true
+        mem: true
+        disk: /
+        cputemp: true
+        unit: metric
 
   bookmarks.yaml: |
     - Homelab:
