@@ -516,3 +516,34 @@ data:
             - abbr: "BRK"
               href: http://192.168.68.63:30889
               description: 192.168.68.63:30889
+
+  # Homepage loads /app/config/custom.css if it exists — the supported way to change anything
+  # the YAML cannot express.
+  #
+  # WHY THIS EXISTS: the info bar is one flex row and Homepage has NO line-break setting, so
+  # "which widgets share a row" is decided purely by how wide they are. Ordering the cluster
+  # first (widgets.yaml) is not enough — on a wide monitor the whole bar fits on one line and
+  # the nodes sit next to the clock. This forces the break.
+  #
+  # ⚠️ It targets Homepage's own class names (`information-widget-<type>`, from its React
+  # components), which are not a public API. A major Homepage release could rename them; the
+  # failure is cosmetic — the bar goes back to one line — so if the layout ever looks wrong
+  # after an upgrade, look here first.
+  custom.css: |
+    /* The header is ONE flex row, `#widgets-wrap`, holding every info widget — including
+       `#information-widgets-right` (search, clock, weather), which `justify-between` pushes to
+       the far end. That is why the clock looks separate while sharing the cluster's line, and
+       why reordering widgets.yaml alone changes nothing: the row simply fits on a wide screen.
+       Both containers already wrap; these rules only decide where the line breaks. */
+    #information-widgets,
+    #widgets-wrap {
+      flex-wrap: wrap !important;
+    }
+
+    /* Give the cluster widget a whole line, so the Proxmox host bars and the right-hand group
+       (search, clock, weather) are all pushed onto the next one.
+       !important is needed: Homepage is Tailwind and the element already carries
+       `sm:basis-auto`, which is a single class — the same specificity as this selector. */
+    .information-widget-kubernetes {
+      flex-basis: 100% !important;
+    }
