@@ -106,10 +106,16 @@ spec:
               mountPath: /app/config/kubernetes.yaml
               subPath: kubernetes.yaml
 
-            # Forces the info bar onto two rows (the cluster takes line one). See configmap.yaml.
+            # Forces the info bar onto two rows (search, clock, weather take line two). See configmap.yaml.
             - name: config
               mountPath: /app/config/custom.css
               subPath: custom.css
+
+            # The NFS share, read-only, ONLY so the `resources` widget can show its used / free
+            # space (statfs). Homepage never reads the files. See widgets.yaml → "NFS".
+            - name: nfs-data
+              mountPath: /mnt/nfs
+              readOnly: true
 
           resources:
             requests:
@@ -123,3 +129,11 @@ spec:
         - name: config
           configMap:
             name: homepage-config
+
+        # Inline NFS volume, not a PV/PVC: it holds no Homepage data and nothing is written,
+        # it is only measured. readOnly here AND on the mount above.
+        - name: nfs-data
+          nfs:
+            server: "192.168.68.50"
+            path: /data
+            readOnly: true

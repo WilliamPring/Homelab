@@ -68,7 +68,7 @@ this tells you *which layer* broke before you open a terminal.
 | Komf, RomM and Ghostfolio tiles | gone (apps removed); Wealthfolio is "Portfolio" |
 | Proxmox only as bookmarks | Proxmox hosts are tiles under **Infrastructure** next to Pulse and OpenBao |
 | info bar: cluster, search, weather | + date/time; weather cached 15 min |
-| info bar: cluster, search, weather in one line | **Nov 2026:** two rows. `cluster · k3s-master-01 · k3s-worker-01` own the first; search, clock, weather and the two Proxmox host bars (Glances) wrap underneath. Order comes from `widgets.yaml`, but the break itself needs `custom.css` — Homepage has no line-break setting, so on a wide monitor order alone leaves everything on one line |
+| info bar: cluster, search, weather in one line | **Nov 2026:** two rows. Row one: a logo, a "William's homelab" greeting, an **NFS** disk widget (used / total of `192.168.68.50:/data`, read through a read-only `nfs-data` mount in the pod; disk only, since CPU/RAM there would be the k3s node's) and `cluster · k3s-master-01 · k3s-worker-01`, which stretches to fill the line. Row two: search, clock, weather. Homepage always groups search / clock / weather on the right and every other widget on the left in yaml order; `custom.css` gives that right group `flex-basis: 100%` so it takes the second line. The two Proxmox host bars (Glances) are commented out until Glances runs on the hosts, since each showed an API error box. `fullWidth: true` uses the whole screen instead of a centred fixed-width column |
 
 Why these choices (from the Homepage docs and the configs people share on r/selfhosted / GitHub):
 
@@ -161,7 +161,7 @@ bao kv patch homelab/homepage HOMEPAGE_VAR_ARGOCD_KEY=<token>
 
 ## Glances on the Proxmox hosts
 
-The two leftmost info-bar widgets (`pve-a` 192.168.68.96, `pve-b` 192.168.68.89) read **Glances**,
+The two Proxmox info-bar widgets (`pve-a` 192.168.68.96, `pve-b` 192.168.68.89; **commented out at the end of `widgets.yaml` until this is done**) read **Glances**,
 which runs **on the Proxmox hosts themselves** — not in k3s, so Argo does not manage it. Without it
 they render an error box and everything else on the bar still works.
 
@@ -231,10 +231,13 @@ Worth knowing when reading the DOM: search, the clock and the weather sit in a n
 `#information-widgets-right`, which `justify-between` pushes to the far end of that same row. They look
 like a separate group but share the cluster's line.
 
-`custom.css` (loaded automatically from `/app/config/custom.css`) gives `.information-widget-kubernetes`
-`flex-basis: 100% !important`, so the cluster takes line one and everything after it — the Proxmox host
-bars and the right-hand group — wraps underneath. The `!important` is not decoration: the element already
-carries Tailwind's `sm:basis-auto`, a single class, so the two rules have equal specificity.
+`custom.css` (loaded automatically from `/app/config/custom.css`) gives `#information-widgets-right`
+`flex-basis: 100% !important`, so search, clock and weather take line two together, and every left widget
+(logo, greeting, NFS, cluster) shares line one. `.information-widget-kubernetes` gets `flex-grow: 1` so the
+node bars stretch into what is left of line one instead of leaving a gap. The `!important` is not
+decoration: those elements already carry Tailwind's `sm:basis-auto` / `grow-0`, single classes, so the
+rules would otherwise have equal specificity. (#64 first did it the other way round, giving the cluster
+the whole line, which left most of line one empty.)
 
 This is the normal way to do it — custom CSS has been supported since v0.6.30, there is no native
 alternative, and it is what the community uses for layout changes. The cost is that it targets Homepage's
