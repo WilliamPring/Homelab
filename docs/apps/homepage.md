@@ -68,7 +68,7 @@ this tells you *which layer* broke before you open a terminal.
 | Komf, RomM and Ghostfolio tiles | gone (apps removed); Wealthfolio is "Portfolio" |
 | Proxmox only as bookmarks | Proxmox hosts are tiles under **Infrastructure** next to Pulse and OpenBao |
 | info bar: cluster, search, weather | + date/time; weather cached 15 min |
-| info bar: cluster, search, weather in one line | **Nov 2026:** the cluster leads, so `cluster · k3s-master-01 · k3s-worker-01` fill the first line and the small widgets — search, clock, weather — wrap underneath. The two Proxmox host bars (Glances) come last. Rows are wrapping, not a setting: Homepage has no header line break, so order is the only lever and a wide enough monitor pulls row 2 up beside the nodes |
+| info bar: cluster, search, weather in one line | **Nov 2026:** two rows. `cluster · k3s-master-01 · k3s-worker-01` own the first; search, clock, weather and the two Proxmox host bars (Glances) wrap underneath. Order comes from `widgets.yaml`, but the break itself needs `custom.css` — Homepage has no line-break setting, so on a wide monitor order alone leaves everything on one line |
 
 Why these choices (from the Homepage docs and the configs people share on r/selfhosted / GitHub):
 
@@ -202,7 +202,7 @@ instead of silently emptying the bar.
 
 ## What's in the ConfigMap
 
-One ConfigMap, five keys, each mounted as its own file via `subPath` (so Homepage can still
+One ConfigMap, six keys, each mounted as its own file via `subPath` (so Homepage can still
 create `/app/config/logs`):
 
 | key | what it is |
@@ -212,6 +212,34 @@ create `/app/config/logs`):
 | `widgets.yaml` | the info bar, in display order: cluster + nodes, search, clock, weather, then the Proxmox hosts (Glances) |
 | `bookmarks.yaml` | repo, Argo/Gatus LAN links, and the **LAN fallback** list |
 | `kubernetes.yaml` | how to talk to the cluster API |
+| `custom.css` | the only thing that forces the info bar onto two rows — see below |
+
+> ⚠️ **`subPath` mounts do NOT update when the ConfigMap changes.** The file in the running pod is a
+> copy made at start. So any edit here needs a Sync **and** a restart, or you will swear the change
+> did not apply:
+> ```bash
+> sudo k3s kubectl -n apps rollout restart deploy/homepage
+> ```
+
+### Why there is a custom.css
+
+Homepage has **no line-break setting** for the header. Ordering in `widgets.yaml` is the only documented
+control, and it is not enough: every info widget lives in one flex row, `#widgets-wrap`, so on a wide
+monitor the whole bar fits on a single line no matter what order it is in.
+
+Worth knowing when reading the DOM: search, the clock and the weather sit in a nested
+`#information-widgets-right`, which `justify-between` pushes to the far end of that same row. They look
+like a separate group but share the cluster's line.
+
+`custom.css` (loaded automatically from `/app/config/custom.css`) gives `.information-widget-kubernetes`
+`flex-basis: 100% !important`, so the cluster takes line one and everything after it — the Proxmox host
+bars and the right-hand group — wraps underneath. The `!important` is not decoration: the element already
+carries Tailwind's `sm:basis-auto`, a single class, so the two rules have equal specificity.
+
+This is the normal way to do it — custom CSS has been supported since v0.6.30, there is no native
+alternative, and it is what the community uses for layout changes. The cost is that it targets Homepage's
+own class names, which are not a public API: a major upgrade could rename them. The failure is cosmetic —
+the bar collapses back to one line — so check here first if the layout looks wrong after a version bump.
 
 ### The LAN fallback bookmarks
 
