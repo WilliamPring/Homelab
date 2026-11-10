@@ -46,13 +46,14 @@ this tells you *which layer* broke before you open a terminal.
 ## The layout (redesigned Nov 2026)
 
 ```
-┌ info bar (every tab) ─ cluster + node CPU/RAM │ Toronto weather │ clock │ search (degoog) ┐
+┌ info bar (every tab) ─ logo · title · NFS disk · cluster + node CPU/RAM / search · clock · weather ┐
 ├ [ Home ] [ Ops ] ───────────────────────────────────────────────────────────────────────┤
 │ Home:  Media        Reading         Everyday       Money                                │
 │        Immich ▦     Library ▦       Bookmarks ▦    Budget                               │
 │        Downloads ▦  Books ▦         degoog         Portfolio                            │
 │                     Manga sources ▦ SearXNG                                             │
-│ Ops:   Cluster:        Argo CD ▦ │ Grafana ▦ │ Status ▦ │ Bark                          │
+│ Ops:   Nodes:          k3s-master-01 ▦ │ k3s-worker-01 ▦ │ NFS · 192.168.68.50 (ping)     │
+│        Cluster:        Argo CD ▦ │ Grafana ▦ │ Status ▦ │ Bark                          │
 │        Infrastructure: Pulse │ OpenBao │ Proxmox .96 │ Proxmox .89                       │
 │        bookmarks:      Homelab (repo, Argo/Gatus LAN)                                    │
 │ every tab, bottom: LAN fallback — every NodePort with its local IP:port written out      │
@@ -115,8 +116,28 @@ filled in, its widget shows an API error and the other tiles work.
 | `HOMEPAGE_VAR_KARAKEEP_KEY` | Karakeep: bookmarks / favorites / highlights / tags | Karakeep → User Settings → API Keys |
 | `HOMEPAGE_VAR_ARGOCD_KEY` | Argo CD: apps / **out of sync** / healthy / degraded | token of the read-only `homepage` account, see below |
 
-No credential needed: **Gatus** (up / down / uptime of the *edge* checks) and **Grafana**'s
-Prometheus targets widget.
+No credential needed: **Gatus** (up / down / uptime of the *edge* checks), **Grafana**'s
+Prometheus targets widget, and the **Nodes** group.
+
+### The Nodes group (Ops tab)
+
+The info bar's `kubernetes` widget has only CPU % and RAM per node; it has no other fields to turn
+on. The **Nodes** group adds the rest from Prometheus (`prometheusmetric` widgets, no secret):
+
+| tile | numbers |
+|---|---|
+| `k3s-master-01`, `k3s-worker-01` | root-disk used %, pods running, container restarts in 24h, uptime (days) |
+| `NFS · 192.168.68.50` | the status dot is an ICMP `ping` from the Homepage pod; the link opens Gatus's `infra / NFS file server` check (TCP to port 2049 every minute, Bark alert on failure) |
+
+node-exporter labels its series by `instance` (IP:port), not by node name, so each disk/uptime query
+joins `node_uname_info` to pick the node by name. A tile that shows `-` means its query returned
+nothing; paste the query from `configmap.yaml` into Prometheus or Grafana Explore to see why.
+
+**"Can the cluster reach the NFS server?"** has three answers on the page:
+- the `NFS · 192.168.68.50` disk widget in the info bar errors if the read-only mount stops answering;
+- the `NFS` tile's dot goes red if the host stops answering ping;
+- Gatus (and Bark) report the NFS port itself being down. This is the check that matters: a host can
+  answer ping while NFS is stopped.
 
 > ⚠️ **ESO writes the Secret only when every listed property exists.** One missing key and
 > `homepage-secret` is not created (the ExternalSecret shows `SecretSyncedError`). Put all nine

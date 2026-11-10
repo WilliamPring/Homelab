@@ -85,6 +85,11 @@ data:
         icon: mdi-piggy-bank-outline
         style: column
 
+      Nodes:
+        tab: Ops
+        icon: mdi-server
+        style: row
+        columns: 3
       Cluster:
         tab: Ops
         icon: mdi-kubernetes
@@ -231,6 +236,63 @@ data:
             podSelector: app=wealthfolio
 
     # ───────────────────────────── Ops tab ─────────────────────────────
+    # ── Nodes: what the info-bar bars cannot show ───────────────────────────────────────
+    # The `kubernetes` info widget has only CPU % and RAM per node; it has no other fields.
+    # These tiles add, per node, from Prometheus (node-exporter + kube-state-metrics):
+    # root-disk %, pods on it, container restarts in 24h, uptime. node-exporter's `instance`
+    # is an IP:port, so each query joins node_uname_info to select the node by NAME.
+    - Nodes:
+        - k3s-master-01:
+            description: Control plane
+            icon: mdi-server
+            widget:
+              type: prometheusmetric
+              url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+              refreshInterval: 60000      # ms; node numbers move slowly
+              metrics:
+                - label: Disk /
+                  query: 100 - 100 * sum(node_filesystem_avail_bytes{mountpoint="/"} * on(instance) group_left(nodename) node_uname_info{nodename="k3s-master-01"}) / sum(node_filesystem_size_bytes{mountpoint="/"} * on(instance) group_left(nodename) node_uname_info{nodename="k3s-master-01"})
+                  format: { type: number, suffix: "%", options: { maximumFractionDigits: 0 } }
+                - label: Pods running
+                  query: count(kube_pod_info{node="k3s-master-01"} * on(namespace, pod) group_left() (kube_pod_status_phase{phase="Running"} == 1))
+                  format: { type: number }
+                - label: Restarts 24h
+                  query: sum(increase(kube_pod_container_status_restarts_total[24h]) * on(namespace, pod) group_left(node) kube_pod_info{node="k3s-master-01"}) or vector(0)
+                  format: { type: number, options: { maximumFractionDigits: 0 } }
+                - label: Uptime
+                  query: (time() - max(node_boot_time_seconds * on(instance) group_left(nodename) node_uname_info{nodename="k3s-master-01"})) / 86400
+                  format: { type: number, suffix: " d", options: { maximumFractionDigits: 1 } }
+
+        - k3s-worker-01:
+            description: 32GB worker, runs the heavy apps
+            icon: mdi-server
+            widget:
+              type: prometheusmetric
+              url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+              refreshInterval: 60000      # ms; node numbers move slowly
+              metrics:
+                - label: Disk /
+                  query: 100 - 100 * sum(node_filesystem_avail_bytes{mountpoint="/"} * on(instance) group_left(nodename) node_uname_info{nodename="k3s-worker-01"}) / sum(node_filesystem_size_bytes{mountpoint="/"} * on(instance) group_left(nodename) node_uname_info{nodename="k3s-worker-01"})
+                  format: { type: number, suffix: "%", options: { maximumFractionDigits: 0 } }
+                - label: Pods running
+                  query: count(kube_pod_info{node="k3s-worker-01"} * on(namespace, pod) group_left() (kube_pod_status_phase{phase="Running"} == 1))
+                  format: { type: number }
+                - label: Restarts 24h
+                  query: sum(increase(kube_pod_container_status_restarts_total[24h]) * on(namespace, pod) group_left(node) kube_pod_info{node="k3s-worker-01"}) or vector(0)
+                  format: { type: number, options: { maximumFractionDigits: 0 } }
+                - label: Uptime
+                  query: (time() - max(node_boot_time_seconds * on(instance) group_left(nodename) node_uname_info{nodename="k3s-worker-01"})) / 86400
+                  format: { type: number, suffix: " d", options: { maximumFractionDigits: 1 } }
+
+        - NFS · 192.168.68.50:
+            # Can the cluster reach it? `ping` = ICMP from the Homepage pod (the dot on the
+            # tile). Gatus checks the real thing: TCP to the NFS port 2049 every minute, and
+            # alerts Bark when it fails. The link opens that Gatus endpoint's history.
+            href: https://status.williampring.ca/endpoints/infra_nfs-file-server
+            description: File server for every app's data (Gatus checks NFS port 2049)
+            icon: mdi-nas
+            ping: 192.168.68.50
+
     - Cluster:
         - Argo CD:
             # Fronted by NPMplus + a Cloudflare tunnel — NOT Traefik, and there is no Ingress
@@ -364,7 +426,7 @@ data:
     # mount of it in the Homepage pod (deployment.yaml → nfs-data). Disk only, on purpose: `cpu` / `memory` here would be the k3s NODE the
     # pod runs on, not the NFS box.
     - resources:
-        label: NFS
+        label: NFS · 192.168.68.50
         disk: /mnt/nfs
         expanded: true             # show used AND total, not just a bar
 
@@ -557,4 +619,15 @@ data:
 
     #information-widgets-right {
       flex-basis: 100% !important;
+    }
+
+    /* Inside the stretched cluster box, spread cluster / master / worker evenly across it
+       instead of bunching them in the middle, and give each a wider bar (Homepage's own
+       minimum is 85px, which leaves short bars floating in empty space). */
+    .information-widget-kubernetes .flex-row.self-center {
+      width: 100%;
+      justify-content: space-around !important;
+    }
+    .information-widget-kubernetes .min-w-\[85px\] {
+      min-width: 180px !important;
     }
