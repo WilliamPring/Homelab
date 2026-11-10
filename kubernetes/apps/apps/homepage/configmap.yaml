@@ -49,6 +49,7 @@ data:
     blockStyle: refined            # the little stat blocks inside service widgets
     font: plexData                 # monospace-ish digits for stats and the clock only
     iconStyle: theme               # mdi-/si- glyphs take the theme colour, not a gradient
+    fullWidth: true                # use the whole screen, not a centred fixed-width column
     useEqualHeights: true          # tiles in a row line up even when one has a widget
     hideVersion: true
     disableUpdateCheck: true       # Renovate owns updates (pinned tag in deployment.yaml)
@@ -339,17 +340,34 @@ data:
     gateway: false
 
   widgets.yaml: |
-    # The info bar — shown above every tab. Order here = order left to right, and the rows
-    # are WRAPPING, not a setting: the browser fills one line, then starts the next. Homepage
-    # has no explicit line break for the header, so "first row / second row" is really
-    # "widest thing first". Hence the cluster leads — cluster · k3s-master-01 · k3s-worker-01
-    # fill line one — and the small widgets (search, clock, weather) flow underneath.
-    # On a very wide monitor part of row 2 may pull up beside the nodes; narrowing the window
-    # shows the intended split. The Proxmox host bars sit at the end — see the note there.
+    # The info bar — shown above every tab. Two rows, set by custom.css (at the end of this
+    # file), not by order alone: Homepage always groups search, clock and weather on the right
+    # and puts every other widget on the left in the order below. custom.css gives the right
+    # group a whole line (row two), so the left widgets here (logo, greeting, NFS, cluster)
+    # share row one. The Proxmox host bars are left out for now — see the note at the end.
     #
     # Real cluster numbers via metrics-server (not the old `resources` widget, which read
     # whichever node the pod happened to land on). The worker runs hot (~85% RAM), so the
-    # per-node bars are the first thing to glance at — which is why they lead.
+    # per-node bars are the first thing to glance at — which is why they stretch to fill row one.
+
+    # Left of the cluster bars: a logo and a title, so the top line isn't three small bars
+    # floating in a wide empty box. Homepage puts every widget that isn't search, datetime or
+    # weather on this left side in yaml order (those three always go right, as one group).
+    - logo:
+        icon: mdi-server-network
+    - greeting:
+        text_size: xl
+        text: William's homelab
+
+    # The NFS server (192.168.68.50, every app's precious data): used / free space of its data disk,
+    # measured on the /data/media export (/data itself is not exported) through a read-only
+    # mount of it in the Homepage pod (deployment.yaml → nfs-data). Disk only, on purpose: `cpu` / `memory` here would be the k3s NODE the
+    # pod runs on, not the NFS box.
+    - resources:
+        label: NFS
+        disk: /mnt/nfs
+        expanded: true             # show used AND total, not just a bar
+
     - kubernetes:
         cluster:
           show: true
@@ -388,33 +406,20 @@ data:
         units: metric
         cache: 15                  # minutes — no need to hit the API on every page view
 
-    # ── Proxmox hosts, last ──────────────────────────────────────────────────────────────
-    # The hypervisors underneath the cluster: CPU / RAM / disk / temperature, the numbers the
-    # k3s widget above cannot see (a host can be thermally throttling while every pod is fine).
-    #
-    # ⚠️ These need Glances running ON EACH PROXMOX HOST — a host service, so Ansible or a
-    #    documented manual step, never Argo (docs/apps/homepage.md → "Glances on the Proxmox
-    #    hosts"). Until it is up BOTH RENDER AN ERROR BOX at the end of the bar. Delete the
-    #    two blocks below if you would rather not look at that while it is pending.
-    - glances:
-        url: http://192.168.68.96:61208
-        version: 4                 # `glances -V` on the host: PVE 8 (bookworm) apt ships 3.x → 3
-        label: pve-a
-        cpu: true
-        mem: true
-        disk: /
-        cputemp: true              # extra API call per refresh; it is what the TEMP bar reads
-        unit: metric
-
-    - glances:
-        url: http://192.168.68.89:61208
-        version: 4
-        label: pve-b
-        cpu: true
-        mem: true
-        disk: /
-        cputemp: true
-        unit: metric
+    # ── Proxmox hosts: not here yet ──────────────────────────────────────────────────────
+    # Two `glances:` widgets (pve-a 192.168.68.96, pve-b 192.168.68.89, port 61208) belong here
+    # once Glances runs ON EACH PROXMOX HOST (a host service: Ansible or a manual step, never
+    # Argo; see docs/apps/homepage.md, "Glances on the Proxmox hosts"). They were taken out
+    # because until then each one renders an API error box. Add them back after that:
+    #   - glances:
+    #       url: http://192.168.68.96:61208
+    #       version: 4           # `glances -V` on the host; PVE 8 apt ships 3.x, so use 3
+    #       label: pve-a
+    #       cpu: true
+    #       mem: true
+    #       disk: /
+    #       cputemp: true
+    #       unit: metric
 
   bookmarks.yaml: |
     - Homelab:
@@ -540,10 +545,16 @@ data:
       flex-wrap: wrap !important;
     }
 
-    /* Give the cluster widget a whole line, so the Proxmox host bars and the right-hand group
-       (search, clock, weather) are all pushed onto the next one.
-       !important is needed: Homepage is Tailwind and the element already carries
-       `sm:basis-auto`, which is a single class — the same specificity as this selector. */
+    /* Row one = every LEFT widget (logo, greeting, NFS, cluster), with the cluster stretching
+       to fill what is left of the line. Row two = the right-hand group (search, clock,
+       weather), which gets a whole line to itself. (#64 did it the other way round, giving
+       the cluster the whole line, which left row one mostly empty.)
+       !important is needed: Homepage is Tailwind and these elements already carry
+       `sm:basis-auto` / `grow-0`, single classes with the same specificity as these selectors. */
     .information-widget-kubernetes {
+      flex-grow: 1 !important;
+    }
+
+    #information-widgets-right {
       flex-basis: 100% !important;
     }
