@@ -359,9 +359,9 @@ data:
         text_size: xl
         text: William's homelab
 
-    # The NFS server (192.168.68.50:/data, every app's precious data): used / free space of
-    # the share, read through a read-only mount of it in the Homepage pod (deployment.yaml
-    # → nfs-data). Disk only, on purpose: `cpu` / `memory` here would be the k3s NODE the
+    # The NFS server (192.168.68.50, every app's precious data): used / free space of its data disk,
+    # measured on the /data/media export (/data itself is not exported) through a read-only
+    # mount of it in the Homepage pod (deployment.yaml → nfs-data). Disk only, on purpose: `cpu` / `memory` here would be the k3s NODE the
     # pod runs on, not the NFS box.
     - resources:
         label: NFS

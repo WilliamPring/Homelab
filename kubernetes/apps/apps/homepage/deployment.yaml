@@ -135,5 +135,7 @@ spec:
         - name: nfs-data
           nfs:
             server: "192.168.68.50"
-            path: /data
+            # /data itself is NOT exported (showmount -e lists only folders under it), so
+            # mount one export. They share one disk, so any of them reports the same space.
+            path: /data/media
             readOnly: true
