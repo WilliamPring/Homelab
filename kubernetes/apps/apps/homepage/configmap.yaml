@@ -408,19 +408,12 @@ data:
     # group a whole line (row two), so the left widgets here (logo, greeting, NFS, cluster)
     # share row one. The Proxmox host bars are left out for now — see the note at the end.
     #
-    # Real cluster numbers via metrics-server (not the old `resources` widget, which read
-    # whichever node the pod happened to land on). The worker runs hot (~85% RAM), so the
-    # per-node bars are the first thing to glance at — which is why they stretch to fill row one.
-
-    # Left of the cluster bars: a logo and a title, so the top line isn't three small bars
-    # floating in a wide empty box. Homepage puts every widget that isn't search, datetime or
-    # weather on this left side in yaml order (those three always go right, as one group).
     - greeting:
         text_size: xl
         text: William's homelab
     # Mullvad VPN — checks the public IP seen by the Homepage pod.
     - customapi:
-        label: Mullvad Exit
+        label: vpn-exit pve-b (192.168.68.51)
         icon: si-mullvad
         url: https://am.i.mullvad.net/json
         refreshInterval: 30000
