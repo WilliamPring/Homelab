@@ -78,7 +78,7 @@ grafana:
   image:
     registry: docker.io
     repository: grafana/grafana
-    tag: 13.3.0-distroless
+    tag: 13.3.1-distroless
   admin:
     existingSecret: kube-prometheus-stack-secret   # from OpenBao homelab/grafana (externalsecret.yaml)
     userKey: admin-user
