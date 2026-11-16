@@ -16,7 +16,7 @@ kind: Kustomization
 helmCharts:
   - name: external-secrets
     repo: https://charts.external-secrets.io
-    version: 2.14.0              # chart and app are released together with the same number
+    version: 2.15.0              # chart and app are released together with the same number
     releaseName: external-secrets
     namespace: external-secrets  # baked into the webhook's Service reference — must match the Argo namespace
     valuesFile: values.yaml
