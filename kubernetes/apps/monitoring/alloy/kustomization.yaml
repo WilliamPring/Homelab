@@ -6,7 +6,7 @@ kind: Kustomization
 helmCharts:
   - name: alloy
     repo: https://grafana.github.io/helm-charts
-    version: 1.15.0
+    version: 1.16.0
     releaseName: alloy
     namespace: monitoring
     valuesFile: values.yaml
