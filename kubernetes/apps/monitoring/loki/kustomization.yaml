@@ -7,7 +7,7 @@ kind: Kustomization
 helmCharts:
   - name: loki
     repo: https://grafana.github.io/helm-charts   # Grafana Labs' own chart (not the grafana-community fork)
-    version: 7.6.0
+    version: 7.7.0
     releaseName: loki          # Service: loki.monitoring.svc:3100 — Alloy and Grafana use that name
     namespace: monitoring
     valuesFile: values.yaml
