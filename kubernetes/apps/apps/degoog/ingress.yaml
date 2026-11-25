@@ -20,6 +20,22 @@ spec:
     - host: search.williampring.ca
       http:
         paths:
+          # MCP sidecar (degoog-mcp) — longest-prefix wins over /, TLS reuses
+          # the existing degoog-tls secret. /mcp requires the Bearer token.
+          - path: /mcp
+            pathType: Prefix
+            backend:
+              service:
+                name: degoog-mcp
+                port:
+                  number: 4443
+          - path: /healthz
+            pathType: Prefix
+            backend:
+              service:
+                name: degoog-mcp
+                port:
+                  number: 4443
           - path: /
             pathType: Prefix
             backend:

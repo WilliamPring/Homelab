@@ -4,6 +4,8 @@ kind: Kustomization
 resources:
   - deployment.yaml
   - degoog-service.yaml
+  - mcp-deployment.yaml
+  - mcp-service.yaml
   - ingress.yaml
   - pvc.yaml
   - externalsecret.yaml  # degoog-secret ← OpenBao homelab/degoog

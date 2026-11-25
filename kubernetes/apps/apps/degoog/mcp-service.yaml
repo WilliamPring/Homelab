@@ -1,0 +1,21 @@
+# degoog-mcp service — ClusterIP, only reachable through the degoog ingress
+# (/mcp and /healthz paths). No NodePort: nothing LAN-internal needs it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: degoog-mcp
+  namespace: apps
+  labels:
+    app: degoog-mcp
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: degoog-mcp
+
+  ports:
+    - name: http
+      port: 4443
+      targetPort: 4443
+      protocol: TCP

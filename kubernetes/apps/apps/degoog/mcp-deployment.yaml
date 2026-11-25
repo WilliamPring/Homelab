@@ -1,0 +1,91 @@
+# degoog-mcp — official Degoog MCP sidecar (degoog-org/mcp). Serves streamable
+# HTTP MCP at /mcp and health at /healthz, port 4443. Reachable publicly via the
+# degoog ingress (search.williampring.ca/mcp) — auth via DEGOOG_MCP_AUTH_TOKEN
+# (OpenBao homelab/degoog → degoog-secret, same pattern as the rest of the app).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: degoog-mcp
+  namespace: apps
+  labels:
+    app: degoog-mcp
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: degoog-mcp
+
+  strategy:
+    type: Recreate
+
+  template:
+    metadata:
+      labels:
+        app: degoog-mcp
+
+    spec:
+      securityContext:
+        fsGroup: 1000
+
+      containers:
+        - name: degoog-mcp
+
+          image: ghcr.io/degoog-org/mcp:0.4.1   # pinned — Renovate PRs bump (grouped weekly)
+
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 4443
+              protocol: TCP
+
+          env:
+
+            # Every /mcp request must carry Authorization: Bearer <token>.
+            - name: DEGOOG_MCP_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: degoog-secret
+                  key: DEGOOG_MCP_AUTH_TOKEN
+
+            # Point the sidecar at the degoog instance (same namespace).
+            - name: DEGOOG_MCP_DEGOOG_URL
+              value: "http://degoog:4444"
+
+            - name: DEGOOG_MCP_PORT
+              value: "4443"
+
+            - name: DEGOOG_MCP_LOG_LEVEL
+              value: "info"
+
+            - name: DEGOOG_MCP_USER_AGENT
+              value: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/124.0"
+
+            # deep_search stays off — no LLM key configured.
+
+          # The sidecar writes a default config to /data on first run; keep it
+          # ephemeral, real config comes from env above.
+          volumeMounts:
+            - name: data
+              mountPath: /data
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+
+            limits:
+              memory: 512Mi
+
+      volumes:
+        - name: data
+          emptyDir: {}
