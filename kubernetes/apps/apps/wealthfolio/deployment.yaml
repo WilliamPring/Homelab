@@ -36,7 +36,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: wealthfolio
-          image: wealthfolio/wealthfolio:3.13.0   # pinned — Renovate PRs bumps (db-migration label)
+          image: wealthfolio/wealthfolio:3.13.1   # pinned — Renovate PRs bumps (db-migration label)
           env:
             - name: WF_LISTEN_ADDR
               value: "0.0.0.0:8088"
