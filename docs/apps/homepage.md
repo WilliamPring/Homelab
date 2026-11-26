@@ -221,26 +221,33 @@ both widgets. It is read-only either way, but it does describe your hardware.
 Worth adding to Gatus's `infra` group alongside the two Proxmox checks, so a dead Glances pages you
 instead of silently emptying the bar.
 
-## What's in the ConfigMap
+## The config files
 
-One ConfigMap, six keys, each mounted as its own file via `subPath` (so Homepage can still
-create `/app/config/logs`):
+Homepage's own config lives in `kubernetes/apps/apps/homepage/config/`, one file per Homepage
+config file. `kustomization.yaml` turns the directory into the `homepage-config` ConfigMap with a
+`configMapGenerator`; each key is mounted as its own file via `subPath` (so Homepage can still
+create `/app/config/logs`). Edit the file you care about — there is no 600-line ConfigMap.
 
-| key | what it is |
+| file | what it is |
 |---|---|
-| `settings.yaml` | title, theme + background, tabs/layout, `statusStyle`, quicklaunch |
-| `services.yaml` | the tiles |
-| `widgets.yaml` | the info bar, in display order: cluster + nodes, search, clock, weather, then the Proxmox hosts (Glances) |
-| `bookmarks.yaml` | repo, Argo/Gatus LAN links, and the **LAN fallback** list |
-| `kubernetes.yaml` | how to talk to the cluster API |
-| `custom.css` | the only thing that forces the info bar onto two rows — see below |
+| `config/settings.yaml` | title, theme + background, tabs/layout, `statusStyle`, quicklaunch |
+| `config/services.yaml` | the tiles |
+| `config/widgets.yaml` | the info bar, in display order: cluster + nodes, search, clock, weather, then the Proxmox hosts (Glances) |
+| `config/bookmarks.yaml` | repo, Argo/Gatus LAN links, and the **LAN fallback** list |
+| `config/kubernetes.yaml` | how to talk to the cluster API |
+| `config/custom.css` | the only thing that forces the info bar onto two rows — see below |
 
-> ⚠️ **`subPath` mounts do NOT update when the ConfigMap changes.** The file in the running pod is a
-> copy made at start. So any edit here needs a Sync **and** a restart, or you will swear the change
-> did not apply:
-> ```bash
-> sudo k3s kubectl -n apps rollout restart deploy/homepage
-> ```
+`config/` is the one place in an app directory that holds YAML which is **not** a Kubernetes
+manifest, so `scripts/ci/check-conventions.sh` skips it (otherwise `settings.yaml`'s background
+URL would be counted as a container image).
+
+> ℹ️ **Why the generated ConfigMap name has a hash on it.** `subPath` mounts never pick up
+> ConfigMap updates — the file in the pod is a copy made at start. The content hash means an edit
+> produces a *new* ConfigMap name, kustomize rewrites the Deployment's volume reference, and the
+> pod rolls on Sync. No `rollout restart` needed. Do not set `disableNameSuffixHash` here: that
+> brings back the old trap where a synced change silently did nothing.
+>
+> The old `homepage-config-<hash>` lingers until you **Sync with Prune ticked**.
 
 ### Why there is a custom.css
 

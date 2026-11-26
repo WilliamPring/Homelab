@@ -1,0 +1,80 @@
+title: Homelab
+description: William's k3s homelab
+theme: dark
+color: slate
+
+# A dim night-sky photo behind frosted-glass cards. Only `opacity` is used on the image:
+# the docs say background blur/saturate/brightness do not combine with `cardBlur`.
+# The image is loaded by your BROWSER from Unsplash (not by the pod). To self-host it,
+# mount a file at /app/public/images/ and use `image: /images/<file>`.
+background:
+  image: https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=2560&q=80
+  opacity: 35
+cardBlur: md
+
+headerStyle: boxedWidgets      # each top-bar widget in its own glass box
+blockStyle: refined            # the little stat blocks inside service widgets
+font: plexData                 # monospace-ish digits for stats and the clock only
+iconStyle: theme               # mdi-/si- glyphs take the theme colour, not a gradient
+fullWidth: true                # use the whole screen, not a centred fixed-width column
+useEqualHeights: true          # tiles in a row line up even when one has a widget
+hideVersion: true
+disableUpdateCheck: true       # Renovate owns updates (pinned tag in deployment.yaml)
+
+# Every tile has a siteMonitor, so without this each one prints a response time in ms.
+# `dot` collapses it to green/red.
+statusStyle: dot
+
+# Type anywhere on the page to filter tiles and launch one. `provider` is inherited from
+# the search widget below (degoog), so a query that matches no tile falls through to it.
+quicklaunch:
+  searchDescriptions: true
+  hideVisitURL: false
+  mobileButtonPosition: bottom-right
+
+# Order here = order on the page, and the order of the tabs.
+# `style: column` groups sit side by side; `style: row` spans the width with N tiles across.
+layout:
+  Media:
+    tab: Home
+    icon: mdi-play-box-multiple-outline
+    style: column
+  Reading:
+    tab: Home
+    icon: mdi-book-open-page-variant-outline
+    style: column
+  Everyday:
+    tab: Home
+    icon: mdi-compass-outline
+    style: column
+  Money:
+    tab: Home
+    icon: mdi-piggy-bank-outline
+    style: column
+
+  Nodes:
+    tab: Ops
+    icon: mdi-server
+    style: row
+    columns: 3
+  Cluster:
+    tab: Ops
+    icon: mdi-kubernetes
+    style: row
+    columns: 4
+  Infrastructure:
+    tab: Ops
+    icon: mdi-server-network
+    style: row
+    columns: 4
+
+  # Bookmark groups.
+  Homelab:
+    tab: Ops
+    icon: mdi-bookmark-outline
+  # No `tab:` on purpose → shown at the bottom of EVERY tab, so the raw local IPs are
+  # one glance away whichever tab you are on when the edge is down.
+  LAN fallback (no DNS needed):
+    icon: mdi-lan
+    style: row
+    columns: 4

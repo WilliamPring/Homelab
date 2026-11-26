@@ -39,7 +39,7 @@ spec:
               value: "home.williampring.ca,homepage.apps.svc.cluster.local:3000"
 
             # ── widget credentials ← homepage-secret ← OpenBao homelab/homepage (externalsecret.yaml)
-            # Homepage replaces "{{HOMEPAGE_VAR_X}}" in configmap.yaml with env var HOMEPAGE_VAR_X.
+            # Homepage replaces "{{HOMEPAGE_VAR_X}}" in config/services.yaml with env var HOMEPAGE_VAR_X.
             # `optional: true` on every one: until the owner fills OpenBao the Secret does not exist,
             # and the dashboard must still start — only the affected widget shows an error.
             - name: HOMEPAGE_VAR_IMMICH_KEY

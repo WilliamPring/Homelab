@@ -1,0 +1,11 @@
+# `cluster` = read the API with the projected ServiceAccount token mounted in this pod
+# (see rbac.yaml). `default` would look for a kubeconfig, which a pod does not have.
+mode: cluster
+
+# ⚠️ These are SERVICE DISCOVERY toggles, not display toggles. Left on, Homepage scans
+#    Ingresses/IngressRoutes and auto-creates tiles for any that carry the annotation
+#    `gethomepage.dev/enabled: "true"`. Nothing in this repo sets that annotation, so
+#    services.yaml stays the single source of truth.
+ingress: false
+traefik: false
+gateway: false

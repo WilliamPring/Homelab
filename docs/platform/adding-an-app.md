@@ -124,7 +124,7 @@ Your phone gets "<app>: deployed" (Argo → Bark).
 
 | Wire-up | Where | Why |
 |---|---|---|
-| **Homepage tile** | `kubernetes/apps/apps/homepage/configmap.yaml` → `services.yaml` block; icon names from the dashboard-icons set | the front door lists everything |
+| **Homepage tile** | `kubernetes/apps/apps/homepage/config/services.yaml`; icon names from the dashboard-icons set | the front door lists everything |
 | **Gatus check** | `kubernetes/apps/monitoring/gatus/configmap.yaml` → an `apps` endpoint (in-cluster Service URL) and an `edge` endpoint (the hostname, with cert-expiry) | you find out it is down before you need it |
 | **Doc** | `docs/apps/<app>.md` — architecture, first-time setup, day-to-day, troubleshooting, quick reference (copy the shape of `apps/wealthfolio.md`) | the setup steps you'll forget |
 | **README** | add the NodePort to the Addresses table if you added one; add the doc to `docs/index.md` | one place for ports and hostnames |

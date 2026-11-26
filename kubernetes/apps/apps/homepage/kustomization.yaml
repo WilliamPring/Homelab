@@ -2,7 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - configmap.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
@@ -11,3 +10,25 @@ resources:
   # ⚠️ The ClusterRole and ClusterRoleBinding are CLUSTER-SCOPED — they outlive a
   #    `kubectl delete ns apps` and survive deleting this directory. See rbac.yaml.
   - rbac.yaml
+
+# The dashboard's own config, one file per Homepage config file (config/ is app config, NOT
+# Kubernetes manifests — scripts/ci/check-conventions.sh skips that directory for the same reason).
+#
+# The generated name carries a content hash, so editing a file under config/ changes the
+# ConfigMap name, kustomize rewrites deployment.yaml's volume reference, and the pod rolls.
+# ⚠️ Do NOT add disableNameSuffixHash here. The files are subPath-mounted, and a subPath mount
+#    NEVER picks up ConfigMap updates — without the hash the pod keeps the old config until you
+#    remember to restart it by hand.
+configMapGenerator:
+  - name: homepage-config
+    namespace: apps
+    files:
+      - config/settings.yaml
+      - config/services.yaml
+      - config/widgets.yaml
+      - config/bookmarks.yaml
+      - config/kubernetes.yaml
+      - config/custom.css
+    options:
+      labels:
+        app: homepage
