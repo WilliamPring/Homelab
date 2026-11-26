@@ -4,8 +4,13 @@ This repo is a personal k3s homelab, deployed by Argo CD from git. Read this bef
 
 ## Ground rules
 - **Never run `git commit` or `git push`.** The owner does all git operations.
-- **Nothing deploys by itself.** Argo sync is MANUAL for every app; Renovate never automerges.
-  Changing a manifest = a PR/push + the owner clicking Sync. Do not add `automated:` sync policies.
+- **Almost nothing deploys by itself.** Argo sync is MANUAL for every app except a four-app allow-list
+  (`searxng`, `kavita`, `suwayomi`, `immich-public-proxy`); Renovate never automerges. Do not add
+  `automated:` sync policies to any other app. An app is INELIGIBLE if it has an `externalsecret.yaml`
+  (manual sync is the pause that lets you add the key to OpenBao first), a Helm chart (`appVersion` rides
+  along), or a documented data migration (immich, calibre); bark/gatus stay manual because they are the
+  alerting. The allow-list lives in `kubernetes/bootstrap/apps.yaml` → `templatePatch`, and changing it
+  means re-applying that file by hand. Never grant auto-sync from the Argo UI — it does not stick.
 - **Pin everything.** Image tags, chart versions, tool versions. `latest` and `"*"` are invisible to Renovate.
   A Helm chart that also picks the APP version (its `appVersion`) gets the app's image tag pinned in `values.yaml`
   too, with a Renovate custom manager — `kubernetes/apps/media/immich/values.yaml` is the example.

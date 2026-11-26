@@ -9,14 +9,11 @@
 # This is the ONE Application-level object applied by hand, once:
 #   sudo k3s kubectl apply -f kubernetes/bootstrap/apps.yaml
 #
-# Scope: the set automates REGISTRATION only. Every generated app has the usual manual syncPolicy —
-# nothing deploys until you click Sync. Hand-edits to a generated Application spec are reverted by
-# the controller: change the directory, not the object.
+# ⚠️ Hand-edits to a generated Application do not stick — the controller owns and watches them, so
+#    the edit itself triggers the reconcile that overwrites it. That is why the UI's "Enable
+#    Auto-Sync" toggle appears not to save. Grant auto-sync HERE, then re-apply this file.
 #
-# Per-app exceptions live in `templatePatch` (today: cert-manager, kube-prometheus-stack and
-# external-secrets need ServerSideApply — their CRDs exceed the client-side annotation limit).
-# Changing templatePatch means re-applying THIS file by hand; nothing in git reconfigures the
-# ApplicationSet itself.
+# Why only those four: docs/platform/argocd.md#sync-mode-manual-except-four-apps
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -49,11 +46,21 @@ spec:
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
+  # Per-app exceptions. Two independent flags — keep them as separate `if`s, never if/else, or an
+  # app needing both silently gets one.
+  # ⚠️ A merge patch REPLACES lists, so syncOptions must restate CreateNamespace=true.
   templatePatch: |
-    {{- if or (eq .path.basename "cert-manager") (eq .path.basename "kube-prometheus-stack") (eq .path.basename "external-secrets") }}
+    {{- $ssa  := has .path.basename (list "cert-manager" "kube-prometheus-stack" "external-secrets") }}
+    {{- $auto := has .path.basename (list "searxng" "kavita" "suwayomi" "immich-public-proxy") }}
+    {{- if or $ssa $auto }}
     spec:
       syncPolicy:
+        {{- if $auto }}
+        automated: {}          # no selfHeal, no prune — on purpose; see the header
+        {{- end }}
         syncOptions:
           - CreateNamespace=true
+          {{- if $ssa }}
           - ServerSideApply=true
+          {{- end }}
     {{- end }}

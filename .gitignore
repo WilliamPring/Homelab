@@ -19,6 +19,10 @@ keys.txt
 # paste of live cluster state, and this repo is PUBLIC. Un-ignore deliberately, per file.
 debug/*.txt
 
+# Claude Code's scratch area. Worktrees here have held real secret files; this repo is PUBLIC.
+# Was only in .git/info/exclude, which is local-only and does not survive a clone.
+.claude/
+
 # Local overrides
 *.local.yaml
 *.local.sh

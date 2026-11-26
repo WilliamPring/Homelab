@@ -11,6 +11,7 @@ Runs alongside [degoog](degoog.md), so the two approaches can be compared side b
 | **URL (raw)** | http://\<node-ip\>:30880 (NodePort) |
 | **Namespace** | `apps` |
 | **Deployed by** | Argo CD (GitOps) — ApplicationSet → `kubernetes/apps/apps/searxng/` |
+| **Sync** | **Automatic** (`automated: {}`, no selfHeal, no prune) — on the allow-list in `kubernetes/bootstrap/apps.yaml`, so merging a digest bump deploys it with no Sync click. [Sync mode](../platform/argocd.md#sync-mode-manual-except-four-apps) |
 | **Image** | `searxng/searxng`, pinned by **digest** (upstream tags are date + hash, not semver); Renovate opens digest bumps in the weekly `stateless patch updates` group |
 | **State** | none — settings come from a ConfigMap; no PVC, no database |
 | **Health** | readiness probe on `/healthz` (the same path Gatus checks) |

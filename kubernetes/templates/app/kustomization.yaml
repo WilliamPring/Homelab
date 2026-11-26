@@ -6,7 +6,4 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-
-# Has a secret? add:
-# generators:
-#   - externalsecret.yaml          # from OpenBao — see docs/platform/openbao.md
+  # Has a secret? add externalsecret.yaml here — docs/platform/openbao.md

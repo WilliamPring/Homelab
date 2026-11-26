@@ -23,6 +23,11 @@ and readable offline through either app.
 |---|---|---|
 | `suwayomi` | `kubernetes/apps/media/suwayomi` | Deployment, data PVC, NFS downloads claim, NodePort, Ingress |
 
+**Sync is automatic** — Suwayomi is on the auto-sync allow-list, so merging an image bump deploys it
+with no Sync click (`automated: {}`, no selfHeal, no prune; granted in `kubernetes/bootstrap/apps.yaml`).
+Renovate still never automerges, so the gate is the PR. Details:
+[Sync mode](../platform/argocd.md#sync-mode-manual-except-four-apps).
+
 Design decisions: Basic auth with hard-coded credentials for now (the Paperback extension speaks
 Basic; Suwayomi's newer login mode does not work with it) · H2 database on local-path with daily built-in backups ·
 downloads go into the **shared** Kavita manga folder · no FlareSolverr by default.
