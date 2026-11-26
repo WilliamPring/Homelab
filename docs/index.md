@@ -171,7 +171,7 @@ Apple — works even with Tailscale asleep). It is the only alert channel; ntfy 
 - [`architecture/production-architecture.md`](architecture/production-architecture.md) — how this compares to production, and the roadmap of what to learn next
 
 **Apps** — one guide per app: setup, how it fits, troubleshooting
-- [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
+- [`apps/immich.md`](apps/immich.md) · [`apps/kavita.md`](apps/kavita.md) · [`apps/calibre.md`](apps/calibre.md) · [`apps/suwayomi.md`](apps/suwayomi.md) · [`apps/kindle.md`](apps/kindle.md)
 - [`apps/qbittorrent.md`](apps/qbittorrent.md) · [`apps/searxng.md`](apps/searxng.md) · [`apps/degoog.md`](apps/degoog.md)
 - [`apps/karakeep.md`](apps/karakeep.md) · [`apps/actual.md`](apps/actual.md) · [`apps/wealthfolio.md`](apps/wealthfolio.md) · [`apps/homepage.md`](apps/homepage.md)
 - [`apps/gatus.md`](apps/gatus.md) · [`apps/bark.md`](apps/bark.md) · [`apps/grafana.md`](apps/grafana.md) (Prometheus, Loki, Alloy, Alertmanager)

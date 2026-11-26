@@ -25,6 +25,11 @@ reading progress, OPDS and a web reader. One helper feeds it good metadata:
 | `kavita` | `kubernetes/apps/media/kavita` | Kavita + NFS library PV/PVC + config PVC + Ingress |
 | `calibre` | `kubernetes/apps/media/calibre` | CWA + the `calibre-books` / `calibre-ingest` NFS claims Kavita reuses |
 
+⚠️ **The two apps sync differently.** `kavita` is on the auto-sync allow-list — merging an image bump
+deploys it, no Sync click (`automated: {}`, no selfHeal, no prune; granted in `kubernetes/bootstrap/apps.yaml`).
+`calibre` stays **manual** on purpose: CWA migrates `app.db` on upgrade. Details:
+[Sync mode](../platform/argocd.md#sync-mode-manual-except-four-apps).
+
 Kavita keeps its state on a `local-path` PVC. Nothing there is irreplaceable: the files are on NFS,
 and it rebuilds its DB by rescanning (reading progress is the one thing a rebuild loses).
 

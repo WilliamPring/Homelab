@@ -80,7 +80,7 @@ data:
           {
             "device_key": "{{.context.barkDeviceKey}}",
             "title": "{{.app.metadata.name}}: SYNC FAILED",
-            "body": "Phase: {{.app.status.operationState.phase}}. Open Argo for the error (bad manifest, KSOPS decrypt, missing secret, image pull…).",
+            "body": "Phase: {{.app.status.operationState.phase}}. Open Argo for the error (bad manifest, missing OpenBao key, image pull…).",
             "level": "timeSensitive",
             "group": "argocd",
             "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true"
