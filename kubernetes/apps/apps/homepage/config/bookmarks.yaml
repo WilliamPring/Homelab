@@ -1,0 +1,99 @@
+- Homelab:
+    - Repo:
+        - icon: github.png
+          href: https://github.com/WilliamPring/Homelab
+          description: WilliamPring/Homelab
+
+    - Argo CD (LAN):
+        - icon: argo-cd.png
+          href: http://192.168.68.63:30443
+          description: 192.168.68.63:30443
+
+    - Gatus (LAN):
+        - icon: gatus.png
+          href: http://192.168.68.63:30881
+          description: 192.168.68.63:30881
+
+# LAN fallback — every app also listens on a NodePort, reachable by raw IP with no
+# DNS, no Cloudflare, no Tailscale and no cert. This is what you use when the tiles
+# are all dead but `kubectl get pods` looks fine: the apps are up, the edge is not.
+# Ports come from the README port table; keep them in step.
+#
+# ⚠️ .63 = k3s-master-01, .62 = k3s-worker-01. Use http://192.168.68.62:<port> if .63 is down.
+#
+# ℹ️ WHY THE MASTER IP WORKS EVEN FOR APPS PINNED TO THE WORKER. No Service in this repo sets
+#    `externalTrafficPolicy: Local`; the default `Cluster` makes kube-proxy on ANY node forward
+#    a NodePort to wherever the pod is.
+#    🛑 Add `externalTrafficPolicy: Local` to a Service and its NodePort STOPS answering on .63.
+#
+# 🛑 THESE IPs HAVE MOVED BEFORE (the master was .93 until a DHCP lease change). Symptom:
+#    every link here dies at once while `kubectl get pods` is healthy. Set DHCP
+#    RESERVATIONS for both nodes, then re-check:  sudo k3s kubectl get nodes -o wide
+#
+# ⚠️ Plain http, LAN only. Not reachable over Tailscale (192.168.68.x is not routed).
+- LAN fallback (no DNS needed):
+    # 🛑 Argo CD first, because it is the one you need when everything else is broken.
+    - Argo CD:
+        - abbr: "ACD"
+          href: http://192.168.68.63:30443
+          description: 192.168.68.63:30443
+
+    - Immich:
+        - abbr: "IMM"
+          href: http://192.168.68.63:30041
+          description: 192.168.68.63:30041
+
+    - Immich shares:
+        - abbr: "IPP"
+          href: http://192.168.68.63:30042
+          description: 192.168.68.63:30042
+
+    - degoog:
+        - abbr: "DEG"
+          href: http://192.168.68.63:30882
+          description: 192.168.68.63:30882
+
+    - qBittorrent:
+        - abbr: "QBT"
+          href: http://192.168.68.63:30080
+          description: 192.168.68.63:30080
+
+    - Calibre-Web:
+        - abbr: "CAL"
+          href: http://192.168.68.63:30083
+          description: 192.168.68.63:30083
+
+    - Karakeep:
+        - abbr: "KRK"
+          href: http://192.168.68.63:30300
+          description: 192.168.68.63:30300
+
+    - Suwayomi:
+        - abbr: "SUW"
+          href: http://192.168.68.63:30456
+          description: 192.168.68.63:30456
+
+    - Kavita:
+        - abbr: "KAV"
+          href: http://192.168.68.63:30500
+          description: 192.168.68.63:30500
+
+    - Actual:
+        - abbr: "ACT"
+          href: http://192.168.68.63:30506
+          description: 192.168.68.63:30506
+
+    - SearXNG:
+        - abbr: "SRX"
+          href: http://192.168.68.63:30880
+          description: 192.168.68.63:30880
+
+    - Gatus:
+        - abbr: "GTS"
+          href: http://192.168.68.63:30881
+          description: 192.168.68.63:30881
+
+    - Bark:
+        - abbr: "BRK"
+          href: http://192.168.68.63:30889
+          description: 192.168.68.63:30889

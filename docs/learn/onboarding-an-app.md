@@ -308,7 +308,7 @@ That output *is* the request path from §1, printed. Bark says *"whoami: deploye
 
 Optional for the lab; this is how a real app joins everything else.
 
-**Homepage tile** — `kubernetes/apps/apps/homepage/configmap.yaml`, inside `services.yaml`, in the right group:
+**Homepage tile** — `kubernetes/apps/apps/homepage/config/services.yaml`, in the right group:
 ```yaml
         - whoami:
             href: https://whoami.williampring.ca

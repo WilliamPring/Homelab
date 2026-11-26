@@ -1,0 +1,41 @@
+/* Loaded only because Homepage reads /app/config/custom.css if it exists — the supported way
+   to change what the YAML cannot express.
+
+   ⚠️ These selectors are Homepage's own React class names (`information-widget-<type>`), NOT a
+   public API. A major release can rename them. The failure is cosmetic — the info bar falls back
+   to one line — so if the layout looks wrong after an upgrade, look here first. */
+
+/* The header is ONE flex row, `#widgets-wrap`, holding every info widget — including
+   `#information-widgets-right` (search, clock, weather), which `justify-between` pushes to
+   the far end. That is why the clock looks separate while sharing the cluster's line, and
+   why reordering widgets.yaml alone changes nothing: the row simply fits on a wide screen.
+   Both containers already wrap; these rules only decide where the line breaks. */
+#information-widgets,
+#widgets-wrap {
+  flex-wrap: wrap !important;
+}
+
+/* Row one = every LEFT widget (logo, greeting, NFS, cluster), with the cluster stretching
+   to fill what is left of the line. Row two = the right-hand group (search, clock,
+   weather), which gets a whole line to itself. (#64 did it the other way round, giving
+   the cluster the whole line, which left row one mostly empty.)
+   !important is needed: Homepage is Tailwind and these elements already carry
+   `sm:basis-auto` / `grow-0`, single classes with the same specificity as these selectors. */
+.information-widget-kubernetes {
+  flex-grow: 1 !important;
+}
+
+#information-widgets-right {
+  flex-basis: 100% !important;
+}
+
+/* Inside the stretched cluster box, spread cluster / master / worker evenly across it
+   instead of bunching them in the middle, and give each a wider bar (Homepage's own
+   minimum is 85px, which leaves short bars floating in empty space). */
+.information-widget-kubernetes .flex-row.self-center {
+  width: 100%;
+  justify-content: space-around !important;
+}
+.information-widget-kubernetes .min-w-\[85px\] {
+  min-width: 180px !important;
+}

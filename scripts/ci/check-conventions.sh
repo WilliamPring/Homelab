@@ -35,7 +35,9 @@ def fail_(m) = (FAIL << m; puts("  \e[31mFAIL\e[0m #{m}"))
 def warn_(m) = (WARN << m; puts("  \e[33mWARN\e[0m #{m}"))
 
 # Load every manifest once. Keep (file, doc) pairs so messages can point at a real path.
-DOCS = Dir["kubernetes/**/*.yaml"].sort.reject { |f| f =~ %r{/charts/} }.flat_map do |f|
+# A `config/` subdirectory holds an APP's own config (Homepage's services.yaml, …) shipped by a
+# configMapGenerator. It is YAML but not Kubernetes, so checking it for images/probes is noise.
+DOCS = Dir["kubernetes/**/*.yaml"].sort.reject { |f| f =~ %r{/charts/|/config/} }.flat_map do |f|
   begin
     YAML.load_stream(File.read(f)).compact.map { |d| [f, d] }
   rescue StandardError
